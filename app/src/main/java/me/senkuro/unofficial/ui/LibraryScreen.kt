@@ -22,6 +22,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
@@ -47,7 +48,7 @@ import java.text.DateFormat
 import java.util.Date
 
 @Composable
-fun LibraryScreen(onManga: (MangaItem) -> Unit) {
+fun LibraryScreen(onManga: (MangaItem) -> Unit, onDebug: (() -> Unit)? = null) {
     val library = AppGraph.library
     val favorites by library.favorites.collectAsState()
     val history by library.history.collectAsState()
@@ -59,6 +60,14 @@ fun LibraryScreen(onManga: (MangaItem) -> Unit) {
                 .fillMaxSize()
                 .padding(padding),
         ) {
+            if (onDebug != null) {
+                OutlinedButton(
+                    onClick = onDebug,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp, vertical = 4.dp),
+                ) { Text("Отладка: перехват запросов сайта") }
+            }
             TabRow(selectedTabIndex = tab) {
                 Tab(selected = tab == 0, onClick = { tab = 0 }, text = { Text("Избранное") })
                 Tab(selected = tab == 1, onClick = { tab = 1 }, text = { Text("История") })

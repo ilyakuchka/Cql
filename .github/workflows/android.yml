@@ -3,10 +3,20 @@ name: Android build
 # Только ручной запуск (Actions → Android build → Run workflow)
 on:
   workflow_dispatch:
+    inputs:
+      build_type:
+        description: "Тип сборки (debug — с отладочными инструментами, release — без них)"
+        type: choice
+        options:
+          - debug
+          - release
+        default: debug
 
 jobs:
   build:
     runs-on: ubuntu-24.04
+    env:
+      BUILD_TYPE: ${{ inputs.build_type }}
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -22,12 +32,52 @@ jobs:
         with:
           gradle-version: "8.9"
 
-      - name: Build debug APK
-        run: gradle assembleDebug --stacktrace
+      # Необязательно: если в секретах репозитория заданы ключи, release подписывается ими.
+      # Секреты: ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD.
+      - name: Prepare release signing
+        if: inputs.build_type == 'release'
+        env:
+          KS_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KS_PASS: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KS_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASS: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          if [ -n "$KS_B64" ]; then
+            echo "$KS_B64" | base64 -d > "$RUNNER_TEMP/release.jks"
+            {
+              echo "KEYSTORE_PATH=$RUNNER_TEMP/release.jks"
+              echo "KEYSTORE_PASSWORD=$KS_PASS"
+              echo "KEY_ALIAS=$KS_ALIAS"
+              echo "KEY_PASSWORD=$KEY_PASS"
+            } >> "$GITHUB_ENV"
+            echo "Release будет подписан ключом из секретов"
+          else
+            echo "::notice::Секретов подписи нет: release подписан debug-ключом (ставится, но без обновлений поверх)"
+          fi
+
+      - name: Build APK
+        run: |
+          if [ "$BUILD_TYPE" = "release" ]; then
+            gradle assembleRelease --stacktrace
+          else
+            gradle assembleDebug --stacktrace
+          fi
+
+      - name: Verify release has no debug tools
+        if: inputs.build_type == 'release'
+        run: |
+          apk=$(ls app/build/outputs/apk/release/*.apk | head -1)
+          mkdir -p "$RUNNER_TEMP/apk"
+          unzip -q -o "$apk" -d "$RUNNER_TEMP/apk"
+          if grep -rqa -e "SenkuroDebug" -e "__senkuroCapture" "$RUNNER_TEMP/apk"; then
+            echo "::error::В release-APK найден отладочный код перехвата запросов"
+            exit 1
+          fi
+          echo "OK: отладочных инструментов в release-APK нет"
 
       - name: Upload APK
         uses: actions/upload-artifact@v5
         with:
-          name: me.senkuro.unofficial-debug
-          path: app/build/outputs/apk/debug/*.apk
+          name: me.senkuro.unofficial-${{ inputs.build_type }}
+          path: app/build/outputs/apk/${{ inputs.build_type }}/*.apk
           if-no-files-found: error

@@ -26,12 +26,15 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import me.senkuro.unofficial.BuildConfig
 import me.senkuro.unofficial.data.MangaItem
+import me.senkuro.unofficial.debugtools.DebugTools
 
 private object Routes {
     const val HOME = "home"
     const val CATALOG = "catalog"
     const val LIBRARY = "library"
+    const val DEBUG = "debug"
     const val MANGA = "manga/{id}"
     const val READER = "reader/{mangaId}/{chapterId}"
 
@@ -88,7 +91,14 @@ fun AppRoot() {
         ) {
             composable(Routes.HOME) { HomeScreen(onManga = openManga) }
             composable(Routes.CATALOG) { CatalogScreen(onManga = openManga) }
-            composable(Routes.LIBRARY) { LibraryScreen(onManga = openManga) }
+            composable(Routes.LIBRARY) {
+                LibraryScreen(
+                    onManga = openManga,
+                    // Кнопка есть только в debug-сборке (BuildConfig.DEBUG_TOOLS = false в release).
+                    onDebug = if (BuildConfig.DEBUG_TOOLS) ({ nav.navigate(Routes.DEBUG) }) else null,
+                )
+            }
+            composable(Routes.DEBUG) { DebugTools.Screen(onBack = { nav.popBackStack() }) }
 
             composable(
                 route = Routes.MANGA,

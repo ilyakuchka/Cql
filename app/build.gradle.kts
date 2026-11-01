@@ -5,6 +5,10 @@ plugins {
     id("org.jetbrains.kotlin.plugin.serialization")
 }
 
+// Подпись release: если заданы переменные окружения (их выставляет workflow из секретов),
+// используется ваш keystore, иначе release подписывается debug-ключом (APK ставится, но без обновлений поверх).
+val releaseKeystorePath: String? = System.getenv("KEYSTORE_PATH")?.takeIf { it.isNotBlank() }
+
 android {
     namespace = "me.senkuro.unofficial"
     compileSdk = 35
@@ -17,14 +21,37 @@ android {
         versionName = "0.1.0"
     }
 
+    signingConfigs {
+        if (releaseKeystorePath != null) {
+            create("release") {
+                storeFile = file(releaseKeystorePath)
+                storePassword = System.getenv("KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("KEY_ALIAS")
+                keyPassword = System.getenv("KEY_PASSWORD")
+            }
+        }
+    }
+
     buildTypes {
+        debug {
+            // Отладочные инструменты (перехват запросов) включены.
+            buildConfigField("boolean", "DEBUG_TOOLS", "true")
+        }
         release {
             isMinifyEnabled = false
+            // В release отладочных инструментов нет: код лежит только в src/debug, здесь пустая заглушка.
+            buildConfigField("boolean", "DEBUG_TOOLS", "false")
+            signingConfig = if (releaseKeystorePath != null) {
+                signingConfigs.getByName("release")
+            } else {
+                signingConfigs.getByName("debug")
+            }
         }
     }
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 
     compileOptions {
@@ -55,4 +82,7 @@ dependencies {
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
+
+    // Только для debug-сборки (перехват запросов в WebView).
+    debugImplementation("androidx.webkit:webkit:1.12.1")
 }

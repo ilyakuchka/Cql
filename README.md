@@ -30,5 +30,23 @@
 
 ## Сборка
 
-Только вручную: **Actions → Android build → Run workflow**. APK появится в артефактах запуска
-(`me.senkuro.unofficial-debug`).
+Только вручную: **Actions → Android build → Run workflow**, в поле `build_type` выберите `debug` или `release`.
+APK появится в артефактах запуска (`me.senkuro.unofficial-debug` / `me.senkuro.unofficial-release`).
+
+### Отладочные инструменты (только debug)
+
+В debug-сборке на вкладке «Библиотека» есть кнопка «Отладка: перехват запросов сайта». Она открывает senkuro.me
+во встроенном браузере и записывает все GraphQL-вызовы (операция, запрос, переменные, ответ).
+Пароли, токены и cookie вырезаются. Лог можно скопировать или отправить файлом («Поделиться»).
+
+В release-сборке этого нет:
+- код перехвата лежит в `app/src/debug`, в `app/src/release` только пустая заглушка;
+- `BuildConfig.DEBUG_TOOLS` равен `true` в debug и `false` в release, кнопка скрыта;
+- библиотека `androidx.webkit` подключена только как `debugImplementation`;
+- workflow при `release` проверяет APK и падает, если находит в нём код перехвата.
+
+### Подпись release (необязательно)
+
+Если в секретах репозитория заданы `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`,
+`ANDROID_KEY_PASSWORD`, release подписывается вашим ключом. Без них он подписывается debug-ключом: ставится,
+но обновить поверх другой сборки нельзя.
