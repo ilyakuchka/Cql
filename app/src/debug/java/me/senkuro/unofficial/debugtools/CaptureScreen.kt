@@ -91,6 +91,8 @@ private fun createWebView(context: Context, onHistory: (Boolean) -> Unit): WebHo
     web.webViewClient = object : WebViewClient() {
         override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
             if (!documentStart) view?.evaluateJavascript(CaptureScript.JS, null)
+            // Переходы между страницами (редиректы авторизации) тоже попадают в лог.
+            url?.let { CaptureLog.navigated(it) }
         }
 
         override fun doUpdateVisitedHistory(view: WebView?, url: String?, isReload: Boolean) {
@@ -143,6 +145,13 @@ fun CaptureScreen(onBack: () -> Unit) {
             OutlinedButton(onClick = { copyReport(context) }) { Text("Копировать") }
             OutlinedButton(onClick = { shareReport(context) }) { Text("Поделиться") }
             OutlinedButton(onClick = { CaptureLog.clear() }) { Text("Очистить") }
+            // Быстрый переход на домены (не меняет домен приложения, только страницу в браузере).
+            SenkuroConfig.DOMAINS.forEach { domain ->
+                OutlinedButton(onClick = {
+                    tab = 0
+                    holder.view.loadUrl(domain.baseUrl)
+                }) { Text(domain.title) }
+            }
         }
 
         if (tab == 0) {

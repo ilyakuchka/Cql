@@ -1,7 +1,8 @@
 package me.senkuro.unofficial.debugtools
 
 /**
- * JS, который подменяет fetch и XMLHttpRequest и передаёт GraphQL-вызовы в Kotlin через SenkuroDebug.log.
+ * JS, который подменяет fetch и XMLHttpRequest и передаёт вызовы в Kotlin через SenkuroDebug.log:
+ * все GraphQL-запросы и любые не-GET запросы к хостам senkuro/shiruho/senkognito (вход, OAuth и т.п.).
  * Дополнительно ловит вычисление sha256 (persisted queries): так получаем текст запроса по его хешу.
  */
 internal object CaptureScript {
@@ -10,11 +11,25 @@ internal object CaptureScript {
   if (window.__senkuroCapture) return;
   window.__senkuroCapture = true;
 
+  function absUrl(u) {
+    try { return new URL(String(u), location.href).href; } catch (e) { return String(u); }
+  }
   function isGql(u) {
-    try { return String(u).indexOf('/graphql') !== -1; } catch (e) { return false; }
+    return String(u).indexOf('/graphql') !== -1;
+  }
+  function ownHost(u) {
+    try { return /senkuro|shiruho|senkognito/i.test(new URL(String(u), location.href).host); } catch (e) { return false; }
+  }
+  function wanted(u, m) {
+    return isGql(u) || (m !== 'GET' && m !== 'HEAD' && m !== 'OPTIONS' && ownHost(u));
   }
   function send(o) {
     try { SenkuroDebug.log(JSON.stringify(o)); } catch (e) {}
+  }
+  function bodyText(b) {
+    if (typeof b === 'string') return b;
+    try { if (b && typeof URLSearchParams !== 'undefined' && b instanceof URLSearchParams) return b.toString(); } catch (e) {}
+    return null;
   }
   // GET-запросы (persisted queries через query string) превращаем в тело {operationName, variables, extensions}.
   function bodyFromUrl(u) {
@@ -34,31 +49,32 @@ internal object CaptureScript {
   var origFetch = window.fetch;
   if (origFetch) {
     window.fetch = function (input, init) {
-      var url = (typeof input === 'string') ? input : (input && input.url);
-      var method = (init && init.method) || (input && input.method) || 'GET';
+      var rawUrl = (typeof input === 'string') ? input : (input && input.url);
+      var url = absUrl(rawUrl);
+      var method = String((init && init.method) || (input && input.method) || 'GET').toUpperCase();
       var promise = origFetch.apply(this, arguments);
-      if (isGql(url)) {
+      if (wanted(url, method)) {
         var initBody = init && init.body;
         var bodyPromise;
-        if (typeof initBody === 'string') {
-          bodyPromise = Promise.resolve(initBody);
+        if (bodyText(initBody) !== null) {
+          bodyPromise = Promise.resolve(bodyText(initBody));
         } else if (!initBody && input && typeof input.clone === 'function' && method !== 'GET') {
           try { bodyPromise = input.clone().text().catch(function () { return null; }); }
           catch (e) { bodyPromise = Promise.resolve(null); }
         } else {
-          bodyPromise = Promise.resolve(bodyFromUrl(url));
+          bodyPromise = Promise.resolve(method === 'GET' ? bodyFromUrl(url) : null);
         }
         promise.then(function (res) {
           var textPromise;
           try { textPromise = res.clone().text(); }
           catch (e) { textPromise = Promise.resolve(null); }
           Promise.all([bodyPromise, textPromise.catch(function () { return null; })]).then(function (r) {
-            send({ url: String(url), method: method, body: r[0], status: res.status, response: r[1],
+            send({ url: url, method: method, body: r[0], status: res.status, response: r[1],
                    note: r[1] === null ? 'fetch: тело ответа недоступно' : null });
           });
         }, function (err) {
           bodyPromise.then(function (b) {
-            send({ url: String(url), method: method, body: b, error: String(err) });
+            send({ url: url, method: method, body: b, error: String(err) });
           });
         });
       }
@@ -70,13 +86,13 @@ internal object CaptureScript {
   var xhrOpen = XMLHttpRequest.prototype.open;
   var xhrSend = XMLHttpRequest.prototype.send;
   XMLHttpRequest.prototype.open = function (method, url) {
-    this.__senkuro = { url: String(url), method: method };
+    this.__senkuro = { url: absUrl(url), method: String(method || 'GET').toUpperCase() };
     return xhrOpen.apply(this, arguments);
   };
   XMLHttpRequest.prototype.send = function (body) {
     var meta = this.__senkuro;
-    if (meta && isGql(meta.url)) {
-      meta.body = (typeof body === 'string') ? body : bodyFromUrl(meta.url);
+    if (meta && wanted(meta.url, meta.method)) {
+      meta.body = (bodyText(body) !== null) ? bodyText(body) : (meta.method === 'GET' ? bodyFromUrl(meta.url) : null);
       this.addEventListener('loadend', function () {
         meta.status = this.status;
         try {

@@ -11,11 +11,16 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonObject
+import java.net.URI
+import java.net.URLDecoder
 import java.util.concurrent.ConcurrentHashMap
 
 class CapturedCall(
     val time: Long,
+    /** Адрес запроса: значения секретных параметров вырезаны, фрагмент (#...) скрыт. */
     val url: String,
+    /** true — GraphQL, false — прочий HTTP-запрос (вход, OAuth) или переход по странице. */
+    val graphql: Boolean,
     val operation: String,
     val query: String,
     /** sha256 из extensions.persistedQuery (если сайт шлёт persisted query). */
@@ -29,7 +34,7 @@ class CapturedCall(
     val note: String?,
 )
 
-/** Журнал перехваченных GraphQL-вызовов. Секретные значения (пароли, токены, cookie) вырезаются при записи. */
+/** Журнал перехваченных вызовов. Секретные значения (пароли, токены, code/state, cookie) вырезаются при записи. */
 object CaptureLog {
 
     val calls = mutableStateListOf<CapturedCall>()
@@ -46,6 +51,14 @@ object CaptureLog {
         RegexOption.IGNORE_CASE,
     )
 
+    /** Ключи, значения которых скрываем в URL и в form-urlencoded телах (OAuth-параметры и т.п.). */
+    private val urlSecretKey = Regex(
+        "^(code|state|ticket|sig|signature|key|jwt|sid|nonce|.*secret.*|.*password.*)$",
+        RegexOption.IGNORE_CASE,
+    )
+
+    private fun isSecret(key: String) = secretKey.matches(key) || urlSecretKey.matches(key)
+
     fun clear() = calls.clear()
 
     /** Вызывается из потока WebView; запись переносится в главный поток. */
@@ -53,6 +66,26 @@ object CaptureLog {
         val parsed = runCatching { parse(raw) }.getOrNull().orEmpty()
         if (parsed.isEmpty()) return
         main.post { parsed.forEach { calls.add(0, it) } }
+    }
+
+    /** Переход браузера на страницу (например, редиректы авторизации). */
+    fun navigated(url: String) {
+        val call = CapturedCall(
+            time = System.currentTimeMillis(),
+            url = safeUrl(url),
+            graphql = false,
+            operation = "PAGE ${path(url)}",
+            query = "",
+            hash = null,
+            variables = "",
+            variablesJson = null,
+            extensions = "",
+            status = null,
+            response = null,
+            error = null,
+            note = null,
+        )
+        main.post { calls.add(0, call) }
     }
 
     /** Текст запроса: из тела вызова либо найденный по хешу. */
@@ -69,42 +102,64 @@ object CaptureLog {
             return emptyList()
         }
 
+        val rawUrl = obj["url"].asText().orEmpty()
+        val method = obj["method"].asText()?.uppercase() ?: "POST"
+        val isGql = rawUrl.contains("/graphql")
         val body = obj["body"].asText()
         val response = obj["response"].asText()
         val status = (obj["status"] as? JsonPrimitive)?.intOrNull
         val error = obj["error"].asText()
         val note = obj["note"].asText()
 
-        val bodyJson = body?.let { runCatching { json.parseToJsonElement(it) }.getOrNull() }
+        val bodyElement: JsonElement? = body?.let { b ->
+            runCatching { json.parseToJsonElement(b) }.getOrNull()?.takeIf { it is JsonObject || it is JsonArray }
+                ?: parseForm(b)
+                ?: JsonPrimitive("<тело не JSON: ${b.length} симв., скрыто>")
+        }
         val responseJson = response?.let { runCatching { json.parseToJsonElement(it) }.getOrNull() }
 
-        val requests: List<JsonObject?> = when (bodyJson) {
-            is JsonArray -> bodyJson.map { it as? JsonObject }
-            is JsonObject -> listOf(bodyJson)
-            else -> listOf(null)
+        val items: List<JsonElement?> = when (bodyElement) {
+            is JsonArray -> bodyElement.toList()
+            null -> listOf(null)
+            else -> listOf(bodyElement)
         }
         val responses: List<JsonElement?> = when {
-            bodyJson is JsonArray && responseJson is JsonArray -> responseJson.toList()
+            bodyElement is JsonArray && responseJson is JsonArray -> responseJson.toList()
             else -> listOf(responseJson)
         }
 
+        val url = safeUrl(rawUrl)
         val now = System.currentTimeMillis()
-        return requests.mapIndexed { index, request ->
+        return items.mapIndexed { index, item ->
+            val request = item as? JsonObject
+            val gqlRequest = isGql && request != null &&
+                (request.containsKey("query") || request.containsKey("operationName") || request.containsKey("extensions"))
+            val variables: JsonElement? = if (gqlRequest) request!!["variables"]?.let { redact(it) } else item?.let { redact(it) }
             val responseItem = responses.getOrNull(index) ?: responses.firstOrNull()
-            val variables = request?.get("variables")?.let { redact(it) }
+
             CapturedCall(
                 time = now,
-                url = obj["url"].asText().orEmpty(),
-                operation = request?.get("operationName").asText()?.ifBlank { null }
-                    ?: guessOperation(request?.get("query").asText())
-                    ?: "(без имени)",
-                query = request?.get("query").asText().orEmpty(),
-                hash = hashOf(request),
+                url = url,
+                graphql = isGql,
+                operation = when {
+                    gqlRequest -> request!!["operationName"].asText()?.ifBlank { null }
+                        ?: guessOperation(request["query"].asText())
+                        ?: "(без имени)"
+                    isGql -> "(без имени)"
+                    else -> "$method ${path(rawUrl)}"
+                },
+                query = if (gqlRequest) request!!["query"].asText().orEmpty() else "",
+                hash = if (gqlRequest) hashOf(request) else null,
                 variables = variables?.let { pretty.encodeToString(JsonElement.serializer(), it) }.orEmpty(),
                 variablesJson = variables,
-                extensions = request?.get("extensions")?.let { pretty.encodeToString(JsonElement.serializer(), redact(it)) }.orEmpty(),
+                extensions = if (gqlRequest) {
+                    request!!["extensions"]?.let { pretty.encodeToString(JsonElement.serializer(), redact(it)) }.orEmpty()
+                } else {
+                    ""
+                },
                 status = status,
-                response = responseItem?.let { redact(it).toString() } ?: response,
+                response = responseItem?.let { redact(it).toString() }
+                    ?: response?.let { "<ответ не JSON: ${it.length} симв., скрыт>" },
                 error = error,
                 note = note,
             )
@@ -119,6 +174,39 @@ object CaptureLog {
 
     private fun guessOperation(query: String?): String? =
         query?.let { Regex("(query|mutation|subscription)\\s+(\\w+)").find(it)?.groupValues?.get(2) }
+
+    private fun path(url: String): String = runCatching {
+        val u = URI(url.substringBefore('#'))
+        u.host.orEmpty() + u.path.orEmpty()
+    }.getOrDefault(url.substringBefore('?').substringBefore('#'))
+
+    private fun decode(s: String) = runCatching { URLDecoder.decode(s, "UTF-8") }.getOrDefault(s)
+
+    /** Адрес без секретных значений: параметры из isSecret вырезаются, фрагмент скрывается. */
+    private fun safeUrl(url: String): String {
+        val hasFragment = url.contains('#')
+        val noFragment = url.substringBefore('#')
+        val base = noFragment.substringBefore('?')
+        val query = noFragment.substringAfter('?', "")
+        val params = if (query.isEmpty()) "" else "?" + query.split('&').joinToString("&") { pair ->
+            val key = pair.substringBefore('=')
+            val value = pair.substringAfter('=', "")
+            "$key=" + if (isSecret(decode(key))) "<redacted>" else value
+        }
+        return base + params + if (hasFragment) "#<скрыто>" else ""
+    }
+
+    /** Тело вида a=b&c=d (form-urlencoded) → объект; секретные значения вырезаются. */
+    private fun parseForm(text: String): JsonElement? {
+        if (!text.contains('=') || text.any { it == ' ' || it == '\n' || it == '{' }) return null
+        val map = LinkedHashMap<String, JsonElement>()
+        text.split('&').forEach { pair ->
+            val key = decode(pair.substringBefore('='))
+            val value = decode(pair.substringAfter('=', ""))
+            map[key] = JsonPrimitive(if (isSecret(key)) "<redacted>" else value)
+        }
+        return JsonObject(map)
+    }
 
     private fun redact(element: JsonElement): JsonElement = when (element) {
         is JsonObject -> JsonObject(
@@ -151,11 +239,11 @@ object CaptureLog {
      */
     fun report(maxResponse: Int = 6000, maxVariants: Int = 15): String {
         val snapshot = calls.toList().asReversed()
-        val groups = snapshot.groupBy { it.operation to (it.hash ?: it.query) }
+        val groups = snapshot.groupBy { Triple(it.operation, it.hash ?: it.query, if (it.graphql) "" else it.url) }
         val text = buildString {
-            appendLine("# Senkuro: перехваченные GraphQL-операции")
+            appendLine("# Senkuro: перехваченные вызовы")
             appendLine("Всего вызовов: ${snapshot.size}, уникальных операций: ${groups.size}")
-            appendLine("Пароли, токены, cookie и email вырезаны (<redacted>).")
+            appendLine("Пароли, токены, code/state, cookie и email вырезаны (<redacted>).")
             appendLine()
             groups.entries.forEachIndexed { index, (key, list) ->
                 val first = list.first()
@@ -163,9 +251,11 @@ object CaptureLog {
                 if (first.url.isNotBlank()) appendLine("URL: ${first.url}")
                 first.hash?.let { appendLine("sha256: $it") }
 
-                val query = queryOf(first)
-                appendLine("### Query")
-                appendLine(if (query.isNotBlank()) query.trim() else "(текст запроса не перехвачен, есть только хеш)")
+                if (first.graphql) {
+                    val query = queryOf(first)
+                    appendLine("### Query")
+                    appendLine(if (query.isNotBlank()) query.trim() else "(текст запроса не перехвачен, есть только хеш)")
+                }
 
                 val values = LinkedHashMap<String, MutableSet<String>>()
                 list.forEach { collect(it.variablesJson, "", values) }
@@ -183,15 +273,16 @@ object CaptureLog {
                     appendLine(first.variables)
                 }
 
-                val sample = list.firstOrNull { it.response != null }
-                if (sample?.response != null) {
-                    appendLine("### Response (пример)")
-                    val r = sample.response
-                    appendLine(if (r.length > maxResponse) r.take(maxResponse) + "\n…(обрезано)" else r)
-                } else {
-                    val why = list.firstNotNullOfOrNull { it.error ?: it.note }
-                    appendLine("### Response")
-                    appendLine("(ответ не получен${why?.let { ": $it" }.orEmpty()})")
+                if (first.graphql || first.status != null || first.error != null) {
+                    val sample = list.firstOrNull { it.response != null }
+                    appendLine("### Response" + if (sample?.response != null) " (пример)" else "")
+                    if (sample?.response != null) {
+                        val r = sample.response
+                        appendLine(if (r.length > maxResponse) r.take(maxResponse) + "\n…(обрезано)" else r)
+                    } else {
+                        val why = list.firstNotNullOfOrNull { it.error ?: it.note }
+                        appendLine("(ответ не получен${why?.let { ": $it" }.orEmpty()})")
+                    }
                 }
                 appendLine()
             }
