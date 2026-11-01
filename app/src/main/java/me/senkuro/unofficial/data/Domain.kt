@@ -1,0 +1,80 @@
+package me.senkuro.unofficial.data
+
+import kotlinx.serialization.Serializable
+
+@Serializable
+data class MangaItem(
+    val id: String,
+    val slug: String,
+    val title: String,
+    val cover: String? = null,
+)
+
+data class MangaDetails(
+    val item: MangaItem,
+    val altNames: List<String>,
+    val description: String,
+    val type: String?,
+    val status: String?,
+    val ageRating: String?,
+    val formats: List<String>,
+    val translationStatus: String?,
+    val labels: List<String>,
+    val authors: String?,
+    val artists: String?,
+)
+
+data class Chapter(
+    val id: String,
+    val slug: String,
+    val branchId: String,
+    val name: String?,
+    val number: String,
+    val volume: String,
+    val date: String?,
+    val teams: List<String>,
+) {
+    val numberValue: Float get() = number.toFloatOrNull() ?: 0f
+    val volumeValue: Float get() = volume.toFloatOrNull() ?: 0f
+
+    val title: String
+        get() = buildString {
+            if (volume.isNotBlank() && volume != "0") append("Том ").append(volume).append(". ")
+            append("Глава ").append(number)
+            if (!name.isNullOrBlank()) append(" — ").append(name)
+        }
+}
+
+data class Branch(val id: String, val label: String, val chapters: List<Chapter>)
+
+data class ChaptersResult(val chapters: List<Chapter>, val message: String?) {
+    /** Ветки переводов: самая заполненная — первой. Главы внутри ветки — по возрастанию. */
+    val branches: List<Branch> by lazy {
+        val comparator = compareBy<Chapter>({ it.volumeValue }, { it.numberValue })
+        chapters.groupBy { it.branchId }
+            .values
+            .sortedByDescending { it.size }
+            .mapIndexed { index, list ->
+                val teams = list.flatMap { it.teams }.distinct()
+                val label = if (teams.isEmpty()) "Ветка ${index + 1}" else teams.take(2).joinToString(", ")
+                Branch(list.first().branchId, label, list.sortedWith(comparator))
+            }
+    }
+}
+
+data class HomeData(
+    val latest: List<MangaItem>,
+    val popular: List<MangaItem>,
+    val newTitles: List<MangaItem>,
+    val recommendations: List<MangaItem>,
+)
+
+data class LabelItem(val slug: String, val title: String, val rootId: String?)
+
+@Serializable
+data class HistoryEntry(
+    val manga: MangaItem,
+    val chapterId: String,
+    val chapterTitle: String,
+    val at: Long,
+)

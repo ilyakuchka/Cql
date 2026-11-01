@@ -1,0 +1,9 @@
+query HomeRecommendations {
+  mangaRecommendations {
+    id
+    slug
+    originalName { lang content }
+    titles { lang content }
+    cover { original { url } }
+  }
+}

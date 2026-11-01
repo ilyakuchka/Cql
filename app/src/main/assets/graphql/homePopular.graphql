@@ -1,0 +1,9 @@
+query HomePopular {
+  mangaPopularByPeriod(period: DAY) {
+    id
+    slug
+    originalName { lang content }
+    titles { lang content }
+    cover { original { url } }
+  }
+}

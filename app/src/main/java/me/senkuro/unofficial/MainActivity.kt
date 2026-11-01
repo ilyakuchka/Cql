@@ -1,20 +1,21 @@
 package me.senkuro.unofficial
 
-import android.app.Activity
 import android.os.Bundle
-import android.view.Gravity
-import android.widget.TextView
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
+import me.senkuro.unofficial.ui.AppRoot
+import me.senkuro.unofficial.ui.UnofficialTheme
 
-class MainActivity : Activity() {
+class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        enableEdgeToEdge()
         super.onCreate(savedInstanceState)
-        setContentView(
-            TextView(this).apply {
-                text = getString(R.string.app_name)
-                gravity = Gravity.CENTER
-                textSize = 20f
+        setContent {
+            UnofficialTheme {
+                AppRoot()
             }
-        )
+        }
     }
 }

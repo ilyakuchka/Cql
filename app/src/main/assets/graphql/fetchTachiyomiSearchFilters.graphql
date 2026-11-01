@@ -1,0 +1,13 @@
+query fetchTachiyomiSearchFilters {
+  mangaTachiyomiSearchFilters {
+    labels {
+      id
+      rootId
+      slug
+      titles {
+        lang
+        content
+      }
+    }
+  }
+}

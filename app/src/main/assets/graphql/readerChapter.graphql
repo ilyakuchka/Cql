@@ -1,0 +1,20 @@
+query Reader($slug: String!, $cdn_quality: String) {
+  mangaChapter(slug: $slug) {
+    id
+    slug
+    name
+    number
+    volume
+    pages(cdnQuality: $cdn_quality) {
+      id
+      number
+      image {
+        original {
+          height
+          width
+          url
+        }
+      }
+    }
+  }
+}

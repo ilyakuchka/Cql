@@ -1,0 +1,18 @@
+query HomeLatest($after: String) {
+  mangas(
+    first: 20
+    after: $after
+    orderBy: { field: LAST_CHAPTER_AT, direction: DESC }
+  ) {
+    edges {
+      node {
+        id
+        slug
+        originalName { lang content }
+        titles { lang content }
+        cover { original { url } }
+      }
+    }
+    pageInfo { hasNextPage endCursor }
+  }
+}

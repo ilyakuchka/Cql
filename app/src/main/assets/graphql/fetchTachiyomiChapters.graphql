@@ -1,0 +1,21 @@
+query fetchTachiyomiChapters($mangaId: ID!) {
+  mangaTachiyomiChapters(mangaId: $mangaId) {
+    message
+    chapters {
+      id
+      slug
+      branchId
+      name
+      teamIds
+      number
+      volume
+      createdAt
+      updatedAt
+    }
+    teams {
+      id
+      slug
+      name
+    }
+  }
+}

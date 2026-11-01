@@ -1,0 +1,47 @@
+query fetchTachiyomiManga($mangaId: ID!) {
+  mangaTachiyomiInfo(mangaId: $mangaId) {
+    id
+    slug
+    originalName {
+      lang
+      content
+    }
+    titles {
+      lang
+      content
+    }
+    alternativeNames {
+      lang
+      content
+    }
+    localizations {
+      lang
+      description
+    }
+    type
+    rating
+    status
+    formats
+    labels {
+      id
+      rootId
+      slug
+      titles {
+        lang
+        content
+      }
+    }
+    translationStatus
+    cover {
+      original {
+        url
+      }
+    }
+    mainStaff {
+      roles
+      person {
+        name
+      }
+    }
+  }
+}

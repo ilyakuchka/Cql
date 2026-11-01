@@ -1,0 +1,45 @@
+query searchTachiyomiManga(
+  $query: String,
+  $type: MangaTachiyomiSearchTypeFilter,
+  $status: MangaTachiyomiSearchStatusFilter,
+  $rating: MangaTachiyomiSearchRatingFilter,
+  $format: MangaTachiyomiSearchFormatFilter,
+  $translationStatus: MangaTachiyomiSearchTranslationStatusFilter,
+  $label: MangaTachiyomiSearchLabelFilter,
+  $orderBy: MangaTachiyomiOrder,
+  $offset: Int
+) {
+  mangaTachiyomiSearch(
+    query: $query,
+    type: $type,
+    status: $status,
+    rating: $rating,
+    format: $format,
+    translationStatus: $translationStatus,
+    label: $label,
+    orderBy: $orderBy,
+    offset: $offset
+  ) {
+    mangas {
+      id
+      slug
+      originalName {
+        lang
+        content
+      }
+      titles {
+        lang
+        content
+      }
+      alternativeNames {
+        lang
+        content
+      }
+      cover {
+        original {
+          url
+        }
+      }
+    }
+  }
+}
