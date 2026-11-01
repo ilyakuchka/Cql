@@ -182,7 +182,8 @@ private fun LogList() {
                 )
                 if (open) {
                     if (call.variables.isNotBlank()) Block("Variables", call.variables)
-                    if (call.query.isNotBlank()) Block("Query", call.query)
+                    val query = CaptureLog.queryOf(call)
+                    Block("Query", if (query.isNotBlank()) query else "(текст не перехвачен, хеш: ${call.hash ?: "—"})")
                     (call.response ?: call.error)?.let { Block("Response", it.take(4000)) }
                 } else if (call.variables.isNotBlank()) {
                     Text(

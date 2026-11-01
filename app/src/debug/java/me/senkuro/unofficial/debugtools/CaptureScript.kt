@@ -1,6 +1,9 @@
 package me.senkuro.unofficial.debugtools
 
-/** JS, который подменяет fetch и XMLHttpRequest и передаёт GraphQL-вызовы в Kotlin через SenkuroDebug.log. */
+/**
+ * JS, который подменяет fetch и XMLHttpRequest и передаёт GraphQL-вызовы в Kotlin через SenkuroDebug.log.
+ * Дополнительно ловит вычисление sha256 (persisted queries): так получаем текст запроса по его хешу.
+ */
 internal object CaptureScript {
     val JS = """
 (function () {
@@ -13,7 +16,21 @@ internal object CaptureScript {
   function send(o) {
     try { SenkuroDebug.log(JSON.stringify(o)); } catch (e) {}
   }
+  // GET-запросы (persisted queries через query string) превращаем в тело {operationName, variables, extensions}.
+  function bodyFromUrl(u) {
+    try {
+      var p = new URL(String(u), location.href).searchParams;
+      if (!p.has('operationName') && !p.has('query') && !p.has('extensions')) return null;
+      var o = {};
+      p.forEach(function (v, k) {
+        if (k === 'variables' || k === 'extensions') { try { o[k] = JSON.parse(v); } catch (e) { o[k] = v; } }
+        else { o[k] = v; }
+      });
+      return JSON.stringify(o);
+    } catch (e) { return null; }
+  }
 
+  // ---- fetch
   var origFetch = window.fetch;
   if (origFetch) {
     window.fetch = function (input, init) {
@@ -25,16 +42,19 @@ internal object CaptureScript {
         var bodyPromise;
         if (typeof initBody === 'string') {
           bodyPromise = Promise.resolve(initBody);
-        } else if (!initBody && input && typeof input.clone === 'function') {
+        } else if (!initBody && input && typeof input.clone === 'function' && method !== 'GET') {
           try { bodyPromise = input.clone().text().catch(function () { return null; }); }
           catch (e) { bodyPromise = Promise.resolve(null); }
         } else {
-          bodyPromise = Promise.resolve(null);
+          bodyPromise = Promise.resolve(bodyFromUrl(url));
         }
         promise.then(function (res) {
-          var copy = res.clone();
-          Promise.all([bodyPromise, copy.text().catch(function () { return null; })]).then(function (r) {
-            send({ url: String(url), method: method, body: r[0], status: res.status, response: r[1] });
+          var textPromise;
+          try { textPromise = res.clone().text(); }
+          catch (e) { textPromise = Promise.resolve(null); }
+          Promise.all([bodyPromise, textPromise.catch(function () { return null; })]).then(function (r) {
+            send({ url: String(url), method: method, body: r[0], status: res.status, response: r[1],
+                   note: r[1] === null ? 'fetch: тело ответа недоступно' : null });
           });
         }, function (err) {
           bodyPromise.then(function (b) {
@@ -46,6 +66,7 @@ internal object CaptureScript {
     };
   }
 
+  // ---- XMLHttpRequest
   var xhrOpen = XMLHttpRequest.prototype.open;
   var xhrSend = XMLHttpRequest.prototype.send;
   XMLHttpRequest.prototype.open = function (method, url) {
@@ -55,17 +76,47 @@ internal object CaptureScript {
   XMLHttpRequest.prototype.send = function (body) {
     var meta = this.__senkuro;
     if (meta && isGql(meta.url)) {
-      meta.body = (typeof body === 'string') ? body : null;
+      meta.body = (typeof body === 'string') ? body : bodyFromUrl(meta.url);
       this.addEventListener('loadend', function () {
         meta.status = this.status;
         try {
-          meta.response = (this.responseType === '' || this.responseType === 'text') ? this.responseText : null;
-        } catch (e) {}
+          var t = this.responseType;
+          if (t === '' || t === 'text') { meta.response = this.responseText; }
+          else if (t === 'json') { meta.response = JSON.stringify(this.response); }
+          else { meta.note = 'XHR responseType=' + t; }
+        } catch (e) { meta.note = 'XHR: не удалось прочитать ответ: ' + e; }
         send(meta);
       });
     }
     return xhrSend.apply(this, arguments);
   };
+
+  // ---- sha256 для persisted queries: связываем хеш с текстом запроса
+  try {
+    var subtle = window.crypto && window.crypto.subtle;
+    if (subtle) {
+      var proto = Object.getPrototypeOf(subtle);
+      var origDigest = proto.digest;
+      proto.digest = function (alg, data) {
+        var promise = origDigest.apply(this, arguments);
+        try {
+          var name = (typeof alg === 'string') ? alg : ((alg && alg.name) || '');
+          if (/sha-?256/i.test(name)) {
+            var text = new TextDecoder().decode(data);
+            if (/^\s*(query|mutation|subscription|fragment)\b/.test(text)) {
+              promise.then(function (buf) {
+                var hex = Array.prototype.map.call(new Uint8Array(buf), function (b) {
+                  return ('0' + b.toString(16)).slice(-2);
+                }).join('');
+                send({ kind: 'hash', hash: hex, query: text });
+              });
+            }
+          }
+        } catch (e) {}
+        return promise;
+      };
+    }
+  } catch (e) {}
 })();
 """.trimIndent()
 }
