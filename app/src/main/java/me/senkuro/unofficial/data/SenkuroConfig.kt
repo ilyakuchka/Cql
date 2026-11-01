@@ -1,10 +1,48 @@
 package me.senkuro.unofficial.data
 
+import java.net.URI
+
+/** Домен Senkuro: адрес сайта и адрес GraphQL API. */
+class Domain(
+    val id: String,
+    val title: String,
+    val baseUrl: String,
+    val apiUrl: String,
+) {
+    val apiHost: String get() = URI(apiUrl).host.orEmpty()
+}
+
 /** Константы подключения к Senkuro (значения взяты из приложенных расширений). */
 object SenkuroConfig {
-    const val BASE_URL = "https://senkuro.me"
-    const val API_URL = "https://api.senkuro.me/graphql"
-    const val API_HOST = "api.senkuro.me"
+
+    val DOMAINS = listOf(
+        Domain(
+            id = "me",
+            title = "senkuro.me",
+            baseUrl = "https://senkuro.me",
+            apiUrl = "https://api.senkuro.me/graphql",
+        ),
+        // Адрес API выведен по тому же правилу, что в расширении Tachiyomi (https://api.<домен>/graphql).
+        // Если у sso.senkuro.net другой адрес API, поменяйте apiUrl здесь.
+        Domain(
+            id = "sso",
+            title = "sso.senkuro.net",
+            baseUrl = "https://sso.senkuro.net",
+            apiUrl = "https://api.sso.senkuro.net/graphql",
+        ),
+    )
+
+    /** Выбранный сейчас домен (меняется через AppGraph.setDomain). */
+    @Volatile
+    var current: Domain = DOMAINS.first()
+
+    val BASE_URL: String get() = current.baseUrl
+    val API_URL: String get() = current.apiUrl
+
+    fun byId(id: String?): Domain = DOMAINS.firstOrNull { it.id == id } ?: DOMAINS.first()
+
+    /** Хост API любого из доменов (заголовки API ставим только на такие запросы). */
+    fun isApiHost(host: String): Boolean = DOMAINS.any { it.apiHost == host }
 
     const val USER_AGENT =
         "Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 " +

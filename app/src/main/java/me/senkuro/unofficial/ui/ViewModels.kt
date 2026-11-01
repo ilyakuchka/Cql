@@ -9,6 +9,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 import me.senkuro.unofficial.data.AppGraph
 import me.senkuro.unofficial.data.CatalogFilters
@@ -34,6 +35,10 @@ class HomeViewModel : ViewModel() {
 
     init {
         load()
+        // Смена домена: загружаем главную заново.
+        viewModelScope.launch {
+            AppGraph.domain.drop(1).collect { load() }
+        }
     }
 
     fun load() {
@@ -72,6 +77,19 @@ class CatalogViewModel : ViewModel() {
 
     init {
         refresh()
+        loadLabels()
+        // Смена домена: сбрасываем фильтры по меткам (набор меток может отличаться) и грузим каталог заново.
+        viewModelScope.launch {
+            AppGraph.domain.drop(1).collect {
+                labels = emptyList()
+                filters = filters.cleared()
+                loadLabels()
+                refresh()
+            }
+        }
+    }
+
+    private fun loadLabels() {
         viewModelScope.launch {
             try {
                 labels = AppGraph.repository.labels()

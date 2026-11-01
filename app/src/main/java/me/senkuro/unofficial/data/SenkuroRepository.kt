@@ -12,6 +12,13 @@ class SenkuroRepository(private val api: SenkuroApi) {
     private val detailsCache = HashMap<String, MangaDetails>()
     private var labelsCache: List<LabelItem>? = null
 
+    /** Сбрасывает кэши (нужно при смене домена: идентификаторы и главы могут отличаться). */
+    fun clearCaches() {
+        synchronized(chaptersCache) { chaptersCache.clear() }
+        synchronized(detailsCache) { detailsCache.clear() }
+        labelsCache = null
+    }
+
     // ---------------------------------------------------------------- Каталог
 
     suspend fun search(query: String?, filters: CatalogFilters, offset: Int): List<MangaItem> {

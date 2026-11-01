@@ -30,7 +30,7 @@ private class HeadersInterceptor : Interceptor {
         val builder = original.newBuilder()
         if (original.header("User-Agent") == null) builder.header("User-Agent", SenkuroConfig.USER_AGENT)
         builder.header("Referer", SenkuroConfig.BASE_URL + "/")
-        if (original.url.host == SenkuroConfig.API_HOST) {
+        if (SenkuroConfig.isApiHost(original.url.host)) {
             builder.header("Origin", SenkuroConfig.BASE_URL)
             builder.header("Accept", "application/json")
             builder.header("App-Id", SenkuroConfig.APP_ID)

@@ -16,6 +16,7 @@ import kotlinx.serialization.json.jsonPrimitive
 
 class CapturedCall(
     val time: Long,
+    val url: String,
     val operation: String,
     val query: String,
     val variables: String,
@@ -73,6 +74,7 @@ object CaptureLog {
             val responseItem = responses.getOrNull(index) ?: responses.firstOrNull()
             CapturedCall(
                 time = now,
+                url = obj["url"].asText().orEmpty(),
                 operation = request?.get("operationName").asText()?.ifBlank { null }
                     ?: guessOperation(request?.get("query").asText())
                     ?: "(без имени)",
@@ -114,6 +116,7 @@ object CaptureLog {
             groups.entries.forEachIndexed { index, (key, list) ->
                 val first = list.first()
                 appendLine("## ${index + 1}. ${key.first} (вызовов: ${list.size}, статус: ${first.status ?: "—"})")
+                if (first.url.isNotBlank()) appendLine("URL: ${first.url}")
                 if (first.query.isNotBlank()) {
                     appendLine("### Query")
                     appendLine(first.query.trim())
