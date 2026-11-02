@@ -30,8 +30,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -82,7 +80,6 @@ fun DetailsScreen(
 ) {
     LaunchedEffect(mangaId) { vm.load(mangaId) }
     val library = AppGraph.library
-    val favorites by library.favorites.collectAsState()
     val readIds by library.readIds.collectAsState()
     val context = LocalContext.current
     val item = (vm.state as? UiState.Ready)?.data?.details?.item
@@ -104,20 +101,18 @@ fun DetailsScreen(
         TopActions(
             onBack = onBack,
             onBookmark = { bookmarkDialog = true },
-            favorite = item?.let { manga -> favorites.any { it.id == manga.id } },
-            onFavorite = { item?.let(library::toggleFavorite) },
+            loaded = item != null,
             onShare = { item?.let { shareManga(context, it) } },
         )
     }
 }
 
-/** Верхняя строка поверх обложки: стрелка назад слева; справа белая «таблетка» закладок, сердце и «поделиться». */
+/** Верхняя строка поверх обложки: стрелка назад слева; справа белая «таблетка» закладок и «поделиться». */
 @Composable
 private fun TopActions(
     onBack: () -> Unit,
     onBookmark: () -> Unit,
-    favorite: Boolean?,
-    onFavorite: () -> Unit,
+    loaded: Boolean,
     onShare: () -> Unit,
 ) {
     Row(
@@ -131,7 +126,7 @@ private fun TopActions(
         IconButton(onClick = onBack) {
             Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Назад", tint = Color.White)
         }
-        if (favorite != null) {
+        if (loaded) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = "+ Закладки",
@@ -143,13 +138,6 @@ private fun TopActions(
                         .clickable(onClick = onBookmark)
                         .padding(horizontal = 12.dp, vertical = 5.dp),
                 )
-                IconButton(onClick = onFavorite) {
-                    Icon(
-                        imageVector = if (favorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
-                        contentDescription = "В избранное",
-                        tint = if (favorite) MaterialTheme.colorScheme.primary else Color.White,
-                    )
-                }
                 IconButton(onClick = onShare) {
                     Icon(Icons.Filled.Share, contentDescription = "Поделиться", tint = Color.White)
                 }

@@ -20,7 +20,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
@@ -67,11 +67,11 @@ private object Routes {
 
 private class TopLevel(val route: String, val title: String, val icon: ImageVector)
 
-// Порядок: главная, каталог, избранное (библиотека), настройки.
+// Порядок: главная, каталог, закладки, настройки.
 private val topLevel = listOf(
     TopLevel(Routes.HOME, "Главная", Icons.Filled.Home),
     TopLevel(Routes.CATALOG, "Каталог", CompassIcon),
-    TopLevel(Routes.LIBRARY, "Избранное", Icons.Filled.Favorite),
+    TopLevel(Routes.LIBRARY, "Закладки", Icons.Filled.Star),
     TopLevel(Routes.SETTINGS, "Настройки", Icons.Filled.Settings),
 )
 
