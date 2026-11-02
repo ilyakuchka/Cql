@@ -91,7 +91,7 @@ private fun greeting(): String = when (Calendar.getInstance().get(Calendar.HOUR_
 private fun HomeHeader(onSearch: () -> Unit, onRefresh: () -> Unit, onLogin: () -> Unit, onProfile: () -> Unit) {
     val account by AppGraph.account.collectAsState()
     val token by AppGraph.auth.token.collectAsState()
-    val line = AppColors.Border
+    val line = MaterialTheme.colorScheme.outline
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -107,8 +107,8 @@ private fun HomeHeader(onSearch: () -> Unit, onRefresh: () -> Unit, onLogin: () 
             modifier = Modifier
                 .size(40.dp)
                 .clip(CircleShape)
-                .background(AppColors.Chip)
-                .border(0.8.dp, AppColors.Border, CircleShape)
+                .background(MaterialTheme.colorScheme.surfaceVariant)
+                .border(0.8.dp, MaterialTheme.colorScheme.outline, CircleShape)
                 .clickable { if (token == null) onLogin() else onProfile() },
             contentAlignment = Alignment.Center,
         ) {
@@ -121,7 +121,7 @@ private fun HomeHeader(onSearch: () -> Unit, onRefresh: () -> Unit, onLogin: () 
                     modifier = Modifier.fillMaxSize(),
                 )
             } else {
-                Icon(Icons.Filled.Person, contentDescription = "Войти", tint = AppColors.Secondary)
+                Icon(Icons.Filled.Person, contentDescription = "Войти", tint = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
         Spacer(Modifier.width(12.dp))
@@ -130,13 +130,13 @@ private fun HomeHeader(onSearch: () -> Unit, onRefresh: () -> Unit, onLogin: () 
                 account?.name?.takeIf { it.isNotBlank() }?.let { "${greeting()}, $it" } ?: greeting(),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                color = AppColors.Text,
+                color = MaterialTheme.colorScheme.onBackground,
                 style = HeadingStyle,
             )
-            Text(SenkuroConfig.current.title, color = AppColors.Secondary, fontSize = 11.sp)
+            Text(SenkuroConfig.current.title, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp)
         }
-        IconButton(onClick = onSearch) { Icon(Icons.Filled.Search, contentDescription = "Поиск", tint = AppColors.Text) }
-        IconButton(onClick = onRefresh) { Icon(Icons.Filled.Refresh, contentDescription = "Обновить", tint = AppColors.Text) }
+        IconButton(onClick = onSearch) { Icon(Icons.Filled.Search, contentDescription = "Поиск", tint = MaterialTheme.colorScheme.onBackground) }
+        IconButton(onClick = onRefresh) { Icon(Icons.Filled.Refresh, contentDescription = "Обновить", tint = MaterialTheme.colorScheme.onBackground) }
     }
 }
 
@@ -149,11 +149,11 @@ private fun SectionHeader(title: String, onMore: (() -> Unit)?) {
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
-        Text(title, style = HeadingStyle, color = AppColors.Text)
+        Text(title, style = HeadingStyle, color = MaterialTheme.colorScheme.onBackground)
         if (onMore != null) {
             Text(
                 text = "Ещё",
-                color = AppColors.Secondary,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 fontSize = 12.sp,
                 modifier = Modifier
                     .clip(RoundedCornerShape(4.dp))

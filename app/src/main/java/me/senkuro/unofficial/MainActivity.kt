@@ -6,6 +6,9 @@ import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import me.senkuro.unofficial.data.AppGraph
 import me.senkuro.unofficial.ui.AppRoot
 import me.senkuro.unofficial.ui.UnofficialTheme
 
@@ -19,7 +22,8 @@ class MainActivity : ComponentActivity() {
         )
         super.onCreate(savedInstanceState)
         setContent {
-            UnofficialTheme {
+            val dark by AppGraph.themeDark.collectAsState()
+            UnofficialTheme(dark = dark) {
                 AppRoot()
             }
         }

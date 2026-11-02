@@ -31,6 +31,11 @@ object AppGraph {
     private var accountJob: Job? = null
 
     private val _domain = MutableStateFlow(SenkuroConfig.current)
+    private val _themeDark = MutableStateFlow(false)
+
+    /** Тёмная тема для обычных страниц (страница тайтла и ридер всегда тёмные). */
+    val themeDark: StateFlow<Boolean> = _themeDark.asStateFlow()
+
     private val _account = MutableStateFlow<Account?>(null)
     private val _accountError = MutableStateFlow<String?>(null)
 
@@ -46,6 +51,7 @@ object AppGraph {
         SenkuroConfig.current = SenkuroConfig.byId(settings.getString(KEY_DOMAIN, null))
         _domain.value = SenkuroConfig.current
 
+        _themeDark.value = settings.getBoolean(KEY_DARK, false)
         auth = AuthStore(app)
         httpClient = createHttpClient { auth.current }
         repository = SenkuroRepository(SenkuroApi(app, httpClient))
@@ -62,6 +68,11 @@ object AppGraph {
         _account.value = null
         _domain.value = domain
         refreshAccount()
+    }
+
+    fun setDarkTheme(dark: Boolean) {
+        settings.edit().putBoolean(KEY_DARK, dark).apply()
+        _themeDark.value = dark
     }
 
     /** Загружает аккаунт по сохранённому токену. */
@@ -125,4 +136,5 @@ object AppGraph {
     }
 
     private const val KEY_DOMAIN = "domain"
+    private const val KEY_DARK = "dark_theme"
 }

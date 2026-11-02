@@ -22,13 +22,16 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.ui.unit.sp
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -44,6 +47,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import me.senkuro.unofficial.BuildConfig
+import me.senkuro.unofficial.data.AppGraph
 import me.senkuro.unofficial.data.MangaItem
 import me.senkuro.unofficial.debugtools.DebugTools
 
@@ -53,6 +57,7 @@ private object Routes {
     const val LIBRARY = "library"
     const val DEBUG = "debug"
     const val LOGIN = "login"
+    const val SETTINGS = "settings"
     const val MANGA = "manga/{id}"
     const val READER = "reader/{mangaId}/{chapterId}"
 
@@ -62,11 +67,12 @@ private object Routes {
 
 private class TopLevel(val route: String, val title: String, val icon: ImageVector)
 
-// Порядок как в макете: дом, сердце, компас.
+// Порядок: главная, каталог, избранное (библиотека), настройки.
 private val topLevel = listOf(
     TopLevel(Routes.HOME, "Главная", Icons.Filled.Home),
-    TopLevel(Routes.LIBRARY, "Библиотека", Icons.Filled.Favorite),
     TopLevel(Routes.CATALOG, "Каталог", CompassIcon),
+    TopLevel(Routes.LIBRARY, "Избранное", Icons.Filled.Favorite),
+    TopLevel(Routes.SETTINGS, "Настройки", Icons.Filled.Settings),
 )
 
 @Composable
@@ -74,6 +80,7 @@ fun AppRoot() {
     val nav = rememberNavController()
     val entry by nav.currentBackStackEntryAsState()
     val route = entry?.destination?.route
+    val appDark by AppGraph.themeDark.collectAsState()
     val showBar = topLevel.any { it.route == route }
 
     val openManga: (MangaItem) -> Unit = { nav.navigate(Routes.manga(it.id)) }
@@ -101,7 +108,7 @@ fun AppRoot() {
                         .weight(1f),
                 ) {
                     composable(Routes.HOME) {
-                        UnofficialTheme(dark = false) {
+                        UnofficialTheme(dark = appDark) {
                             HomeScreen(
                                 onManga = openManga,
                                 onSearch = { navigateTop(Routes.CATALOG) },
@@ -111,9 +118,9 @@ fun AppRoot() {
                             )
                         }
                     }
-                    composable(Routes.CATALOG) { UnofficialTheme(dark = false) { CatalogScreen(onManga = openManga) } }
+                    composable(Routes.CATALOG) { UnofficialTheme(dark = appDark) { CatalogScreen(onManga = openManga) } }
                     composable(Routes.LIBRARY) {
-                        UnofficialTheme(dark = false) {
+                        UnofficialTheme(dark = appDark) {
                             LibraryScreen(
                                 onManga = openManga,
                                 onLogin = { nav.navigate(Routes.LOGIN) },
@@ -122,13 +129,14 @@ fun AppRoot() {
                             )
                         }
                     }
+                    composable(Routes.SETTINGS) { UnofficialTheme(dark = appDark) { SettingsScreen() } }
                     composable(Routes.LOGIN) {
-                        UnofficialTheme(dark = false) {
+                        UnofficialTheme(dark = appDark) {
                             LoginScreen(onBack = { nav.popBackStack() }, onDone = { nav.popBackStack() })
                         }
                     }
                     composable(Routes.DEBUG) {
-                        UnofficialTheme(dark = false) { DebugTools.Screen(onBack = { nav.popBackStack() }) }
+                        UnofficialTheme(dark = appDark) { DebugTools.Screen(onBack = { nav.popBackStack() }) }
                     }
 
                     composable(
@@ -182,13 +190,13 @@ private fun BottomBar(route: String?, onSelect: (String) -> Unit, modifier: Modi
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .background(AppColors.Bg),
+            .background(MaterialTheme.colorScheme.background),
     ) {
         Box(
             Modifier
                 .fillMaxWidth()
                 .height(0.8.dp)
-                .background(AppColors.Border),
+                .background(MaterialTheme.colorScheme.outline),
         )
         Row(
             modifier = Modifier
@@ -199,7 +207,7 @@ private fun BottomBar(route: String?, onSelect: (String) -> Unit, modifier: Modi
         ) {
             topLevel.forEach { item ->
                 val selected = route == item.route
-                val tint = if (selected) AppColors.Text else AppColors.Secondary
+                val tint = if (selected) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.onSurfaceVariant
                 Column(
                     modifier = Modifier
                         .weight(1f)

@@ -97,14 +97,14 @@ fun CatalogScreen(onManga: (MangaItem) -> Unit, vm: CatalogViewModel = viewModel
                     shape = RoundedCornerShape(4.dp),
                     textStyle = TextStyle(fontSize = 14.sp),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = AppColors.Chip,
-                        unfocusedContainerColor = AppColors.Chip,
+                        focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
                         focusedBorderColor = Color.Transparent,
                         unfocusedBorderColor = Color.Transparent,
-                        cursorColor = AppColors.Text,
+                        cursorColor = MaterialTheme.colorScheme.onBackground,
                     ),
-                    placeholder = { Text("Поиск по каталогу", fontSize = 14.sp, color = AppColors.Secondary) },
-                    leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null, tint = AppColors.Text) },
+                    placeholder = { Text("Поиск по каталогу", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant) },
+                    leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null, tint = MaterialTheme.colorScheme.onBackground) },
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                     keyboardActions = KeyboardActions(onSearch = {
                         focus.clearFocus()
@@ -113,7 +113,7 @@ fun CatalogScreen(onManga: (MangaItem) -> Unit, vm: CatalogViewModel = viewModel
                 )
                 val active = vm.filters.activeCount
                 TextButton(onClick = { showFilters = true }) {
-                    Text(if (active > 0) "Фильтры ($active)" else "Фильтры", color = AppColors.Secondary, fontSize = 14.sp)
+                    Text(if (active > 0) "Фильтры ($active)" else "Фильтры", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp)
                 }
             }
 
