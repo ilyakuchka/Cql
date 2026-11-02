@@ -1,0 +1,38 @@
+query fetchNotificationFeeds($first: Int!, $after: String, $isRead: Boolean!, $types: [NotificationType!]) {
+  notificationFeeds(first: $first, after: $after, isRead: $isRead, types: $types) {
+    edges {
+      node {
+        id
+        type
+        lastEventAt
+        eventCount
+        notifiable { ...NotifNode }
+        context { ...NotifNode }
+        payload {
+          __typename
+          ... on NotificationFeedMangaChaptersPayload {
+            chapters { id number }
+          }
+        }
+      }
+    }
+    pageInfo { hasNextPage endCursor }
+  }
+}
+fragment NotifNode on Node {
+  __typename
+  id
+  ... on User { name }
+  ... on Post { title }
+  ... on Manga {
+    slug
+    originalName { lang content }
+    titles { lang content }
+    cover { original { url } }
+  }
+  ... on MangaChapter {
+    slug
+    number
+    volume
+  }
+}

@@ -193,3 +193,48 @@ class MutationResponse(val updateUserBookmark: SuccessDto? = null, val deleteUse
 
 @Serializable
 class BookmarkableResponse(val bookmarkable: BookmarkNodeDto? = null)
+
+// ---------------------------------------------------------------- Уведомления
+
+@Serializable
+class UnreadResponse(val viewerUnreadNotifications: kotlinx.serialization.json.JsonElement? = null)
+
+@Serializable
+class NotifNodeDto(
+    @kotlinx.serialization.SerialName("__typename") val typename: String? = null,
+    val id: String? = null,
+    val name: String? = null,
+    val title: String? = null,
+    val slug: String = "",
+    val originalName: Title? = null,
+    val titles: List<Title>? = null,
+    val cover: Cover? = null,
+    val number: kotlinx.serialization.json.JsonElement? = null,
+    val volume: kotlinx.serialization.json.JsonElement? = null,
+)
+
+@Serializable
+class NotifChapterRef(val id: String? = null, val number: kotlinx.serialization.json.JsonElement? = null)
+
+@Serializable
+class NotifPayloadDto(val chapters: List<NotifChapterRef>? = null)
+
+@Serializable
+class NotifFeedDto(
+    val id: String = "",
+    val type: String? = null,
+    val lastEventAt: String? = null,
+    val eventCount: Int? = null,
+    val notifiable: NotifNodeDto? = null,
+    val context: NotifNodeDto? = null,
+    val payload: NotifPayloadDto? = null,
+)
+
+@Serializable
+class NotifEdge(val node: NotifFeedDto)
+
+@Serializable
+class NotifConn(val edges: List<NotifEdge> = emptyList(), val pageInfo: PageInfoDto = PageInfoDto())
+
+@Serializable
+class NotifResponse(val notificationFeeds: NotifConn = NotifConn())

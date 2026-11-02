@@ -58,6 +58,7 @@ private object Routes {
     const val DEBUG = "debug"
     const val LOGIN = "login"
     const val SETTINGS = "settings"
+    const val NOTIFICATIONS = "notifications"
     const val MANGA = "manga/{id}"
     const val READER = "reader/{mangaId}/{chapterId}"
 
@@ -115,6 +116,7 @@ fun AppRoot() {
                                 onMore = { navigateTop(Routes.CATALOG) },
                                 onLogin = { nav.navigate(Routes.LOGIN) },
                                 onProfile = { navigateTop(Routes.LIBRARY) },
+                                onNotifications = { nav.navigate(Routes.NOTIFICATIONS) },
                             )
                         }
                     }
@@ -127,6 +129,11 @@ fun AppRoot() {
                                 // Кнопка есть только в debug-сборке (BuildConfig.DEBUG_TOOLS = false в release).
                                 onDebug = if (BuildConfig.DEBUG_TOOLS) ({ nav.navigate(Routes.DEBUG) }) else null,
                             )
+                        }
+                    }
+                    composable(Routes.NOTIFICATIONS) {
+                        UnofficialTheme(dark = appDark) {
+                            NotificationsScreen(onBack = { nav.popBackStack() }, onManga = openManga)
                         }
                     }
                     composable(Routes.SETTINGS) { UnofficialTheme(dark = appDark) { SettingsScreen() } }

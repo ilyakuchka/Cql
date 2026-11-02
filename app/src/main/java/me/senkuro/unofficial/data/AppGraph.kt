@@ -36,6 +36,11 @@ object AppGraph {
     /** Тёмная тема для обычных страниц (страница тайтла и ридер всегда тёмные). */
     val themeDark: StateFlow<Boolean> = _themeDark.asStateFlow()
 
+    private val _unread = MutableStateFlow(0)
+
+    /** Число непрочитанных уведомлений (0, если не вошли). */
+    val unread: StateFlow<Int> = _unread.asStateFlow()
+
     private val _account = MutableStateFlow<Account?>(null)
     private val _accountError = MutableStateFlow<String?>(null)
 
@@ -66,6 +71,7 @@ object AppGraph {
         repository.clearCaches()
         auth.onDomainChanged()
         _account.value = null
+        _unread.value = 0
         _domain.value = domain
         refreshAccount()
     }
@@ -73,6 +79,21 @@ object AppGraph {
     fun setDarkTheme(dark: Boolean) {
         settings.edit().putBoolean(KEY_DARK, dark).apply()
         _themeDark.value = dark
+    }
+
+    fun refreshUnread() {
+        if (auth.current == null) {
+            _unread.value = 0
+            return
+        }
+        scope.launch {
+            try {
+                _unread.value = repository.unreadNotifications()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+            }
+        }
     }
 
     /** Загружает аккаунт по сохранённому токену. */
@@ -88,6 +109,7 @@ object AppGraph {
                 val account = repository.viewer()
                 if (account == null) auth.clear()
                 _account.value = account
+                if (account != null) refreshUnread()
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -108,6 +130,7 @@ object AppGraph {
             } else {
                 _account.value = account
                 _accountError.value = null
+                refreshUnread()
                 true
             }
         } catch (e: CancellationException) {
@@ -128,6 +151,7 @@ object AppGraph {
         auth.clear()
         _account.value = null
         _accountError.value = null
+        _unread.value = 0
         // Сессия сайта в WebView тоже сбрасывается, иначе следующий вход подхватит старый аккаунт.
         runCatching {
             CookieManager.getInstance().removeAllCookies(null)

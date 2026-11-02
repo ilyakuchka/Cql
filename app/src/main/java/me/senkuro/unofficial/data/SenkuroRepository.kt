@@ -4,7 +4,9 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
+import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.put
 
@@ -234,6 +236,56 @@ class SenkuroRepository(private val api: SenkuroApi) {
 
     private fun BookmarkNodeDto.numberText(): String? =
         (number as? JsonPrimitive)?.takeIf { it !is JsonNull }?.content
+
+    // ---------------------------------------------------------------- Уведомления
+
+    suspend fun unreadNotifications(): Int =
+        (api.execute(
+            "fetchViewerUnreadNotifications", "fetchViewerUnreadNotifications",
+            buildJsonObject {}, UnreadResponse.serializer(),
+        ).viewerUnreadNotifications as? JsonPrimitive)?.contentOrNull?.toIntOrNull() ?: 0
+
+    suspend fun notifications(read: Boolean, after: String?): NotificationsPage {
+        val vars = buildJsonObject {
+            put("first", 10)
+            put("isRead", read)
+            if (after != null) put("after", after)
+        }
+        val conn = api.execute("fetchNotificationFeeds", "fetchNotificationFeeds", vars, NotifResponse.serializer())
+            .notificationFeeds
+        return NotificationsPage(
+            items = conn.edges.map { it.node.toItem() },
+            next = conn.pageInfo.endCursor.takeIf { conn.pageInfo.hasNextPage },
+        )
+    }
+
+    private fun JsonElement?.text(): String? = (this as? JsonPrimitive)?.takeIf { it !is JsonNull }?.contentOrNull
+
+    private fun NotifFeedDto.toItem(): NotificationItem {
+        val nodes = listOfNotNull(notifiable, context)
+        val mangaNode = nodes.firstOrNull { it.typename == "Manga" }
+        val manga = mangaNode?.let { n ->
+            n.id?.let { MangaItem(it, n.slug, pickTitle(n.titles, n.originalName, n.slug), n.cover?.original?.url) }
+        }
+        val chapterNode = nodes.firstOrNull { it.typename == "MangaChapter" }
+        val user = nodes.firstOrNull { it.typename == "User" }?.name
+        val post = nodes.firstOrNull { it.typename == "Post" }?.title
+        val numbers = payload?.chapters.orEmpty().mapNotNull { it.number.text() }
+        val label = type.orEmpty().lowercase().replace('_', ' ')
+
+        val subtitle = when {
+            numbers.isNotEmpty() -> "Новые главы: " + numbers.take(4).joinToString(", ") + if (numbers.size > 4) "…" else ""
+            chapterNode != null -> "Глава " + chapterNode.number.text().orEmpty()
+            else -> label + if ((eventCount ?: 0) > 1) " ×$eventCount" else ""
+        }
+        return NotificationItem(
+            id = id,
+            title = manga?.title ?: post ?: user ?: label.ifBlank { "Уведомление" },
+            subtitle = subtitle,
+            date = lastEventAt?.take(10),
+            manga = manga,
+        )
+    }
 
     // ---------------------------------------------------------------- Маппинг
 

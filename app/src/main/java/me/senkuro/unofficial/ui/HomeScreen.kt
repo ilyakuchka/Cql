@@ -22,6 +22,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
@@ -55,10 +56,11 @@ fun HomeScreen(
     onMore: () -> Unit,
     onLogin: () -> Unit,
     onProfile: () -> Unit,
+    onNotifications: () -> Unit,
     vm: HomeViewModel = viewModel(),
 ) {
     Column(Modifier.fillMaxSize()) {
-        HomeHeader(onSearch = onSearch, onRefresh = vm::load, onLogin = onLogin, onProfile = onProfile)
+        HomeHeader(onSearch = onSearch, onRefresh = vm::load, onLogin = onLogin, onProfile = onProfile, onNotifications = onNotifications)
         when (val state = vm.state) {
             is UiState.Loading -> LoadingBox()
             is UiState.Error -> ErrorBox(state.message, vm::load)
@@ -88,7 +90,8 @@ private fun greeting(): String = when (Calendar.getInstance().get(Calendar.HOUR_
 
 /** Шапка как «Banner» в ките: белая полоса с нижней линией #E0E0E0, слева аватар и приветствие, справа иконки. */
 @Composable
-private fun HomeHeader(onSearch: () -> Unit, onRefresh: () -> Unit, onLogin: () -> Unit, onProfile: () -> Unit) {
+private fun HomeHeader(onSearch: () -> Unit, onRefresh: () -> Unit, onLogin: () -> Unit, onProfile: () -> Unit, onNotifications: () -> Unit) {
+    val unread by AppGraph.unread.collectAsState()
     val account by AppGraph.account.collectAsState()
     val token by AppGraph.auth.token.collectAsState()
     val line = MaterialTheme.colorScheme.outline
@@ -134,6 +137,26 @@ private fun HomeHeader(onSearch: () -> Unit, onRefresh: () -> Unit, onLogin: () 
                 style = HeadingStyle,
             )
             Text(SenkuroConfig.current.title, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp)
+        }
+        if (token != null) {
+            IconButton(onClick = onNotifications) {
+                Box {
+                    Icon(Icons.Filled.Notifications, contentDescription = "Уведомления", tint = MaterialTheme.colorScheme.onBackground)
+                    if (unread > 0) {
+                        Text(
+                            text = if (unread > 99) "99+" else unread.toString(),
+                            color = androidx.compose.ui.graphics.Color.Black,
+                            fontSize = 9.sp,
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .padding(start = 10.dp)
+                                .clip(CircleShape)
+                                .background(AppColors.Accent)
+                                .padding(horizontal = 4.dp),
+                        )
+                    }
+                }
+            }
         }
         IconButton(onClick = onSearch) { Icon(Icons.Filled.Search, contentDescription = "Поиск", tint = MaterialTheme.colorScheme.onBackground) }
         IconButton(onClick = onRefresh) { Icon(Icons.Filled.Refresh, contentDescription = "Обновить", tint = MaterialTheme.colorScheme.onBackground) }

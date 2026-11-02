@@ -87,3 +87,13 @@ data class Account(
 data class BookmarkEntry(val manga: MangaItem, val collectionId: String?, val page: Int?, val number: String?)
 
 data class BookmarksPage(val items: List<BookmarkEntry>, val next: String?)
+
+data class NotificationItem(
+    val id: String,
+    val title: String,
+    val subtitle: String,
+    val date: String?,
+    val manga: MangaItem?,
+)
+
+data class NotificationsPage(val items: List<NotificationItem>, val next: String?)
