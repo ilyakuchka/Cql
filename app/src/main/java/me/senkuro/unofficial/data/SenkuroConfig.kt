@@ -15,18 +15,13 @@ class Domain(
 /** Константы подключения к Senkuro (значения взяты из приложенных расширений). */
 object SenkuroConfig {
 
+    /** Основной домен (API api.senkuro.me, вход через sso.senkuro.net). Переключатель доменов в интерфейсе пока убран. */
     val DOMAINS = listOf(
         Domain(
             id = "me",
             title = "senkuro.me",
             baseUrl = "https://senkuro.me",
             apiUrl = "https://api.senkuro.me/graphql",
-        ),
-        Domain(
-            id = "com",
-            title = "senkuro.com",
-            baseUrl = "https://senkuro.com",
-            apiUrl = "https://api.senkuro.com/graphql",
         ),
     )
 

@@ -24,22 +24,14 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -48,7 +40,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import me.senkuro.unofficial.data.AppGraph
 import me.senkuro.unofficial.data.MangaItem
 import me.senkuro.unofficial.data.SenkuroConfig
 import java.util.Calendar
@@ -91,7 +82,7 @@ private fun greeting(): String = when (Calendar.getInstance().get(Calendar.HOUR_
     else -> "Доброй ночи"
 }
 
-/** Шапка как в дизайне: круглый красный аватар, приветствие, имя красным (у нас — текущий домен) и иконки справа. */
+/** Шапка как в дизайне: круглый красный аватар, приветствие, имя красным (у нас — домен сайта) и иконки справа. */
 @Composable
 private fun HomeHeader(onSearch: () -> Unit, onRefresh: () -> Unit) {
     Row(
@@ -113,40 +104,15 @@ private fun HomeHeader(onSearch: () -> Unit, onRefresh: () -> Unit) {
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
             Text(greeting(), color = AppColors.Text.copy(alpha = 0.75f), fontSize = 12.sp)
-            DomainSwitcher()
+            Text(
+                SenkuroConfig.current.title,
+                color = MaterialTheme.colorScheme.primary,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold,
+            )
         }
         IconButton(onClick = onSearch) { Icon(Icons.Filled.Search, contentDescription = "Поиск") }
         IconButton(onClick = onRefresh) { Icon(Icons.Filled.Refresh, contentDescription = "Обновить") }
-    }
-}
-
-/** Переключатель домена (senkuro.me / senkuro.com): выбор сохраняется, данные перезагружаются. */
-@Composable
-private fun DomainSwitcher() {
-    val current by AppGraph.domain.collectAsState()
-    var open by remember { mutableStateOf(false) }
-    val accent = MaterialTheme.colorScheme.primary
-    Box {
-        Row(
-            modifier = Modifier
-                .clip(RoundedCornerShape(8.dp))
-                .clickable { open = true },
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(current.title, color = accent, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-            Icon(Icons.Filled.ArrowDropDown, contentDescription = "Сменить домен", tint = accent)
-        }
-        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
-            SenkuroConfig.DOMAINS.forEach { domain ->
-                DropdownMenuItem(
-                    text = { Text(if (domain.id == current.id) "✓ ${domain.title}" else domain.title) },
-                    onClick = {
-                        open = false
-                        AppGraph.setDomain(domain)
-                    },
-                )
-            }
-        }
     }
 }
 
