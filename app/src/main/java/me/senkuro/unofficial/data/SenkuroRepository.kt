@@ -4,6 +4,8 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.JsonNull
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.put
 
 class SenkuroRepository(private val api: SenkuroApi) {
@@ -161,6 +163,77 @@ class SenkuroRepository(private val api: SenkuroApi) {
 
         throw (primary.exceptionOrNull() ?: fallback.exceptionOrNull() ?: ApiException("В главе нет страниц"))
     }
+
+    // ------------------------------------------------------- Аккаунт и закладки сайта
+
+    /** null — токен не принят (аноним). */
+    suspend fun viewer(): Account? {
+        val viewer = api.execute("fetchViewer", "fetchViewer", buildJsonObject {}, ViewerResponse.serializer()).viewer
+        val user = viewer?.user ?: return null
+        return Account(
+            userId = user.id,
+            name = user.name.ifBlank { user.slug },
+            avatar = user.avatar?.original?.url,
+            collections = viewer.userBookmarkCollections
+                .filter { it.entityType?.equals("MANGA", true) != false }
+                .map { c ->
+                    BookmarkCollection(
+                        id = c.id,
+                        name = c.preference?.name?.takeIf { it.isNotBlank() } ?: c.name.ifBlank { c.slug },
+                        system = c.system,
+                    )
+                },
+        )
+    }
+
+    suspend fun bookmarks(userId: String, collectionId: String?, after: String?): BookmarksPage {
+        val vars = buildJsonObject {
+            put("userId", userId)
+            put("subjectType", "MANGA")
+            if (after != null) put("after", after)
+            if (collectionId != null) put("collectionId", collectionId)
+            put("orderBy", buildJsonObject {
+                put("field", "UPDATED_AT")
+                put("direction", "DESC")
+            })
+        }
+        val conn = api.execute("fetchUserBookmarks", "fetchUserBookmarks", vars, BookmarksResponse.serializer()).userBookmarks
+        val items = conn.edges.mapNotNull { edge ->
+            val node = edge.node
+            val manga = node.entity?.toItem() ?: return@mapNotNull null
+            BookmarkEntry(manga, node.collectionId, node.page, node.numberText())
+        }
+        return BookmarksPage(items, conn.pageInfo.endCursor.takeIf { conn.pageInfo.hasNextPage })
+    }
+
+    /** Коллекция, в которой лежит тайтл, или null. */
+    suspend fun bookmarkOf(mangaId: String): String? =
+        api.execute(
+            "fetchBookmarkable", "fetchBookmarkable",
+            buildJsonObject { put("subjectId", mangaId) },
+            BookmarkableResponse.serializer(),
+        ).bookmarkable?.collectionId
+
+    suspend fun setBookmark(mangaId: String, collectionId: String) {
+        val vars = buildJsonObject {
+            put("input", buildJsonObject {
+                put("collectionId", collectionId)
+                put("manual", true)
+                put("subjectId", mangaId)
+            })
+        }
+        val r = api.execute("updateUserBookmark", "updateUserBookmark", vars, MutationResponse.serializer())
+        if (r.updateUserBookmark?.success != true) throw ApiException("Не удалось сохранить закладку")
+    }
+
+    suspend fun removeBookmark(mangaId: String) {
+        val vars = buildJsonObject { put("input", buildJsonObject { put("subjectId", mangaId) }) }
+        val r = api.execute("deleteUserBookmark", "deleteUserBookmark", vars, MutationResponse.serializer())
+        if (r.deleteUserBookmark?.success != true) throw ApiException("Не удалось удалить закладку")
+    }
+
+    private fun BookmarkNodeDto.numberText(): String? =
+        (number as? JsonPrimitive)?.takeIf { it !is JsonNull }?.content
 
     // ---------------------------------------------------------------- Маппинг
 

@@ -139,3 +139,57 @@ class ReaderChapterDto(val pages: List<ReaderPageDto> = emptyList())
 
 @Serializable
 class ReaderResponse(val mangaChapter: ReaderChapterDto? = null)
+
+// ---------------------------------------------------------------- Аккаунт и закладки
+
+@Serializable
+class UserDto(val id: String = "", val slug: String = "", val name: String = "", val avatar: Cover? = null)
+
+@Serializable
+class CollectionPreferenceDto(val name: String? = null)
+
+@Serializable
+class CollectionDto(
+    val id: String = "",
+    val slug: String = "",
+    val name: String = "",
+    val entityType: String? = null,
+    val system: Boolean = false,
+    val preference: CollectionPreferenceDto? = null,
+)
+
+@Serializable
+class ViewerDto(val user: UserDto? = null, val userBookmarkCollections: List<CollectionDto> = emptyList())
+
+@Serializable
+class ViewerResponse(val viewer: ViewerDto? = null)
+
+@Serializable
+class BookmarkNodeDto(
+    val entityId: String? = null,
+    val collectionId: String? = null,
+    val page: Int? = null,
+    val number: kotlinx.serialization.json.JsonElement? = null,
+    val entity: MangaCardDto? = null,
+)
+
+@Serializable
+class BookmarkEdge(val node: BookmarkNodeDto)
+
+@Serializable
+class PageInfoDto(val hasNextPage: Boolean = false, val endCursor: String? = null)
+
+@Serializable
+class BookmarksConn(val edges: List<BookmarkEdge> = emptyList(), val pageInfo: PageInfoDto = PageInfoDto())
+
+@Serializable
+class BookmarksResponse(val userBookmarks: BookmarksConn = BookmarksConn())
+
+@Serializable
+class SuccessDto(val success: Boolean = false)
+
+@Serializable
+class MutationResponse(val updateUserBookmark: SuccessDto? = null, val deleteUserBookmark: SuccessDto? = null)
+
+@Serializable
+class BookmarkableResponse(val bookmarkable: BookmarkNodeDto? = null)

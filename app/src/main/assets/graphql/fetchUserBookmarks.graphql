@@ -1,0 +1,31 @@
+query fetchUserBookmarks($after: String, $userId: ID!, $collectionId: ID, $subjectType: UserBookmarkSubjectType!, $orderBy: UserBookmarkOrder) {
+  userBookmarks(
+    first: 20
+    after: $after
+    userId: $userId
+    collectionId: $collectionId
+    subjectType: $subjectType
+    orderBy: $orderBy
+  ) {
+    edges {
+      node {
+        entityId
+        collectionId
+        page
+        number
+        entity {
+          id
+          ... on Manga {
+            slug
+            originalName { lang content }
+            titles { lang content }
+            status
+            rating
+            cover { original { url } }
+          }
+        }
+      }
+    }
+    pageInfo { hasNextPage endCursor }
+  }
+}

@@ -24,7 +24,7 @@ import java.util.concurrent.TimeUnit
 class ApiException(message: String) : Exception(message)
 
 /** Добавляет заголовки клиента ко всем запросам (API и картинки). */
-private class HeadersInterceptor : Interceptor {
+private class HeadersInterceptor(private val token: () -> String?) : Interceptor {
     override fun intercept(chain: Interceptor.Chain): Response {
         val original = chain.request()
         val builder = original.newBuilder()
@@ -35,13 +35,15 @@ private class HeadersInterceptor : Interceptor {
             builder.header("Accept", "application/json")
             builder.header("App-Id", SenkuroConfig.APP_ID)
             builder.header("App-Version", SenkuroConfig.APP_VERSION)
+            // Токен уходит только на хосты API, не на картинки.
+            token()?.let { builder.header("Authorization", "Bearer $it") }
         }
         return chain.proceed(builder.build())
     }
 }
 
-fun createHttpClient(): OkHttpClient = OkHttpClient.Builder()
-    .addInterceptor(HeadersInterceptor())
+fun createHttpClient(token: () -> String?): OkHttpClient = OkHttpClient.Builder()
+    .addInterceptor(HeadersInterceptor(token))
     .connectTimeout(20, TimeUnit.SECONDS)
     .readTimeout(30, TimeUnit.SECONDS)
     .build()

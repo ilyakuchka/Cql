@@ -1,0 +1,5 @@
+mutation updateUserBookmark($input: UpdateUserBookmarkInput!) {
+  updateUserBookmark(input: $input) {
+    success
+  }
+}

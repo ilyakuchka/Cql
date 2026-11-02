@@ -1,0 +1,18 @@
+query fetchViewer {
+  viewer {
+    user {
+      id
+      slug
+      name
+      avatar { original { url } }
+    }
+    userBookmarkCollections {
+      id
+      slug
+      name
+      entityType
+      system
+      preference { name }
+    }
+  }
+}

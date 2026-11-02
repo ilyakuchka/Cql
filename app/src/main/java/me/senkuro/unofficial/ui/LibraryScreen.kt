@@ -48,7 +48,7 @@ import java.text.DateFormat
 import java.util.Date
 
 @Composable
-fun LibraryScreen(onManga: (MangaItem) -> Unit, onDebug: (() -> Unit)? = null) {
+fun LibraryScreen(onManga: (MangaItem) -> Unit, onLogin: () -> Unit, onDebug: (() -> Unit)? = null) {
     val library = AppGraph.library
     val favorites by library.favorites.collectAsState()
     val history by library.history.collectAsState()
@@ -71,8 +71,11 @@ fun LibraryScreen(onManga: (MangaItem) -> Unit, onDebug: (() -> Unit)? = null) {
             TabRow(selectedTabIndex = tab) {
                 Tab(selected = tab == 0, onClick = { tab = 0 }, text = { Text("Избранное") })
                 Tab(selected = tab == 1, onClick = { tab = 1 }, text = { Text("История") })
+                Tab(selected = tab == 2, onClick = { tab = 2 }, text = { Text("Закладки") })
             }
-            if (tab == 0) {
+            if (tab == 2) {
+                SiteBookmarksTab(onManga = onManga, onLogin = onLogin)
+            } else if (tab == 0) {
                 if (favorites.isEmpty()) {
                     EmptyHint("В избранном пока пусто")
                 } else {

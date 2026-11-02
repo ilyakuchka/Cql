@@ -108,7 +108,10 @@ fun CaptureScreen(onBack: () -> Unit) {
     val context = LocalContext.current
     var tab by rememberSaveable { mutableIntStateOf(0) }
     var canGoBack by remember { mutableStateOf(false) }
-    val holder = remember { createWebView(context) { canGoBack = it } }
+    val holder = remember {
+        CaptureLog.loadImplemented(context)
+        createWebView(context) { canGoBack = it }
+    }
 
     DisposableEffect(holder) {
         onDispose {
@@ -141,7 +144,12 @@ fun CaptureScreen(onBack: () -> Unit) {
             verticalAlignment = Alignment.CenterVertically,
         ) {
             FilterChip(selected = tab == 0, onClick = { tab = 0 }, label = { Text("Браузер") })
-            FilterChip(selected = tab == 1, onClick = { tab = 1 }, label = { Text("Лог (${CaptureLog.calls.size})") })
+            FilterChip(selected = tab == 1, onClick = { tab = 1 }, label = { Text("Лог (${CaptureLog.visible().size})") })
+            FilterChip(
+                selected = CaptureLog.showImplemented,
+                onClick = { CaptureLog.showImplemented = !CaptureLog.showImplemented },
+                label = { Text(if (CaptureLog.showImplemented) "Реализованные: показаны" else "Реализованные скрыты: ${CaptureLog.hiddenCount()}") },
+            )
             OutlinedButton(onClick = { copyReport(context) }) { Text("Копировать") }
             OutlinedButton(onClick = { shareReport(context) }) { Text("Поделиться") }
             OutlinedButton(onClick = { CaptureLog.clear() }) { Text("Очистить") }
@@ -167,15 +175,26 @@ fun CaptureScreen(onBack: () -> Unit) {
 
 @Composable
 private fun LogList() {
-    val calls = CaptureLog.calls
+    val calls = CaptureLog.visible()
+    val hidden = CaptureLog.hiddenCount()
     if (calls.isEmpty()) {
         Text(
-            "Пока пусто. Откройте вкладку «Браузер», войдите в аккаунт и пройдитесь по разделам сайта (закладки, история, профиль).",
+            (if (hidden > 0) "Скрыто уже реализованных запросов: $hidden. Новых пока нет. " else "") + "Пока пусто. Откройте вкладку «Браузер», войдите в аккаунт и пройдитесь по разделам сайта (закладки, история, профиль).",
             modifier = Modifier.padding(16.dp),
         )
         return
     }
     LazyColumn(Modifier.fillMaxSize()) {
+        if (hidden > 0) {
+            item {
+                Text(
+                    "Скрыто уже реализованных запросов: $hidden",
+                    style = MaterialTheme.typography.labelMedium,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                )
+                HorizontalDivider()
+            }
+        }
         items(calls) { call ->
             var open by remember { mutableStateOf(false) }
             Column(

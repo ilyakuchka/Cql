@@ -2,7 +2,11 @@ package me.senkuro.unofficial.debugtools
 
 import android.os.Handler
 import android.os.Looper
+import android.content.Context
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
@@ -60,6 +64,33 @@ object CaptureLog {
     private fun isSecret(key: String) = secretKey.matches(key) || urlSecretKey.matches(key)
 
     fun clear() = calls.clear()
+
+    /** Имена GraphQL-операций, которые уже реализованы в приложении (читаются из assets/graphql). */
+    @Volatile
+    private var implemented: Set<String> = emptySet()
+
+    /** true — показывать и уже реализованные запросы; по умолчанию они скрыты. */
+    var showImplemented by mutableStateOf(false)
+
+    fun loadImplemented(context: Context) {
+        val names = HashSet<String>()
+        val regex = Regex("(?:query|mutation|subscription)\\s+(\\w+)")
+        runCatching {
+            context.assets.list("graphql").orEmpty().forEach { file ->
+                val text = context.assets.open("graphql/$file").bufferedReader().use { it.readText() }
+                regex.findAll(text).forEach { names.add(it.groupValues[1]) }
+            }
+        }
+        implemented = names
+    }
+
+    fun isImplemented(call: CapturedCall): Boolean = call.graphql && call.operation in implemented
+
+    /** Вызовы для показа: без реализованных, пока не включён переключатель. */
+    fun visible(): List<CapturedCall> =
+        if (showImplemented) calls.toList() else calls.filterNot(::isImplemented)
+
+    fun hiddenCount(): Int = if (showImplemented) 0 else calls.count(::isImplemented)
 
     /** Вызывается из потока WebView; запись переносится в главный поток. */
     fun ingest(raw: String) {
@@ -238,12 +269,17 @@ object CaptureLog {
      * по всем вызовам, уникальные наборы переменных и пример ответа.
      */
     fun report(maxResponse: Int = 6000, maxVariants: Int = 15): String {
-        val snapshot = calls.toList().asReversed()
+        val snapshot = visible().asReversed()
+        val hidden = if (showImplemented) emptyList() else calls.filter(::isImplemented)
         val groups = snapshot.groupBy { Triple(it.operation, it.hash ?: it.query, if (it.graphql) "" else it.url) }
         val text = buildString {
             appendLine("# Senkuro: перехваченные вызовы")
             appendLine("Всего вызовов: ${snapshot.size}, уникальных операций: ${groups.size}")
             appendLine("Пароли, токены, code/state, cookie и email вырезаны (<redacted>).")
+            if (hidden.isNotEmpty()) {
+                val byName = hidden.groupingBy { it.operation }.eachCount()
+                appendLine("Скрыто уже реализованных запросов: ${hidden.size} (${byName.entries.joinToString(", ") { "${it.key} ×${it.value}" }})")
+            }
             appendLine()
             groups.entries.forEachIndexed { index, (key, list) ->
                 val first = list.first()

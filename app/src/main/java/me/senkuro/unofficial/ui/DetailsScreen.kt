@@ -38,6 +38,7 @@ import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.FilterChip
@@ -82,6 +83,7 @@ fun DetailsScreen(
     mangaId: String,
     onBack: () -> Unit,
     onRead: (Chapter) -> Unit,
+    onLogin: () -> Unit,
     vm: DetailsViewModel = viewModel(key = "details-$mangaId"),
 ) {
     LaunchedEffect(mangaId) { vm.load(mangaId) }
@@ -97,8 +99,13 @@ fun DetailsScreen(
             is UiState.Error -> ErrorBox(state.message, { vm.load(mangaId, force = true) })
             is UiState.Ready -> DetailsContent(state.data, readIds, onRead)
         }
+        var bookmarkDialog by remember { mutableStateOf(false) }
+        if (bookmarkDialog) {
+            BookmarkDialog(mangaId = mangaId, onLogin = onLogin, onDismiss = { bookmarkDialog = false })
+        }
         TopActions(
             onBack = onBack,
+            onBookmark = { bookmarkDialog = true },
             favorite = item?.let { manga -> favorites.any { it.id == manga.id } },
             onFavorite = { item?.let(library::toggleFavorite) },
             onShare = { item?.let { shareManga(context, it) } },
@@ -107,7 +114,7 @@ fun DetailsScreen(
 }
 
 @Composable
-private fun TopActions(onBack: () -> Unit, favorite: Boolean?, onFavorite: () -> Unit, onShare: () -> Unit) {
+private fun TopActions(onBack: () -> Unit, onBookmark: () -> Unit, favorite: Boolean?, onFavorite: () -> Unit, onShare: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -125,6 +132,7 @@ private fun TopActions(onBack: () -> Unit, favorite: Boolean?, onFavorite: () ->
                     tint = if (favorite) MaterialTheme.colorScheme.primary else Color.White,
                     onClick = onFavorite,
                 )
+                RoundIconButton(Icons.Filled.Star, "Закладки на сайте", Color.White, onBookmark)
                 RoundIconButton(Icons.Filled.Share, "Поделиться", Color.White, onShare)
             }
         }

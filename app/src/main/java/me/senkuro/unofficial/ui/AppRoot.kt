@@ -47,6 +47,7 @@ private object Routes {
     const val CATALOG = "catalog"
     const val LIBRARY = "library"
     const val DEBUG = "debug"
+    const val LOGIN = "login"
     const val MANGA = "manga/{id}"
     const val READER = "reader/{mangaId}/{chapterId}"
 
@@ -106,9 +107,13 @@ fun AppRoot() {
                     composable(Routes.LIBRARY) {
                         LibraryScreen(
                             onManga = openManga,
+                            onLogin = { nav.navigate(Routes.LOGIN) },
                             // Кнопка есть только в debug-сборке (BuildConfig.DEBUG_TOOLS = false в release).
                             onDebug = if (BuildConfig.DEBUG_TOOLS) ({ nav.navigate(Routes.DEBUG) }) else null,
                         )
+                    }
+                    composable(Routes.LOGIN) {
+                        LoginScreen(onBack = { nav.popBackStack() }, onDone = { nav.popBackStack() })
                     }
                     composable(Routes.DEBUG) { DebugTools.Screen(onBack = { nav.popBackStack() }) }
 
@@ -121,6 +126,7 @@ fun AppRoot() {
                             mangaId = id,
                             onBack = { nav.popBackStack() },
                             onRead = { chapter -> nav.navigate(Routes.reader(id, chapter.id)) },
+                            onLogin = { nav.navigate(Routes.LOGIN) },
                         )
                     }
 

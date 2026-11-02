@@ -81,3 +81,17 @@ data class HistoryEntry(
     val chapterTitle: String,
     val at: Long,
 )
+
+data class BookmarkCollection(val id: String, val name: String, val system: Boolean)
+
+/** Аккаунт на сайте: пользователь и его коллекции закладок (только манга). */
+data class Account(
+    val userId: String,
+    val name: String,
+    val avatar: String?,
+    val collections: List<BookmarkCollection>,
+)
+
+data class BookmarkEntry(val manga: MangaItem, val collectionId: String?, val page: Int?, val number: String?)
+
+data class BookmarksPage(val items: List<BookmarkEntry>, val next: String?)
