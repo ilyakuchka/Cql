@@ -22,14 +22,11 @@ object SenkuroConfig {
             baseUrl = "https://senkuro.me",
             apiUrl = "https://api.senkuro.me/graphql",
         ),
-        // Сайт авторизации: открывается по https://sso.senkuro.net/ (без api.).
-        // Адрес API для него не подтверждён, предполагаем https://sso.senkuro.net/graphql;
-        // реальный адрес покажет строка URL в отчёте перехвата (debug). Если он другой, поменяйте apiUrl здесь.
         Domain(
-            id = "sso",
-            title = "sso.senkuro.net",
-            baseUrl = "https://sso.senkuro.net",
-            apiUrl = "https://sso.senkuro.net/graphql",
+            id = "com",
+            title = "senkuro.com",
+            baseUrl = "https://senkuro.com",
+            apiUrl = "https://api.senkuro.com/graphql",
         ),
     )
 

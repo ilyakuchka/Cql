@@ -146,11 +146,14 @@ fun CaptureScreen(onBack: () -> Unit) {
             OutlinedButton(onClick = { shareReport(context) }) { Text("Поделиться") }
             OutlinedButton(onClick = { CaptureLog.clear() }) { Text("Очистить") }
             // Быстрый переход на домены (не меняет домен приложения, только страницу в браузере).
-            SenkuroConfig.DOMAINS.forEach { domain ->
+            // Домены приложения плюс сайт авторизации sso.senkuro.net (нужен только для перехвата входа).
+            val quickLinks = SenkuroConfig.DOMAINS.map { it.title to it.baseUrl } +
+                ("sso.senkuro.net" to "https://sso.senkuro.net")
+            quickLinks.forEach { (title, url) ->
                 OutlinedButton(onClick = {
                     tab = 0
-                    holder.view.loadUrl(domain.baseUrl)
-                }) { Text(domain.title) }
+                    holder.view.loadUrl(url)
+                }) { Text(title) }
             }
         }
 
