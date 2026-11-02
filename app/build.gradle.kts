@@ -6,7 +6,7 @@ plugins {
 }
 
 // Подпись release: если заданы переменные окружения (их выставляет workflow из секретов),
-// используется ваш keystore, иначе release подписывается debug-ключом (APK ставится, но без обновлений поверх).
+// используется ваш keystore, иначе release подписывается постоянным debug-ключом из app/debug.keystore.
 val releaseKeystorePath: String? = System.getenv("KEYSTORE_PATH")?.takeIf { it.isNotBlank() }
 
 android {
@@ -22,6 +22,15 @@ android {
     }
 
     signingConfigs {
+        // Постоянный debug-ключ лежит в репозитории (app/debug.keystore): все сборки подписаны одним ключом,
+        // поэтому новую сборку можно ставить поверх старой без удаления приложения.
+        // Ключ не секретный (пароль android), для публикации он не подходит.
+        getByName("debug") {
+            storeFile = file("debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
         if (releaseKeystorePath != null) {
             create("release") {
                 storeFile = file(releaseKeystorePath)

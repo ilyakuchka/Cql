@@ -12,3 +12,4 @@ captures/
 *.jks
 *.keystore
 .DS_Store
+!app/debug.keystore
