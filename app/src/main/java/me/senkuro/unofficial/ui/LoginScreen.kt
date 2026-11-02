@@ -37,6 +37,8 @@ import me.senkuro.unofficial.data.AppGraph
 import me.senkuro.unofficial.data.SenkuroConfig
 import java.net.URLDecoder
 
+private const val SSO_URL = "https://sso.senkuro.net/"
+
 /**
  * Вход через сайт: логин (с капчей) проходит в WebView, после этого токен берётся из cookie `access_token`
  * (запасной вариант — ключ с «access token» в localStorage) и проверяется запросом fetchViewer.
@@ -49,6 +51,7 @@ fun LoginScreen(onBack: () -> Unit, onDone: () -> Unit) {
     var status by remember { mutableStateOf("Войдите в аккаунт — приложение подхватит вход само.") }
     var checking by remember { mutableStateOf(false) }
     var lastTried by remember { mutableStateOf<String?>(null) }
+    var openedSite by remember { mutableStateOf(false) }
 
     fun candidate(cookies: String): String? = cookies.split(';')
         .map { it.trim() }
@@ -117,10 +120,18 @@ fun LoginScreen(onBack: () -> Unit, onDone: () -> Unit) {
                 override fun onPageFinished(view: WebView?, url: String?) {
                     // Токен ищем только на самом сайте, не на странице SSO.
                     val host = runCatching { java.net.URI(url.orEmpty()).host }.getOrNull()
-                    if (host == java.net.URI(SenkuroConfig.BASE_URL).host) check(view, manual = false)
+                    if (host == java.net.URI(SenkuroConfig.BASE_URL).host) {
+                        check(view, manual = false)
+                    } else if (host == java.net.URI(SSO_URL).host && !openedSite &&
+                        runCatching { java.net.URI(url.orEmpty()).path }.getOrNull().orEmpty().startsWith("/account")
+                    ) {
+                        openedSite = true
+                        view?.loadUrl(SenkuroConfig.BASE_URL)
+                    }
                 }
             }
-            loadUrl(SenkuroConfig.BASE_URL)
+            // Сразу на страницу входа SSO; после входа переходим на сайт, чтобы он получил токен.
+            loadUrl(SSO_URL)
         }
     }
 
@@ -135,7 +146,7 @@ fun LoginScreen(onBack: () -> Unit, onDone: () -> Unit) {
     Column(Modifier.fillMaxSize().systemBarsPadding()) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Назад") }
-            Text("Вход на ${SenkuroConfig.current.title}", style = MaterialTheme.typography.titleMedium)
+            Text("Вход (sso.senkuro.net)", style = MaterialTheme.typography.titleMedium)
         }
         Row(Modifier.padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(status, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))

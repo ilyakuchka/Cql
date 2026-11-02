@@ -32,6 +32,12 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.style.TextOverflow
+import coil3.compose.AsyncImage
+import me.senkuro.unofficial.data.AppGraph
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -49,10 +55,12 @@ fun HomeScreen(
     onManga: (MangaItem) -> Unit,
     onSearch: () -> Unit,
     onMore: () -> Unit,
+    onLogin: () -> Unit,
+    onProfile: () -> Unit,
     vm: HomeViewModel = viewModel(),
 ) {
     Column(Modifier.fillMaxSize()) {
-        HomeHeader(onSearch = onSearch, onRefresh = vm::load)
+        HomeHeader(onSearch = onSearch, onRefresh = vm::load, onLogin = onLogin, onProfile = onProfile)
         when (val state = vm.state) {
             is UiState.Loading -> LoadingBox()
             is UiState.Error -> ErrorBox(state.message, vm::load)
@@ -84,7 +92,9 @@ private fun greeting(): String = when (Calendar.getInstance().get(Calendar.HOUR_
 
 /** Шапка как в дизайне: круглый красный аватар, приветствие, имя красным (у нас — домен сайта) и иконки справа. */
 @Composable
-private fun HomeHeader(onSearch: () -> Unit, onRefresh: () -> Unit) {
+private fun HomeHeader(onSearch: () -> Unit, onRefresh: () -> Unit, onLogin: () -> Unit, onProfile: () -> Unit) {
+    val account by AppGraph.account.collectAsState()
+    val token by AppGraph.auth.token.collectAsState()
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -96,14 +106,31 @@ private fun HomeHeader(onSearch: () -> Unit, onRefresh: () -> Unit) {
             modifier = Modifier
                 .size(48.dp)
                 .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.primary),
+                .background(MaterialTheme.colorScheme.primary)
+                .clickable { if (token == null) onLogin() else onProfile() },
             contentAlignment = Alignment.Center,
         ) {
-            Icon(Icons.Filled.Person, contentDescription = null, tint = Color.White)
+            val avatar = account?.avatar
+            if (avatar != null) {
+                AsyncImage(
+                    model = avatar,
+                    contentDescription = "Профиль",
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            } else {
+                Icon(Icons.Filled.Person, contentDescription = "Войти", tint = Color.White)
+            }
         }
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
-            Text(greeting(), color = AppColors.Text.copy(alpha = 0.75f), fontSize = 12.sp)
+            Text(
+                account?.name?.takeIf { it.isNotBlank() }?.let { "${greeting()}, $it" } ?: greeting(),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                color = AppColors.Text.copy(alpha = 0.75f),
+                fontSize = 12.sp,
+            )
             Text(
                 SenkuroConfig.current.title,
                 color = MaterialTheme.colorScheme.primary,

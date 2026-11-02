@@ -101,6 +101,8 @@ fun AppRoot() {
                             onManga = openManga,
                             onSearch = { navigateTop(Routes.CATALOG) },
                             onMore = { navigateTop(Routes.CATALOG) },
+                            onLogin = { nav.navigate(Routes.LOGIN) },
+                            onProfile = { navigateTop(Routes.LIBRARY) },
                         )
                     }
                     composable(Routes.CATALOG) { CatalogScreen(onManga = openManga) }
