@@ -4,7 +4,6 @@ package me.senkuro.unofficial.ui
 
 import android.content.Context
 import android.content.Intent
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -18,33 +17,26 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.matchParentSize
 import androidx.compose.foundation.layout.navigationBars
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Share
-import androidx.compose.material.icons.filled.Star
-import androidx.compose.material3.AssistChip
-import androidx.compose.material3.Button
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -59,10 +51,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -77,7 +69,10 @@ import me.senkuro.unofficial.data.MangaDetails
 import me.senkuro.unofficial.data.MangaItem
 import me.senkuro.unofficial.data.SenkuroConfig
 
-/** Страница тайтла по макету «Chapters»: обложка-герой, плавающая карточка с описанием, красные карточки глав. */
+/**
+ * Страница тайтла по экрану «Episode list» из кита Webtoon: тёмный фон #161616, обложка под затемнением,
+ * жанр, название 23sp, автор, строка описания, кнопка-«таблетка», затем строки глав с миниатюрой слева и «#N» справа.
+ */
 @Composable
 fun DetailsScreen(
     mangaId: String,
@@ -93,7 +88,11 @@ fun DetailsScreen(
     val context = LocalContext.current
     val item = (vm.state as? UiState.Ready)?.data?.details?.item
 
-    Box(Modifier.fillMaxSize()) {
+    Box(
+        Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background),
+    ) {
         when (val state = vm.state) {
             is UiState.Loading -> LoadingBox()
             is UiState.Error -> ErrorBox(state.message, { vm.load(mangaId, force = true) })
@@ -113,43 +112,50 @@ fun DetailsScreen(
     }
 }
 
+/** Верхняя строка поверх обложки: стрелка назад слева; справа белая «таблетка» закладок, сердце и «поделиться». */
 @Composable
-private fun TopActions(onBack: () -> Unit, onBookmark: () -> Unit, favorite: Boolean?, onFavorite: () -> Unit, onShare: () -> Unit) {
+private fun TopActions(
+    onBack: () -> Unit,
+    onBookmark: () -> Unit,
+    favorite: Boolean?,
+    onFavorite: () -> Unit,
+    onShare: () -> Unit,
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .statusBarsPadding()
-            .padding(horizontal = 12.dp, vertical = 8.dp),
+            .padding(horizontal = 4.dp, vertical = 4.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        RoundIconButton(Icons.AutoMirrored.Filled.ArrowBack, "Назад", Color.White, onBack)
+        IconButton(onClick = onBack) {
+            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Назад", tint = Color.White)
+        }
         if (favorite != null) {
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                RoundIconButton(
-                    icon = if (favorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
-                    description = "В избранное",
-                    tint = if (favorite) MaterialTheme.colorScheme.primary else Color.White,
-                    onClick = onFavorite,
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = "+ Закладки",
+                    color = Color.Black,
+                    fontSize = 11.sp,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(25.dp))
+                        .background(Color.White)
+                        .clickable(onClick = onBookmark)
+                        .padding(horizontal = 12.dp, vertical = 5.dp),
                 )
-                RoundIconButton(Icons.Filled.Star, "Закладки на сайте", Color.White, onBookmark)
-                RoundIconButton(Icons.Filled.Share, "Поделиться", Color.White, onShare)
+                IconButton(onClick = onFavorite) {
+                    Icon(
+                        imageVector = if (favorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                        contentDescription = "В избранное",
+                        tint = if (favorite) MaterialTheme.colorScheme.primary else Color.White,
+                    )
+                }
+                IconButton(onClick = onShare) {
+                    Icon(Icons.Filled.Share, contentDescription = "Поделиться", tint = Color.White)
+                }
             }
         }
-    }
-}
-
-@Composable
-private fun RoundIconButton(icon: ImageVector, description: String, tint: Color, onClick: () -> Unit) {
-    Box(
-        modifier = Modifier
-            .size(40.dp)
-            .clip(CircleShape)
-            .background(Color(0x66000000))
-            .clickable(onClick = onClick),
-        contentAlignment = Alignment.Center,
-    ) {
-        Icon(icon, contentDescription = description, tint = tint)
     }
 }
 
@@ -172,77 +178,96 @@ private fun DetailsContent(data: DetailsData, readIds: Set<String>, onRead: (Cha
         val list = branch?.chapters.orEmpty()
         list.firstOrNull { it.id !in readIds } ?: list.firstOrNull()
     }
+    val readLabel = when {
+        continueFrom == null -> "Нет глав"
+        continueFrom.id in readIds -> "Читать заново"
+        branch?.chapters?.any { it.id in readIds } == true -> "Продолжить"
+        else -> "Начать читать"
+    }
     val navBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+    var expanded by rememberSaveable { mutableStateOf(false) }
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(bottom = navBottom + 16.dp),
     ) {
-        item(key = "hero") { HeroWithInfo(details) }
+        item(key = "hero") {
+            Hero(details, chapterCount = branch?.chapters?.size, readLabel = readLabel, enabled = continueFrom != null) {
+                continueFrom?.let(onRead)
+            }
+        }
+
+        if (details.description.isNotBlank()) {
+            item(key = "synopsis") {
+                val long = details.description.length > 160
+                Column(Modifier.padding(horizontal = 21.dp, vertical = 14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    if (expanded && details.altNames.isNotEmpty()) {
+                        Text(
+                            "Также: " + details.altNames.joinToString(" / "),
+                            color = AppColors.DarkSecondary,
+                            fontSize = 12.sp,
+                        )
+                    }
+                    Text(
+                        text = details.description,
+                        color = AppColors.DarkSecondary,
+                        fontSize = 13.sp,
+                        lineHeight = 18.sp,
+                        maxLines = if (expanded) Int.MAX_VALUE else 4,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    if (long) {
+                        Text(
+                            text = if (expanded) "Свернуть" else "Показать полностью",
+                            color = MaterialTheme.colorScheme.primary,
+                            fontSize = 12.sp,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(4.dp))
+                                .clickable { expanded = !expanded }
+                                .padding(vertical = 2.dp),
+                        )
+                    }
+                }
+            }
+        }
 
         if (details.labels.isNotEmpty()) {
             item(key = "labels") {
                 FlowRow(
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    modifier = Modifier.padding(horizontal = 21.dp, vertical = 2.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    details.labels.forEach { AssistChip(onClick = {}, label = { Text(it) }) }
+                    details.labels.forEach { OutlineChip(it, selected = false, onClick = null) }
                 }
-            }
-        }
-
-        item(key = "read") {
-            Button(
-                onClick = { continueFrom?.let(onRead) },
-                enabled = continueFrom != null,
-                shape = RoundedCornerShape(24.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp)
-                    .padding(horizontal = 16.dp, vertical = 4.dp),
-            ) {
-                Icon(Icons.Filled.PlayArrow, contentDescription = null)
-                Text(
-                    when {
-                        continueFrom == null -> "Нет глав"
-                        continueFrom.id in readIds -> "Читать заново"
-                        branch?.chapters?.any { it.id in readIds } == true -> "Продолжить"
-                        else -> "Начать читать"
-                    },
-                    fontWeight = FontWeight.Bold,
-                )
             }
         }
 
         item(key = "chapters-title") {
-            Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(Modifier.padding(horizontal = 21.dp, vertical = 14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text(
                     text = "Главы" + if (branch != null) " (${branch.chapters.size})" else "",
                     style = HeadingStyle,
-                    color = AppColors.Text,
+                    color = Color.White,
                 )
                 if (branches.size > 1) {
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         branches.forEachIndexed { index, b ->
-                            FilterChip(
-                                selected = index == branchIndex,
-                                onClick = { branchIndex = index },
-                                label = { Text(b.label) },
-                            )
+                            OutlineChip(b.label, selected = index == branchIndex, onClick = { branchIndex = index })
                         }
                     }
                 }
                 data.chapters.message?.takeIf { it.isNotBlank() }?.let {
-                    Text(it, style = MaterialTheme.typography.bodySmall)
+                    Text(it, color = AppColors.DarkSecondary, fontSize = 12.sp)
                 }
                 data.chaptersError?.let {
-                    Text("Не удалось загрузить главы: $it", style = MaterialTheme.typography.bodySmall)
+                    Text("Не удалось загрузить главы: $it", color = AppColors.DarkSecondary, fontSize = 12.sp)
                 }
             }
         }
 
         items(chaptersDescending, key = { it.id }) { chapter ->
-            ChapterCard(
+            ChapterRow(
                 chapter = chapter,
                 cover = details.item.cover,
                 read = chapter.id in readIds,
@@ -252,149 +277,125 @@ private fun DetailsContent(data: DetailsData, readIds: Set<String>, onRead: (Cha
     }
 }
 
-/** Обложка на всю ширину с затемнением и плавающей карточкой «название + синопсис» с красной кнопкой раскрытия. */
+/** Обложка под затемнением, поверх неё жанр, название, автор, строка описания, мета и кнопка «Начать читать ›». */
 @Composable
-private fun HeroWithInfo(details: MangaDetails) {
-    var expanded by rememberSaveable { mutableStateOf(false) }
-    val longText = details.description.length > 160
-    val dim = AppColors.Text.copy(alpha = 0.5f)
+private fun Hero(details: MangaDetails, chapterCount: Int?, readLabel: String, enabled: Boolean, onRead: () -> Unit) {
+    val people = listOfNotNull(details.authors, details.artists).joinToString(", ")
+    val tagline = details.description.lineSequence().firstOrNull { it.isNotBlank() }.orEmpty()
     val meta = listOfNotNull(
-        details.type,
         details.status,
         details.ageRating,
-        details.translationStatus?.let { "Перевод: $it" },
-    ).joinToString(" · ")
+        details.type,
+        chapterCount?.let { "Глав: $it" },
+    ).joinToString("  ·  ")
 
     Box(Modifier.fillMaxWidth()) {
+        AsyncImage(
+            model = details.item.cover,
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.matchParentSize(),
+        )
         Box(
             Modifier
-                .fillMaxWidth()
-                .height(300.dp)
-                .background(MaterialTheme.colorScheme.surfaceVariant),
-        ) {
-            AsyncImage(
-                model = details.item.cover,
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize(),
-            )
-            Box(
-                Modifier
-                    .fillMaxSize()
-                    .background(Brush.verticalGradient(0f to Color(0x80000000), 0.5f to Color.Transparent, 1f to AppColors.Bg)),
-            )
-        }
-
+                .matchParentSize()
+                .background(Brush.verticalGradient(0f to Color(0xCC161616), 0.6f to Color(0xE6161616), 1f to AppColors.DarkBg)),
+        )
         Column(
             Modifier
-                .padding(top = 220.dp)
-                .padding(horizontal = 16.dp)
-                .padding(bottom = if (longText) 28.dp else 8.dp),
+                .statusBarsPadding()
+                .padding(top = 56.dp, start = 21.dp, end = 21.dp, bottom = 20.dp),
         ) {
-            Box {
-                Surface(
-                    shape = RoundedCornerShape(24.dp),
-                    color = AppColors.Bg,
-                    shadowElevation = 8.dp,
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text(
-                            text = details.item.title,
-                            style = HeadingStyle,
-                            color = Color.White,
-                            maxLines = 3,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                        if (meta.isNotBlank()) {
-                            Text(meta, color = AppColors.Text, fontSize = 12.sp, fontWeight = FontWeight.Medium)
-                        }
-                        val people = listOfNotNull(
-                            details.authors?.let { "Автор: $it" },
-                            details.artists?.let { "Художник: $it" },
-                        )
-                        if (people.isNotEmpty()) {
-                            Text(people.joinToString(" · "), color = dim, fontSize = 12.sp, fontWeight = FontWeight.Medium)
-                        }
-                        if (expanded && details.altNames.isNotEmpty()) {
-                            Text(
-                                "Также: " + details.altNames.joinToString(" / "),
-                                color = dim,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Medium,
-                            )
-                        }
-                        if (details.description.isNotBlank()) {
-                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                Text("Синопсис", style = HeadingSmallStyle, color = dim)
-                                Text(
-                                    text = details.description,
-                                    color = dim,
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Medium,
-                                    maxLines = if (expanded) Int.MAX_VALUE else 4,
-                                    overflow = TextOverflow.Ellipsis,
-                                )
-                            }
-                        }
-                        if (longText) Spacer(Modifier.height(16.dp))
-                    }
-                }
-                if (longText) {
-                    Box(
-                        modifier = Modifier
-                            .align(Alignment.BottomCenter)
-                            .offset(y = 24.dp)
-                            .size(48.dp)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.primary)
-                            .clickable { expanded = !expanded },
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Icon(
-                            Icons.Filled.KeyboardArrowDown,
-                            contentDescription = if (expanded) "Свернуть" else "Развернуть",
-                            tint = Color.White,
-                            modifier = Modifier.rotate(if (expanded) 180f else 0f),
-                        )
-                    }
-                }
+            (details.labels.firstOrNull() ?: details.type)?.let {
+                Text(it, color = Color.White, fontSize = 13.sp)
             }
+            Text(
+                text = details.item.title,
+                color = Color.White,
+                fontSize = 23.sp,
+                lineHeight = 27.sp,
+                fontWeight = FontWeight.Bold,
+                maxLines = 3,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(top = 4.dp),
+            )
+            if (people.isNotBlank()) {
+                Text(
+                    people,
+                    color = Color.White,
+                    fontSize = 11.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(top = 6.dp),
+                )
+            }
+            if (tagline.isNotBlank()) {
+                Text(
+                    tagline,
+                    color = Color.White,
+                    fontSize = 13.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(top = 10.dp),
+                )
+            }
+            if (meta.isNotBlank()) {
+                Text(meta, color = Color.White, fontSize = 11.sp, modifier = Modifier.padding(top = 6.dp))
+            }
+            Text(
+                text = "$readLabel  ›",
+                color = Color.White.copy(alpha = if (enabled) 1f else 0.5f),
+                fontSize = 11.sp,
+                modifier = Modifier
+                    .padding(top = 14.dp)
+                    .clip(RoundedCornerShape(32.dp))
+                    .border(0.8.dp, Color.White.copy(alpha = if (enabled) 1f else 0.5f), RoundedCornerShape(32.dp))
+                    .clickable(enabled = enabled, onClick = onRead)
+                    .padding(horizontal = 15.dp, vertical = 7.dp),
+            )
         }
     }
 }
 
-/** Карточка главы: красный контур, скругление 24, миниатюра 84×80 слева, подпись и название красным справа. */
+/** Контурная «таблетка» как у «Recent searches» в ките: рамка 0.8 и скругление 20; выбранная — зелёная. */
 @Composable
-private fun ChapterCard(chapter: Chapter, cover: String?, read: Boolean, onClick: () -> Unit) {
-    val shape = RoundedCornerShape(24.dp)
+private fun OutlineChip(text: String, selected: Boolean, onClick: (() -> Unit)?) {
+    val shape = RoundedCornerShape(20.dp)
     val accent = MaterialTheme.colorScheme.primary
-    val teams = chapter.teams.joinToString(", ")
-    val top = buildString {
-        if (chapter.volume.isNotBlank() && chapter.volume != "0") append("Том ").append(chapter.volume).append(" · ")
-        append("Глава ").append(chapter.number)
-        chapter.date?.let { append(" · ").append(it) }
-    }
-    val main = chapter.name?.takeIf { it.isNotBlank() } ?: teams.ifBlank { "Глава ${chapter.number}" }
+    Text(
+        text = text,
+        color = if (selected) accent else Color.White,
+        fontSize = 12.sp,
+        modifier = Modifier
+            .clip(shape)
+            .border(0.8.dp, if (selected) accent else AppColors.DarkBorder, shape)
+            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
+            .padding(horizontal = 12.dp, vertical = 6.dp),
+    )
+}
 
+/** Строка главы из кита: высота 67, миниатюра 71 слева, «Глава N» 15sp, дата серым, справа «#N»; фон #2C2C2C, линия #464545. */
+@Composable
+private fun ChapterRow(chapter: Chapter, cover: String?, read: Boolean, onClick: () -> Unit) {
+    val line = AppColors.DarkBorder
+    val sub = listOfNotNull(chapter.date, chapter.teams.joinToString(", ").ifBlank { null }).joinToString("  ·  ")
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 4.dp)
-            .height(96.dp)
-            .clip(shape)
-            .border(BorderStroke(1.dp, accent), shape)
+            .height(67.dp)
+            .background(AppColors.DarkItem)
+            .drawBehind {
+                val y = size.height - 0.4.dp.toPx()
+                drawLine(line, Offset(0f, y), Offset(size.width, y), strokeWidth = 0.8.dp.toPx())
+            }
             .clickable(onClick = onClick)
-            .alpha(if (read) 0.5f else 1f)
-            .padding(8.dp),
+            .alpha(if (read) 0.5f else 1f),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(13.dp),
     ) {
         Box(
             Modifier
-                .width(84.dp)
-                .fillMaxSize()
-                .clip(RoundedCornerShape(16.dp))
+                .width(71.dp)
+                .fillMaxHeight()
                 .background(MaterialTheme.colorScheme.surfaceVariant),
         ) {
             AsyncImage(
@@ -404,12 +405,24 @@ private fun ChapterCard(chapter: Chapter, cover: String?, read: Boolean, onClick
                 modifier = Modifier.fillMaxSize(),
             )
         }
-        Column(Modifier.weight(1f)) {
-            Text(top, color = AppColors.Text, fontSize = 12.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text(main, color = accent, fontSize = 18.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            if (chapter.name?.isNotBlank() == true && teams.isNotBlank()) {
-                Text(teams, color = AppColors.Text.copy(alpha = 0.6f), fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Column(
+            Modifier
+                .weight(1f)
+                .padding(horizontal = 13.dp),
+            verticalArrangement = Arrangement.Center,
+        ) {
+            Text(
+                chapter.title,
+                color = Color.White,
+                fontSize = 15.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            if (sub.isNotBlank()) {
+                Spacer(Modifier.height(6.dp))
+                Text(sub, color = AppColors.DarkSecondary, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
+        Text("#${chapter.number}", color = Color.White, fontSize = 14.sp, modifier = Modifier.padding(end = 12.dp))
     }
 }

@@ -33,6 +33,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.unit.sp
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -90,9 +94,17 @@ fun CatalogScreen(onManga: (MangaItem) -> Unit, vm: CatalogViewModel = viewModel
                     onValueChange = { text = it },
                     modifier = Modifier.weight(1f),
                     singleLine = true,
-                    shape = RoundedCornerShape(24.dp),
-                    placeholder = { Text("Поиск по каталогу") },
-                    leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
+                    shape = RoundedCornerShape(4.dp),
+                    textStyle = TextStyle(fontSize = 14.sp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = AppColors.Chip,
+                        unfocusedContainerColor = AppColors.Chip,
+                        focusedBorderColor = Color.Transparent,
+                        unfocusedBorderColor = Color.Transparent,
+                        cursorColor = AppColors.Text,
+                    ),
+                    placeholder = { Text("Поиск по каталогу", fontSize = 14.sp, color = AppColors.Secondary) },
+                    leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null, tint = AppColors.Text) },
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                     keyboardActions = KeyboardActions(onSearch = {
                         focus.clearFocus()
@@ -100,8 +112,8 @@ fun CatalogScreen(onManga: (MangaItem) -> Unit, vm: CatalogViewModel = viewModel
                     }),
                 )
                 val active = vm.filters.activeCount
-                OutlinedButton(onClick = { showFilters = true }) {
-                    Text(if (active > 0) "Фильтры ($active)" else "Фильтры")
+                TextButton(onClick = { showFilters = true }) {
+                    Text(if (active > 0) "Фильтры ($active)" else "Фильтры", color = AppColors.Secondary, fontSize = 14.sp)
                 }
             }
 

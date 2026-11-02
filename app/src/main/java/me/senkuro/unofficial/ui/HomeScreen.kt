@@ -1,6 +1,7 @@
 package me.senkuro.unofficial.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -8,11 +9,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -34,18 +32,18 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.text.style.TextOverflow
-import coil3.compose.AsyncImage
-import me.senkuro.unofficial.data.AppGraph
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import coil3.compose.AsyncImage
+import me.senkuro.unofficial.data.AppGraph
 import me.senkuro.unofficial.data.MangaItem
 import me.senkuro.unofficial.data.SenkuroConfig
 import java.util.Calendar
@@ -65,15 +63,13 @@ fun HomeScreen(
             is UiState.Loading -> LoadingBox()
             is UiState.Error -> ErrorBox(state.message, vm::load)
             is UiState.Ready -> {
-                val bottom = LocalBottomInset.current +
-                    WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 16.dp
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(top = 8.dp, bottom = bottom),
-                    verticalArrangement = Arrangement.spacedBy(20.dp),
+                    contentPadding = PaddingValues(top = 4.dp, bottom = 16.dp + LocalBottomInset.current),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     val data = state.data
-                    bannerSection("Популярное за день", data.popular, onManga)
+                    trendingSection("Популярное за день", data.popular, onManga)
                     cardsSection("Свежие обновления", data.latest, onManga, onMore)
                     cardsSection("Новые тайтлы", data.newTitles, onManga, onMore)
                     cardsSection("Рекомендации", data.recommendations, onManga, onMore)
@@ -90,23 +86,29 @@ private fun greeting(): String = when (Calendar.getInstance().get(Calendar.HOUR_
     else -> "Доброй ночи"
 }
 
-/** Шапка как в дизайне: круглый красный аватар, приветствие, имя красным (у нас — домен сайта) и иконки справа. */
+/** Шапка как «Banner» в ките: белая полоса с нижней линией #E0E0E0, слева аватар и приветствие, справа иконки. */
 @Composable
 private fun HomeHeader(onSearch: () -> Unit, onRefresh: () -> Unit, onLogin: () -> Unit, onProfile: () -> Unit) {
     val account by AppGraph.account.collectAsState()
     val token by AppGraph.auth.token.collectAsState()
+    val line = AppColors.Border
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .statusBarsPadding()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+            .drawBehind {
+                val y = size.height - 0.4.dp.toPx()
+                drawLine(line, Offset(0f, y), Offset(size.width, y), strokeWidth = 0.8.dp.toPx())
+            }
+            .padding(horizontal = 12.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(
             modifier = Modifier
-                .size(48.dp)
+                .size(40.dp)
                 .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.primary)
+                .background(AppColors.Chip)
+                .border(0.8.dp, AppColors.Border, CircleShape)
                 .clickable { if (token == null) onLogin() else onProfile() },
             contentAlignment = Alignment.Center,
         ) {
@@ -119,7 +121,7 @@ private fun HomeHeader(onSearch: () -> Unit, onRefresh: () -> Unit, onLogin: () 
                     modifier = Modifier.fillMaxSize(),
                 )
             } else {
-                Icon(Icons.Filled.Person, contentDescription = "Войти", tint = Color.White)
+                Icon(Icons.Filled.Person, contentDescription = "Войти", tint = AppColors.Secondary)
             }
         }
         Spacer(Modifier.width(12.dp))
@@ -128,18 +130,13 @@ private fun HomeHeader(onSearch: () -> Unit, onRefresh: () -> Unit, onLogin: () 
                 account?.name?.takeIf { it.isNotBlank() }?.let { "${greeting()}, $it" } ?: greeting(),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                color = AppColors.Text.copy(alpha = 0.75f),
-                fontSize = 12.sp,
+                color = AppColors.Text,
+                style = HeadingStyle,
             )
-            Text(
-                SenkuroConfig.current.title,
-                color = MaterialTheme.colorScheme.primary,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Bold,
-            )
+            Text(SenkuroConfig.current.title, color = AppColors.Secondary, fontSize = 11.sp)
         }
-        IconButton(onClick = onSearch) { Icon(Icons.Filled.Search, contentDescription = "Поиск") }
-        IconButton(onClick = onRefresh) { Icon(Icons.Filled.Refresh, contentDescription = "Обновить") }
+        IconButton(onClick = onSearch) { Icon(Icons.Filled.Search, contentDescription = "Поиск", tint = AppColors.Text) }
+        IconButton(onClick = onRefresh) { Icon(Icons.Filled.Refresh, contentDescription = "Обновить", tint = AppColors.Text) }
     }
 }
 
@@ -148,19 +145,18 @@ private fun SectionHeader(title: String, onMore: (() -> Unit)?) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp),
-        verticalAlignment = Alignment.Bottom,
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
         Text(title, style = HeadingStyle, color = AppColors.Text)
         if (onMore != null) {
             Text(
                 text = "Ещё",
-                color = MaterialTheme.colorScheme.primary,
+                color = AppColors.Secondary,
                 fontSize = 12.sp,
-                fontWeight = FontWeight.Medium,
                 modifier = Modifier
-                    .clip(RoundedCornerShape(8.dp))
+                    .clip(RoundedCornerShape(4.dp))
                     .clickable(onClick = onMore)
                     .padding(horizontal = 4.dp, vertical = 2.dp),
             )
@@ -168,17 +164,23 @@ private fun SectionHeader(title: String, onMore: (() -> Unit)?) {
     }
 }
 
-private fun LazyListScope.bannerSection(title: String, list: List<MangaItem>, onManga: (MangaItem) -> Unit) {
+/** «Trending Series»: пронумерованные строки по три в колонке, колонки листаются вбок. */
+private fun LazyListScope.trendingSection(title: String, list: List<MangaItem>, onManga: (MangaItem) -> Unit) {
     if (list.isEmpty()) return
-    item(key = "banner-$title") {
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    item(key = "trending-$title") {
+        Column {
             SectionHeader(title, onMore = null)
             LazyRow(
-                contentPadding = PaddingValues(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                contentPadding = PaddingValues(horizontal = 12.dp),
+                horizontalArrangement = Arrangement.spacedBy(17.dp),
             ) {
-                items(list, key = { it.id }) { manga ->
-                    BannerCard(manga, onClick = { onManga(manga) })
+                val columns = list.chunked(3)
+                items(columns.size) { column ->
+                    Column(Modifier.width(246.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        columns[column].forEachIndexed { row, manga ->
+                            TrendingRow(rank = column * 3 + row + 1, item = manga, onClick = { onManga(manga) })
+                        }
+                    }
                 }
             }
         }
@@ -193,14 +195,14 @@ private fun LazyListScope.cardsSection(
 ) {
     if (list.isEmpty()) return
     item(key = "section-$title") {
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Column {
             SectionHeader(title, onMore = onMore)
             LazyRow(
-                contentPadding = PaddingValues(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                contentPadding = PaddingValues(horizontal = 12.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 items(list, key = { it.id }) { manga ->
-                    MangaCard(manga, onClick = { onManga(manga) }, modifier = Modifier.width(128.dp))
+                    MangaCard(manga, onClick = { onManga(manga) }, modifier = Modifier.width(120.dp))
                 }
             }
         }

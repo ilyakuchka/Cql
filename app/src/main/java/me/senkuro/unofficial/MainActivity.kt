@@ -12,10 +12,10 @@ import me.senkuro.unofficial.ui.UnofficialTheme
 class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        // Тема приложения тёмная, поэтому иконки системных панелей всегда светлые.
+        // Страницы светлые (значки панелей тёмные); на тёмных страницах тема переключает их сама.
         enableEdgeToEdge(
-            statusBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
-            navigationBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
+            statusBarStyle = SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT),
+            navigationBarStyle = SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT),
         )
         super.onCreate(savedInstanceState)
         setContent {

@@ -1,66 +1,115 @@
 package me.senkuro.unofficial.ui
 
-import android.graphics.Typeface
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
+import androidx.core.view.WindowCompat
 
-/** Палитра из дизайна Figma: фон #171717, акцент #DA0037, текст #EDEDED. */
+/** Палитра из UI-кита «Webtoon App UI» (Figma): светлые страницы, тёмная страница тайтла, зелёный акцент. */
 object AppColors {
-    val Bg = Color(0xFF171717)
-    val Accent = Color(0xFFDA0037)
-    val Text = Color(0xFFEDEDED)
+    // Светлые страницы (главная, поиск, библиотека)
+    val Bg = Color.White
+    val Text = Color(0xFF3C3C3C)
+    val Secondary = Color(0xFF8C8C8C)
+    val Border = Color(0xFFE0E0E0)
+    val Chip = Color(0xFFF8F8F8)
+    val Accent = Color(0xFF00DC64)
+
+    // Тёмные страницы (тайтл, главы)
+    val DarkBg = Color(0xFF161616)
+    val DarkItem = Color(0xF52C2C2C)
+    val DarkBorder = Color(0xFF464545)
+    val DarkSecondary = Color(0xFFBCBCBC)
 }
 
-private val DarkColors = darkColorScheme(
+private val LightColors = lightColorScheme(
     primary = AppColors.Accent,
-    onPrimary = Color.White,
-    primaryContainer = Color(0xFF5C0017),
-    onPrimaryContainer = Color(0xFFFFD9DF),
-    secondary = AppColors.Accent,
+    onPrimary = Color.Black,
+    primaryContainer = Color(0xFFD6FBE4),
+    onPrimaryContainer = Color(0xFF00391A),
+    secondary = AppColors.Text,
     onSecondary = Color.White,
-    secondaryContainer = Color(0xFF5C0017),
-    onSecondaryContainer = Color(0xFFFFD9DF),
+    secondaryContainer = AppColors.Chip,
+    onSecondaryContainer = AppColors.Text,
     background = AppColors.Bg,
     onBackground = AppColors.Text,
     surface = AppColors.Bg,
     onSurface = AppColors.Text,
-    surfaceVariant = Color(0xFF262626),
-    onSurfaceVariant = Color(0xFFBDBDBD),
-    outline = Color(0xFF5A5A5A),
-    outlineVariant = Color(0xFF333333),
-    surfaceContainerLowest = Color(0xFF121212),
+    surfaceVariant = AppColors.Chip,
+    onSurfaceVariant = AppColors.Secondary,
+    outline = AppColors.Border,
+    outlineVariant = AppColors.Border,
+    surfaceContainerLowest = Color.White,
+    surfaceContainerLow = AppColors.Chip,
+    surfaceContainer = AppColors.Chip,
+    surfaceContainerHigh = Color(0xFFF0F0F0),
+    surfaceContainerHighest = Color(0xFFEAEAEA),
+)
+
+private val DarkColors = darkColorScheme(
+    primary = AppColors.Accent,
+    onPrimary = Color.Black,
+    primaryContainer = Color(0xFF00522A),
+    onPrimaryContainer = Color(0xFFB8F5D0),
+    secondary = Color.White,
+    onSecondary = Color.Black,
+    secondaryContainer = Color(0xFF2C2C2C),
+    onSecondaryContainer = Color.White,
+    background = AppColors.DarkBg,
+    onBackground = Color.White,
+    surface = AppColors.DarkBg,
+    onSurface = Color.White,
+    surfaceVariant = Color(0xFF2C2C2C),
+    onSurfaceVariant = AppColors.DarkSecondary,
+    outline = AppColors.DarkBorder,
+    outlineVariant = AppColors.DarkBorder,
+    surfaceContainerLowest = Color(0xFF101010),
     surfaceContainerLow = Color(0xFF1C1C1C),
     surfaceContainer = Color(0xFF202020),
     surfaceContainerHigh = Color(0xFF262626),
     surfaceContainerHighest = Color(0xFF2C2C2C),
-    error = Color(0xFFFF5370),
-    errorContainer = Color(0xFF5C1020),
-    onErrorContainer = Color(0xFFFFD9DF),
 )
+
+/** Заголовок раздела: Arial Bold 15 в ките (у нас системный шрифт). */
+val HeadingStyle = TextStyle(fontWeight = FontWeight.Bold, fontSize = 15.sp)
+
+val HeadingSmallStyle = HeadingStyle.copy(fontSize = 13.sp)
 
 /**
- * Шрифт заголовков. В дизайне Oswald Bold; шрифты по сети не подключаем,
- * поэтому берём системный узкий жирный (sans-serif-condensed).
+ * Тема приложения. Страницы светлые, страница тайтла и ридер тёмные (`dark = true`);
+ * от режима зависит и цвет значков системных панелей.
  */
-val HeadingFont = FontFamily(Typeface.create("sans-serif-condensed", Typeface.BOLD))
-
-val HeadingStyle = TextStyle(
-    fontFamily = HeadingFont,
-    fontWeight = FontWeight.Bold,
-    fontSize = 24.sp,
-    letterSpacing = (-0.33).sp,
-)
-
-val HeadingSmallStyle = HeadingStyle.copy(fontSize = 18.sp)
-
-/** Дизайн тёмный, поэтому тема всегда тёмная (независимо от системной). */
 @Composable
-fun UnofficialTheme(content: @Composable () -> Unit) {
-    MaterialTheme(colorScheme = DarkColors, content = content)
+fun UnofficialTheme(dark: Boolean = false, content: @Composable () -> Unit) {
+    val view = LocalView.current
+    if (!view.isInEditMode) {
+        SideEffect {
+            findActivity(view.context)?.window?.let { window ->
+                WindowCompat.getInsetsController(window, view).apply {
+                    isAppearanceLightStatusBars = !dark
+                    isAppearanceLightNavigationBars = !dark
+                }
+            }
+        }
+    }
+    MaterialTheme(colorScheme = if (dark) DarkColors else LightColors, content = content)
+}
+
+private fun findActivity(context: Context): Activity? {
+    var current = context
+    while (current is ContextWrapper) {
+        if (current is Activity) return current
+        current = current.baseContext
+    }
+    return null
 }

@@ -9,7 +9,9 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
@@ -21,12 +23,7 @@ import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -35,24 +32,23 @@ import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import me.senkuro.unofficial.data.MangaItem
 
-/** Отступ снизу под плавающую панель навигации (0, когда панели нет). */
+/** Дополнительный отступ снизу (панель навигации теперь занимает своё место, поэтому 0). */
 val LocalBottomInset = compositionLocalOf<Dp> { 0.dp }
 
-/** Карточка-постер 2:3 со скруглением 16 и названием по центру под ней (как «Recent Release» в дизайне). */
+/** Постер 2:3 со скруглением 4 и подписями слева под ним: название 13sp и статус серым 11sp (как в ките). */
 @Composable
 fun MangaCard(item: MangaItem, onClick: () -> Unit, modifier: Modifier = Modifier) {
     Column(
         modifier = modifier
-            .clip(RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(4.dp))
             .clickable(onClick = onClick),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .aspectRatio(2f / 3f)
-                .clip(RoundedCornerShape(16.dp))
+                .clip(RoundedCornerShape(4.dp))
                 .background(MaterialTheme.colorScheme.surfaceVariant),
         ) {
             AsyncImage(
@@ -64,62 +60,59 @@ fun MangaCard(item: MangaItem, onClick: () -> Unit, modifier: Modifier = Modifie
         }
         Text(
             text = item.title,
-            color = AppColors.Text,
-            fontSize = 12.sp,
-            fontWeight = FontWeight.Medium,
-            textAlign = TextAlign.Center,
+            color = MaterialTheme.colorScheme.onBackground,
+            fontSize = 13.sp,
+            lineHeight = 16.sp,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.padding(horizontal = 2.dp),
         )
+        item.status?.let {
+            Text(it.uppercase(), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp, maxLines = 1)
+        }
     }
 }
 
-/** Широкий баннер 296×200 с градиентом, названием и строкой статуса («Most Popular» в дизайне). */
+/** Строка «Trending Series» из кита: номер, миниатюра 40 со скруглением 4, жанр/статус серым и название. */
 @Composable
-fun BannerCard(item: MangaItem, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    val shadow = Shadow(Color(0x80000000), Offset(0f, 4f), 4f)
-    Box(
+fun TrendingRow(rank: Int, item: MangaItem, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    Row(
         modifier = modifier
-            .width(296.dp)
-            .height(200.dp)
-            .clip(RoundedCornerShape(16.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .fillMaxWidth()
+            .height(40.dp)
             .clickable(onClick = onClick),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        AsyncImage(
-            model = item.cover,
-            contentDescription = item.title,
-            contentScale = ContentScale.Crop,
-            modifier = Modifier.fillMaxSize(),
+        Text(
+            text = rank.toString(),
+            color = MaterialTheme.colorScheme.onBackground,
+            fontSize = 14.sp,
+            modifier = Modifier.width(26.dp),
         )
         Box(
             Modifier
-                .fillMaxSize()
-                .background(Brush.verticalGradient(0.3f to Color.Transparent, 1f to Color(0xD9000000))),
-        )
-        Column(
-            modifier = Modifier
-                .align(Alignment.BottomStart)
-                .padding(13.dp),
+                .size(40.dp)
+                .clip(RoundedCornerShape(4.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant),
         ) {
-            Text(
-                text = item.title,
-                style = HeadingStyle.copy(shadow = shadow),
-                color = AppColors.Text,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
+            AsyncImage(
+                model = item.cover,
+                contentDescription = item.title,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize(),
             )
+        }
+        Column(Modifier.padding(start = 12.dp), verticalArrangement = Arrangement.Center) {
             val meta = listOfNotNull(item.status, item.age).joinToString(" · ")
             if (meta.isNotBlank()) {
-                Text(
-                    text = meta,
-                    color = AppColors.Text,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Medium,
-                    style = MaterialTheme.typography.bodySmall.copy(shadow = shadow),
-                )
+                Text(meta.uppercase(), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp, maxLines = 1)
             }
+            Text(
+                text = item.title,
+                color = MaterialTheme.colorScheme.onBackground,
+                fontSize = 13.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
         }
     }
 }
