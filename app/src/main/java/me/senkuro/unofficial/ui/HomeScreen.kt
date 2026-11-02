@@ -120,7 +120,7 @@ private fun HomeHeader(onSearch: () -> Unit, onRefresh: () -> Unit) {
     }
 }
 
-/** Переключатель домена (senkuro.me / sso.senkuro.net): выбор сохраняется, данные перезагружаются. */
+/** Переключатель домена (senkuro.me / senkuro.com): выбор сохраняется, данные перезагружаются. */
 @Composable
 private fun DomainSwitcher() {
     val current by AppGraph.domain.collectAsState()
