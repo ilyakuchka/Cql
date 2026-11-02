@@ -4,6 +4,8 @@ query HomePopular {
     slug
     originalName { lang content }
     titles { lang content }
+    status
+    rating
     cover { original { url } }
   }
 }

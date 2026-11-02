@@ -8,6 +8,9 @@ data class MangaItem(
     val slug: String,
     val title: String,
     val cover: String? = null,
+    /** Статус и возрастное ограничение (русские названия), если пришли в ответе. */
+    val status: String? = null,
+    val age: String? = null,
 )
 
 data class MangaDetails(

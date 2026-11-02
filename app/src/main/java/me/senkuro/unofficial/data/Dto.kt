@@ -36,6 +36,8 @@ class MangaCardDto(
     val originalName: Title? = null,
     val alternativeNames: List<Title>? = null,
     val cover: Cover? = null,
+    val status: String? = null,
+    val rating: String? = null,
 )
 
 @Serializable

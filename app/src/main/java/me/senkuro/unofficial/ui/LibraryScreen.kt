@@ -78,7 +78,12 @@ fun LibraryScreen(onManga: (MangaItem) -> Unit, onDebug: (() -> Unit)? = null) {
                 } else {
                     LazyVerticalGrid(
                         columns = GridCells.Adaptive(110.dp),
-                        contentPadding = PaddingValues(12.dp),
+                        contentPadding = PaddingValues(
+                            start = 12.dp,
+                            top = 12.dp,
+                            end = 12.dp,
+                            bottom = 12.dp + LocalBottomInset.current,
+                        ),
                         horizontalArrangement = Arrangement.spacedBy(10.dp),
                         verticalArrangement = Arrangement.spacedBy(10.dp),
                     ) {
@@ -96,7 +101,7 @@ fun LibraryScreen(onManga: (MangaItem) -> Unit, onDebug: (() -> Unit)? = null) {
                             onClick = library::clearHistory,
                             modifier = Modifier.align(Alignment.End),
                         ) { Text("Очистить") }
-                        LazyColumn {
+                        LazyColumn(contentPadding = PaddingValues(bottom = LocalBottomInset.current)) {
                             items(history, key = { it.manga.id }) { entry ->
                                 HistoryRow(entry, onClick = { onManga(entry.manga) })
                                 HorizontalDivider()

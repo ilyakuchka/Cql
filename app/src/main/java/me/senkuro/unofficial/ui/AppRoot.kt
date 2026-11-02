@@ -1,24 +1,36 @@
-@file:OptIn(ExperimentalMaterial3Api::class)
-
 package me.senkuro.unofficial.ui
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
+import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.unit.dp
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -44,11 +56,15 @@ private object Routes {
 
 private class TopLevel(val route: String, val title: String, val icon: ImageVector)
 
+// Порядок как в макете: дом, сердце, компас.
 private val topLevel = listOf(
     TopLevel(Routes.HOME, "Главная", Icons.Filled.Home),
-    TopLevel(Routes.CATALOG, "Каталог", Icons.Filled.Search),
     TopLevel(Routes.LIBRARY, "Библиотека", Icons.Filled.Favorite),
+    TopLevel(Routes.CATALOG, "Каталог", CompassIcon),
 )
+
+/** Высота плавающей панели (64) + отступ снизу (16) + запас: на столько экраны поднимают содержимое. */
+private val FloatingBarInset = 88.dp
 
 @Composable
 fun AppRoot() {
@@ -58,79 +74,126 @@ fun AppRoot() {
     val showBar = topLevel.any { it.route == route }
 
     val openManga: (MangaItem) -> Unit = { nav.navigate(Routes.manga(it.id)) }
+    val navigateTop: (String) -> Unit = { target ->
+        nav.navigate(target) {
+            popUpTo(nav.graph.findStartDestination().id) { saveState = true }
+            launchSingleTop = true
+            restoreState = true
+        }
+    }
 
-    Scaffold(
-        contentWindowInsets = WindowInsets(0, 0, 0, 0),
-        bottomBar = {
-            if (showBar) {
-                NavigationBar {
-                    topLevel.forEach { item ->
-                        NavigationBarItem(
-                            selected = route == item.route,
-                            onClick = {
-                                nav.navigate(item.route) {
-                                    popUpTo(nav.graph.findStartDestination().id) { saveState = true }
-                                    launchSingleTop = true
-                                    restoreState = true
+    CompositionLocalProvider(LocalBottomInset provides if (showBar) FloatingBarInset else 0.dp) {
+        Scaffold(contentWindowInsets = WindowInsets(0, 0, 0, 0)) { padding ->
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+                    .consumeWindowInsets(padding),
+            ) {
+                NavHost(
+                    navController = nav,
+                    startDestination = Routes.HOME,
+                    modifier = Modifier.fillMaxSize(),
+                ) {
+                    composable(Routes.HOME) {
+                        HomeScreen(
+                            onManga = openManga,
+                            onSearch = { navigateTop(Routes.CATALOG) },
+                            onMore = { navigateTop(Routes.CATALOG) },
+                        )
+                    }
+                    composable(Routes.CATALOG) { CatalogScreen(onManga = openManga) }
+                    composable(Routes.LIBRARY) {
+                        LibraryScreen(
+                            onManga = openManga,
+                            // Кнопка есть только в debug-сборке (BuildConfig.DEBUG_TOOLS = false в release).
+                            onDebug = if (BuildConfig.DEBUG_TOOLS) ({ nav.navigate(Routes.DEBUG) }) else null,
+                        )
+                    }
+                    composable(Routes.DEBUG) { DebugTools.Screen(onBack = { nav.popBackStack() }) }
+
+                    composable(
+                        route = Routes.MANGA,
+                        arguments = listOf(navArgument("id") { type = NavType.StringType }),
+                    ) { backStack ->
+                        val id = backStack.arguments?.getString("id").orEmpty()
+                        DetailsScreen(
+                            mangaId = id,
+                            onBack = { nav.popBackStack() },
+                            onRead = { chapter -> nav.navigate(Routes.reader(id, chapter.id)) },
+                        )
+                    }
+
+                    composable(
+                        route = Routes.READER,
+                        arguments = listOf(
+                            navArgument("mangaId") { type = NavType.StringType },
+                            navArgument("chapterId") { type = NavType.StringType },
+                        ),
+                    ) { backStack ->
+                        val mangaId = backStack.arguments?.getString("mangaId").orEmpty()
+                        val chapterId = backStack.arguments?.getString("chapterId").orEmpty()
+                        ReaderScreen(
+                            mangaId = mangaId,
+                            chapterId = chapterId,
+                            onBack = { nav.popBackStack() },
+                            onOpenChapter = { chapter ->
+                                nav.navigate(Routes.reader(mangaId, chapter.id)) {
+                                    popUpTo(Routes.READER) { inclusive = true }
                                 }
                             },
-                            icon = { Icon(item.icon, contentDescription = item.title) },
-                            label = { Text(item.title) },
                         )
                     }
                 }
+
+                if (showBar) {
+                    FloatingNavBar(
+                        route = route,
+                        onSelect = navigateTop,
+                        modifier = Modifier.align(Alignment.BottomCenter),
+                    )
+                }
             }
-        },
-    ) { padding ->
-        NavHost(
-            navController = nav,
-            startDestination = Routes.HOME,
-            modifier = Modifier
-                .padding(padding)
-                .consumeWindowInsets(padding),
+        }
+    }
+}
+
+/** Красная плавающая панель-«таблетка» 296×64 с тремя иконками, как в макете. */
+@Composable
+private fun FloatingNavBar(route: String?, onSelect: (String) -> Unit, modifier: Modifier = Modifier) {
+    Surface(
+        modifier = modifier
+            .navigationBarsPadding()
+            .padding(horizontal = 32.dp)
+            .padding(bottom = 16.dp)
+            .widthIn(max = 296.dp)
+            .fillMaxWidth()
+            .height(64.dp),
+        shape = RoundedCornerShape(32.dp),
+        color = AppColors.Accent,
+        shadowElevation = 8.dp,
+    ) {
+        Row(
+            modifier = Modifier.fillMaxSize(),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            composable(Routes.HOME) { HomeScreen(onManga = openManga) }
-            composable(Routes.CATALOG) { CatalogScreen(onManga = openManga) }
-            composable(Routes.LIBRARY) {
-                LibraryScreen(
-                    onManga = openManga,
-                    // Кнопка есть только в debug-сборке (BuildConfig.DEBUG_TOOLS = false в release).
-                    onDebug = if (BuildConfig.DEBUG_TOOLS) ({ nav.navigate(Routes.DEBUG) }) else null,
-                )
-            }
-            composable(Routes.DEBUG) { DebugTools.Screen(onBack = { nav.popBackStack() }) }
-
-            composable(
-                route = Routes.MANGA,
-                arguments = listOf(navArgument("id") { type = NavType.StringType }),
-            ) { backStack ->
-                val id = backStack.arguments?.getString("id").orEmpty()
-                DetailsScreen(
-                    mangaId = id,
-                    onBack = { nav.popBackStack() },
-                    onRead = { chapter -> nav.navigate(Routes.reader(id, chapter.id)) },
-                )
-            }
-
-            composable(
-                route = Routes.READER,
-                arguments = listOf(
-                    navArgument("mangaId") { type = NavType.StringType },
-                    navArgument("chapterId") { type = NavType.StringType },
-                ),
-            ) { backStack ->
-                val mangaId = backStack.arguments?.getString("mangaId").orEmpty()
-                val chapterId = backStack.arguments?.getString("chapterId").orEmpty()
-                ReaderScreen(
-                    mangaId = mangaId,
-                    chapterId = chapterId,
-                    onBack = { nav.popBackStack() },
-                    onOpenChapter = { chapter ->
-                        nav.navigate(Routes.reader(mangaId, chapter.id)) {
-                            popUpTo(Routes.READER) { inclusive = true }
-                        }
-                    },
-                )
+            topLevel.forEach { item ->
+                val selected = route == item.route
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(CircleShape)
+                        .background(if (selected) Color.White.copy(alpha = 0.22f) else Color.Transparent)
+                        .clickable { onSelect(item.route) },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector = item.icon,
+                        contentDescription = item.title,
+                        tint = Color.White.copy(alpha = if (selected) 1f else 0.75f),
+                    )
+                }
             }
         }
     }

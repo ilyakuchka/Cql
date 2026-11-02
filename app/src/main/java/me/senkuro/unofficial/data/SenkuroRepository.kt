@@ -176,7 +176,14 @@ class SenkuroRepository(private val api: SenkuroApi) {
 
     private fun MangaCardDto.toItem(): MangaItem? {
         val id = id ?: return null
-        return MangaItem(id, slug, pickTitle(titles, originalName, slug), cover?.original?.url)
+        return MangaItem(
+            id = id,
+            slug = slug,
+            title = pickTitle(titles, originalName, slug),
+            cover = cover?.original?.url,
+            status = statusName(status),
+            age = ageName(rating),
+        )
     }
 
     private fun MangaInfoDto.toDetails(): MangaDetails {
@@ -188,7 +195,14 @@ class SenkuroRepository(private val api: SenkuroApi) {
             .ifBlank { null }
 
         return MangaDetails(
-            item = MangaItem(id, slug, pickTitle(titles, originalName, slug), cover?.original?.url),
+            item = MangaItem(
+                id = id,
+                slug = slug,
+                title = pickTitle(titles, originalName, slug),
+                cover = cover?.original?.url,
+                status = statusName(status),
+                age = ageName(rating),
+            ),
             altNames = alternativeNames.orEmpty().map { it.content }.filter { it.isNotBlank() }.distinct(),
             description = localizations.orEmpty()
                 .firstOrNull { it.lang.equals("RU", true) }?.description.orEmpty()
