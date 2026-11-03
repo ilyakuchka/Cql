@@ -72,6 +72,14 @@ object CaptureLog {
     /** true — показывать и уже реализованные запросы; по умолчанию они скрыты. */
     var showImplemented by mutableStateOf(false)
 
+    /**
+     * Операции сайта, функционал которых приложение уже реализовало своими запросами с другими именами
+     * (tachiyomi-запросы, Reader, home*): их тоже скрываем.
+     */
+    private val EQUIVALENTS = setOf(
+        "fetchManga", "fetchMangaChapters", "fetchMangaChapter", "fetchMainPage", "fetchPopularMangaByPeriod",
+    )
+
     fun loadImplemented(context: Context) {
         val names = HashSet<String>()
         val regex = Regex("(?:query|mutation|subscription)\\s+(\\w+)")
@@ -81,6 +89,7 @@ object CaptureLog {
                 regex.findAll(text).forEach { names.add(it.groupValues[1]) }
             }
         }
+        names.addAll(EQUIVALENTS)
         implemented = names
     }
 
