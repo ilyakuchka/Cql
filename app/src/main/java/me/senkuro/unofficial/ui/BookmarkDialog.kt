@@ -28,10 +28,12 @@ fun BookmarkDialog(mangaId: String, onLogin: () -> Unit, onDismiss: () -> Unit) 
     var message by remember { mutableStateOf<String?>(null) }
     var busy by remember { mutableStateOf(false) }
 
-    LaunchedEffect(mangaId, token) {
+    LaunchedEffect(mangaId, token, account) {
         if (token == null) return@LaunchedEffect
         try {
-            current = AppGraph.repository.bookmarkOf(mangaId)
+            val id = AppGraph.repository.bookmarkOf(mangaId)
+            // Закладка считается существующей, только если её коллекция есть среди коллекций аккаунта.
+            current = id?.takeIf { cid -> account?.collections?.any { it.id == cid } != false && cid.isNotBlank() }
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
@@ -81,7 +83,7 @@ fun BookmarkDialog(mangaId: String, onLogin: () -> Unit, onDismiss: () -> Unit) 
                                 modifier = Modifier.fillMaxWidth(),
                             ) { Text(if (current == c.id) "✓ ${c.name}" else c.name) }
                         }
-                        if (current != null) {
+                        if (current != null && acc.collections.any { it.id == current }) {
                             TextButton(
                                 enabled = !busy,
                                 onClick = {
