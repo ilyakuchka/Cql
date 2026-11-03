@@ -100,6 +100,40 @@ object FileCapture {
         }
     }
 
+    /** Скачивает файл без участия WebView (для загрузки по манифесту). true — файл сохранён. */
+    fun fetchDirect(url: String): Boolean {
+        if (seen.contains(url) || !ownStatic(url)) return seen.contains(url)
+        if (total >= MAX_TOTAL) return false
+        return try {
+            val request = Request.Builder().url(url).header("User-Agent", "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/124 Mobile Safari/537.36").build()
+            client.newCall(request).execute().use { response ->
+                val body = response.body ?: return false
+                if (body.contentLength() > MAX_FILE) return false
+                val bytes = body.bytes()
+                if (bytes.size > MAX_FILE) return false
+                val mime = response.header("Content-Type").orEmpty().substringBefore(';').trim().ifBlank { "application/octet-stream" }
+                record(url, mime, bytes, response.code)
+                response.code in 200..299
+            }
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    /**
+     * Адреса js из precache-манифеста service worker (vite-plugin-pwa: url:"assets/x.js").
+     * Сначала файлы, похожие на слой запросов (graphql/api/query), чтобы они не упёрлись в лимит размера.
+     */
+    fun manifestUrls(swText: String, swUrl: String): List<String> {
+        val base = URI(swUrl)
+        val all = Regex("""url:"([^"]+\.js)"""").findAll(swText).map { it.groupValues[1] }.distinct().toList()
+        val priority = Regex("graphql|api|query|queries|gql|manga|user|bookmark|comment|chapter", RegexOption.IGNORE_CASE)
+        return all.sortedBy { if (priority.containsMatchIn(it)) 0 else 1 }
+            .mapNotNull { runCatching { base.resolve(it).toString() }.getOrNull() }
+    }
+
+    fun swFile(): CapturedFile? = files.firstOrNull { it.name.endsWith("/sw.js") || it.name == "sw.js" }
+
     private fun record(url: String, mime: String, bytes: ByteArray, status: Int) {
         if (status !in 200..299 || !seen.add(url)) return
         contents[url] = bytes

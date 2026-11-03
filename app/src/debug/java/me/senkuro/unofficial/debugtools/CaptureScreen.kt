@@ -20,6 +20,8 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import androidx.compose.foundation.clickable
@@ -93,6 +95,16 @@ private fun createWebView(context: Context, onHistory: (Boolean) -> Unit): WebHo
     val documentStart = WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)
     if (documentStart) {
         WebViewCompat.addDocumentStartJavaScript(web, CaptureScript.JS, setOf("*"))
+    }
+
+    // Запросы самого service worker (precache) тоже попадают во вкладку «Файлы».
+    runCatching {
+        android.webkit.ServiceWorkerController.getInstance().setServiceWorkerClient(
+            object : android.webkit.ServiceWorkerClient() {
+                override fun shouldInterceptRequest(request: WebResourceRequest): WebResourceResponse? =
+                    FileCapture.intercept(request)
+            },
+        )
     }
 
     web.webViewClient = object : WebViewClient() {
@@ -322,6 +334,42 @@ private fun FilesTab() {
         if (text != null) write(uri) { out -> out.write(text.toByteArray()) }
     }
 
+    var progress by remember { mutableStateOf<String?>(null) }
+
+    fun downloadManifest() {
+        scope.launch(Dispatchers.IO) {
+            try {
+                val swUrl = FileCapture.swFile()?.url ?: (SenkuroConfig.BASE_URL.trimEnd('/') + "/sw.js")
+                if (FileCapture.swFile() == null) FileCapture.fetchDirect(swUrl)
+                val sw = FileCapture.swFile()?.let { FileCapture.textOf(it) }
+                if (sw == null) {
+                    withContext(Dispatchers.Main) { toast("sw.js недоступен") }
+                    return@launch
+                }
+                val urls = FileCapture.manifestUrls(sw, swUrl)
+                var done = 0
+                val gate = kotlinx.coroutines.sync.Semaphore(6)
+                kotlinx.coroutines.coroutineScope {
+                    urls.map { u ->
+                        async {
+                            gate.acquire()
+                            try {
+                                FileCapture.fetchDirect(u)
+                            } finally {
+                                gate.release()
+                                done++
+                                if (done % 10 == 0 || done == urls.size) withContext(Dispatchers.Main) { progress = "$done / ${urls.size}" }
+                            }
+                        }
+                    }.awaitAll()
+                }
+                withContext(Dispatchers.Main) { progress = null; toast("Готово: загружено js по манифесту ${urls.size}") }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) { progress = null; toast("Ошибка: ${e.message}") }
+            }
+        }
+    }
+
     val files = FileCapture.files.toList()
     LazyColumn(Modifier.fillMaxSize()) {
         item {
@@ -338,6 +386,9 @@ private fun FilesTab() {
                         .padding(top = 8.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
+                    OutlinedButton(enabled = progress == null, onClick = { downloadManifest() }) {
+                        Text(progress?.let { "Загрузка $it" } ?: "Загрузить js по манифесту sw.js")
+                    }
                     OutlinedButton(enabled = files.isNotEmpty(), onClick = {
                         found = GqlScanner.scan(files)
                         toast("Найдено документов: ${found?.size ?: 0}")
