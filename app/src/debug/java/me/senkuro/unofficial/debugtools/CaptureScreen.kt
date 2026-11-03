@@ -10,11 +10,18 @@ import android.content.Intent
 import android.graphics.Bitmap
 import android.webkit.CookieManager
 import android.webkit.JavascriptInterface
+import android.webkit.WebResourceRequest
+import android.webkit.WebResourceResponse
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -95,6 +102,10 @@ private fun createWebView(context: Context, onHistory: (Boolean) -> Unit): WebHo
             url?.let { CaptureLog.navigated(it) }
         }
 
+        // Статические файлы сайта (js, css, json…) скачиваем сами и сохраняем для вкладки «Файлы».
+        override fun shouldInterceptRequest(view: WebView?, request: WebResourceRequest?): WebResourceResponse? =
+            request?.let { FileCapture.intercept(it) }
+
         override fun doUpdateVisitedHistory(view: WebView?, url: String?, isReload: Boolean) {
             onHistory(view?.canGoBack() == true)
         }
@@ -145,6 +156,7 @@ fun CaptureScreen(onBack: () -> Unit) {
         ) {
             FilterChip(selected = tab == 0, onClick = { tab = 0 }, label = { Text("Браузер") })
             FilterChip(selected = tab == 1, onClick = { tab = 1 }, label = { Text("Лог (${CaptureLog.visible().size})") })
+            FilterChip(selected = tab == 2, onClick = { tab = 2 }, label = { Text("Файлы (${FileCapture.files.size})") })
             FilterChip(
                 selected = CaptureLog.showImplemented,
                 onClick = { CaptureLog.showImplemented = !CaptureLog.showImplemented },
@@ -152,7 +164,7 @@ fun CaptureScreen(onBack: () -> Unit) {
             )
             OutlinedButton(onClick = { copyReport(context) }) { Text("Копировать") }
             OutlinedButton(onClick = { shareReport(context) }) { Text("Поделиться") }
-            OutlinedButton(onClick = { CaptureLog.clear() }) { Text("Очистить") }
+            OutlinedButton(onClick = { if (tab == 2) FileCapture.clear() else CaptureLog.clear() }) { Text("Очистить") }
             // Быстрый переход на домены (не меняет домен приложения, только страницу в браузере).
             // Домены приложения плюс сайт авторизации sso.senkuro.net (нужен только для перехвата входа).
             val quickLinks = SenkuroConfig.DOMAINS.map { it.title to it.baseUrl } +
@@ -167,8 +179,10 @@ fun CaptureScreen(onBack: () -> Unit) {
 
         if (tab == 0) {
             AndroidView(factory = { holder.view }, modifier = Modifier.fillMaxSize())
-        } else {
+        } else if (tab == 1) {
             LogList()
+        } else {
+            FilesTab()
         }
     }
 }
@@ -260,5 +274,103 @@ private fun shareReport(context: Context) {
         context.startActivity(Intent.createChooser(intent, "Поделиться логом").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
     } catch (e: Exception) {
         Toast.makeText(context, "Не удалось поделиться: ${e.message}", Toast.LENGTH_LONG).show()
+    }
+}
+
+private fun formatSize(n: Int): String = when {
+    n >= 1024 * 1024 -> "%.1f МБ".format(n / 1048576.0)
+    n >= 1024 -> "${n / 1024} КБ"
+    else -> "$n Б"
+}
+
+/** Вкладка «Файлы»: перехваченные js/css/json и т.п., сохранение по одному, ZIP-архивом и найденный в js GraphQL. */
+@Composable
+private fun FilesTab() {
+    val context = LocalContext.current
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    var found by remember { mutableStateOf<List<GqlScanner.Found>?>(null) }
+    var pending by remember { mutableStateOf<CapturedFile?>(null) }
+
+    fun toast(text: String) = Toast.makeText(context, text, Toast.LENGTH_LONG).show()
+
+    fun write(uri: android.net.Uri?, block: (java.io.OutputStream) -> Unit) {
+        if (uri == null) return
+        scope.launch(Dispatchers.IO) {
+            val message = try {
+                context.contentResolver.openOutputStream(uri)?.use(block)
+                "Сохранено"
+            } catch (e: Exception) {
+                "Не удалось сохранить: ${e.message}"
+            }
+            withContext(Dispatchers.Main) { toast(message) }
+        }
+    }
+
+    fun gqlText(): String? = found?.let { GqlScanner.render(it, CaptureLog.implementedNames().takeIf { _ -> !CaptureLog.showImplemented }.orEmpty()) }
+
+    val saveOne = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/octet-stream")) { uri ->
+        val file = pending
+        if (file != null) write(uri) { out -> FileCapture.bytesOf(file)?.let(out::write) }
+        pending = null
+    }
+    val saveZip = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/zip")) { uri ->
+        val extra = gqlText()?.let { mapOf("_graphql-from-js.txt" to it) }.orEmpty()
+        write(uri) { out -> FileCapture.writeZip(out, extra) }
+    }
+    val saveGql = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/plain")) { uri ->
+        val text = gqlText()
+        if (text != null) write(uri) { out -> out.write(text.toByteArray()) }
+    }
+
+    val files = FileCapture.files.toList()
+    LazyColumn(Modifier.fillMaxSize()) {
+        item {
+            Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                Text(
+                    "Файлов: ${files.size}, ${"%.1f".format(FileCapture.totalBytes() / 1048576.0)} МБ. " +
+                        "Откройте вкладку «Браузер» и походите по сайту: js, css, json и прочие статические файлы " +
+                        "появятся здесь. Файлы сохраняются как есть: json может содержать данные вашего аккаунта.",
+                    style = MaterialTheme.typography.bodySmall,
+                )
+                Row(
+                    Modifier
+                        .horizontalScroll(rememberScrollState())
+                        .padding(top = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    OutlinedButton(enabled = files.isNotEmpty(), onClick = {
+                        found = GqlScanner.scan(files)
+                        toast("Найдено документов: ${found?.size ?: 0}")
+                    }) { Text("Найти GraphQL в js") }
+                    OutlinedButton(enabled = found != null, onClick = { saveGql.launch("graphql-from-js.txt") }) {
+                        Text("Сохранить GraphQL (${found?.size ?: 0})")
+                    }
+                    OutlinedButton(enabled = files.isNotEmpty(), onClick = { saveZip.launch("senkuro-files.zip") }) {
+                        Text("Скачать всё (ZIP)")
+                    }
+                    OutlinedButton(onClick = { FileCapture.clear(); found = null }) { Text("Очистить") }
+                }
+            }
+            HorizontalDivider()
+        }
+        items(files) { f ->
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(Modifier.weight(1f)) {
+                    Text(f.name.substringAfterLast('/'), style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text("${f.mime} · ${formatSize(f.size)}", style = MaterialTheme.typography.labelSmall)
+                    Text(f.url, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
+                OutlinedButton(onClick = {
+                    pending = f
+                    saveOne.launch(f.name.substringAfterLast('/'))
+                }) { Text("Скачать") }
+            }
+            HorizontalDivider()
+        }
     }
 }

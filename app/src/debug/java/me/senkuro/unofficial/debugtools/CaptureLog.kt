@@ -93,6 +93,8 @@ object CaptureLog {
         implemented = names
     }
 
+    fun implementedNames(): Set<String> = implemented
+
     fun isImplemented(call: CapturedCall): Boolean = call.graphql && call.operation in implemented
 
     /** Вызовы для показа: без реализованных, пока не включён переключатель. */
