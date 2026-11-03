@@ -19,6 +19,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -41,7 +42,7 @@ fun MangaCard(
     item: MangaItem,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    label: String? = null,
+    label: String? = me.senkuro.unofficial.data.AppGraph.marks.collectAsState().value[item.id],
     compact: Boolean = false,
 ) {
     Column(
@@ -123,7 +124,8 @@ fun TrendingRow(rank: Int, item: MangaItem, onClick: () -> Unit, modifier: Modif
             )
         }
         Column(Modifier.padding(start = 12.dp), verticalArrangement = Arrangement.Center) {
-            val meta = listOfNotNull(item.status, item.age).joinToString(" · ")
+            val mark = me.senkuro.unofficial.data.AppGraph.marks.collectAsState().value[item.id]
+            val meta = listOfNotNull(mark, item.status, item.age).joinToString(" · ")
             if (meta.isNotBlank()) {
                 Text(meta.uppercase(), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp, maxLines = 1)
             }
