@@ -93,6 +93,9 @@ fun ReaderScreen(
             is UiState.Ready -> {
                 val data = state.data
                 var urls by remember(data.chapter.id) { mutableStateOf(data.pages) }
+                val screenWidthPx = with(androidx.compose.ui.platform.LocalDensity.current) {
+                    androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp.dp.roundToPx()
+                }
                 var siteTried by remember(data.chapter.id) { mutableStateOf(false) }
                 val hasToken by AppGraph.auth.token.collectAsState()
                 fun report(block: suspend () -> Unit) {
@@ -130,7 +133,14 @@ fun ReaderScreen(
                 ) {
                     itemsIndexed(urls) { index, url ->
                         SubcomposeAsyncImage(
-                            model = url,
+                            // Высокие ленты не помещаются в аппаратный bitmap: декодируем программно,
+                            // сжимая до ширины экрана и в RGB_565 (вдвое меньше памяти).
+                            model = coil3.request.ImageRequest.Builder(androidx.compose.ui.platform.LocalContext.current)
+                                .data(url)
+                                .size(coil3.size.Size(screenWidthPx, coil3.size.Dimension.Undefined))
+                                .allowHardware(false)
+                                .bitmapConfig(android.graphics.Bitmap.Config.RGB_565)
+                                .build(),
                             contentDescription = "Страница ${index + 1}",
                             contentScale = ContentScale.FillWidth,
                             modifier = Modifier.fillMaxWidth(),
