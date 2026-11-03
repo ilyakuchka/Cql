@@ -1,0 +1,5 @@
+mutation updateMangaReaderSetting($input: UpdateMangaReaderSettingInput!) {
+  updateMangaReaderSetting(input: $input) {
+    success
+  }
+}

@@ -29,6 +29,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -42,6 +43,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.SubcomposeAsyncImage
+import kotlinx.coroutines.launch
+import me.senkuro.unofficial.data.AppGraph
 import me.senkuro.unofficial.data.Chapter
 
 /** Вертикальный ридер: страницы идут сплошной лентой, тап по экрану показывает/прячет панели. */
@@ -55,6 +58,7 @@ fun ReaderScreen(
 ) {
     LaunchedEffect(mangaId, chapterId) { vm.load(mangaId, chapterId) }
     var controls by remember { mutableStateOf(true) }
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
     var showComments by remember { mutableStateOf(false) }
     val listState = androidx.compose.foundation.lazy.rememberLazyListState()
 
@@ -83,6 +87,31 @@ fun ReaderScreen(
 
             is UiState.Ready -> {
                 val data = state.data
+                val hasToken by AppGraph.auth.token.collectAsState()
+                fun report(block: suspend () -> Unit) {
+                    if (hasToken == null) return
+                    scope.launch {
+                        try { block() } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Exception) { }
+                    }
+                }
+                LaunchedEffect(data.chapter.id, hasToken) {
+                    if (hasToken != null) {
+                        try { AppGraph.repository.readChapter(mangaId, data.chapter) }
+                        catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Exception) { }
+                    }
+                }
+                LaunchedEffect(data.chapter.id, hasToken) {
+                    if (hasToken == null) return@LaunchedEffect
+                    var sent = false
+                    androidx.compose.runtime.snapshotFlow { listState.canScrollForward }
+                        .collect { forward ->
+                            if (!forward && !sent && listState.layoutInfo.totalItemsCount > 1) {
+                                sent = true
+                                try { AppGraph.repository.readerEvent(mangaId, data.chapter, "COMPLETED_READING") }
+                                catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Exception) { }
+                            }
+                        }
+                }
                 LazyColumn(
                     state = listState,
                     modifier = Modifier
@@ -159,7 +188,10 @@ fun ReaderScreen(
                             }
                             Text(data.chapter.title, color = Color(0xFFCCCCCC), style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
-                        androidx.compose.material3.TextButton(onClick = { showComments = true }) {
+                        androidx.compose.material3.TextButton(onClick = {
+                            showComments = true
+                            report { AppGraph.repository.readerEvent(mangaId, data.chapter, "OPEN_COMMENTS") }
+                        }) {
                             Text("Комментарии", color = Color.White)
                         }
                     }

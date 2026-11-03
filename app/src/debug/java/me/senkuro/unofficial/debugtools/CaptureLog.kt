@@ -77,7 +77,7 @@ object CaptureLog {
      * (tachiyomi-запросы, Reader, home*): их тоже скрываем.
      */
     private val EQUIVALENTS = setOf(
-        "fetchManga", "fetchMangaChapters", "fetchMangaChapter", "fetchMainPage", "fetchPopularMangaByPeriod",
+        "fetchManga", "fetchMangaInReader", "fetchMangaChapters", "fetchMangaChapter", "fetchMainPage", "fetchPopularMangaByPeriod",
     )
 
     fun loadImplemented(context: Context) {

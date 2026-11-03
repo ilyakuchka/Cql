@@ -32,7 +32,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -65,12 +69,24 @@ fun HomeScreen(
             is UiState.Loading -> LoadingBox()
             is UiState.Error -> ErrorBox(state.message, vm::load)
             is UiState.Ready -> {
+                val account by AppGraph.account.collectAsState()
+                var resume by remember { mutableStateOf<List<MangaItem>>(emptyList()) }
+                LaunchedEffect(account?.userId) {
+                    resume = if (account == null) emptyList() else try {
+                        AppGraph.repository.continueReading()
+                    } catch (e: kotlinx.coroutines.CancellationException) {
+                        throw e
+                    } catch (_: Exception) {
+                        emptyList()
+                    }
+                }
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(top = 4.dp, bottom = 16.dp + LocalBottomInset.current),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     val data = state.data
+                    cardsSection("Продолжить чтение", resume, onManga, onMore, showMore = false)
                     trendingSection("Популярное за день", data.popular, onManga)
                     cardsSection("Свежие обновления", data.latest, onManga, onMore)
                     cardsSection("Новые тайтлы", data.newTitles, onManga, onMore)
@@ -215,11 +231,12 @@ private fun LazyListScope.cardsSection(
     list: List<MangaItem>,
     onManga: (MangaItem) -> Unit,
     onMore: () -> Unit,
+    showMore: Boolean = true,
 ) {
     if (list.isEmpty()) return
     item(key = "section-$title") {
         Column {
-            SectionHeader(title, onMore = onMore)
+            SectionHeader(title, onMore = if (showMore) onMore else null)
             LazyRow(
                 contentPadding = PaddingValues(horizontal = 12.dp),
                 horizontalArrangement = Arrangement.spacedBy(10.dp),

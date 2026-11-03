@@ -39,6 +39,9 @@
 | `fetchUser`, `fetchUserAchievements` | экран профиля (аватар в шапке) и достижения |
 | `fetchThreadComments`, `createComment`, `updateComment`, `deleteComment` | комментарии к странице в ридере |
 | `viewManga` | засчитывает просмотр тайтла |
+| `voteManga`, `fetchMangaViewerState` | оценка тайтла 1–10 («★ Оценка» на экране тайтла) |
+| `readMangaChapter`, `updateMangaReaderSetting` | прогресс чтения: глава прочитана, конец главы, открыты комментарии |
+| `fetchMangaBookmarkNextChapters` | «Продолжить чтение» на главной |
 | `fetchUserBookmarks`, `updateUserBookmark`, `deleteUserBookmark` | закладки на сайте |
 | `homeLatest`, `homeNew`, `homePopular`, `homeRecommendations` | секции главной |
 

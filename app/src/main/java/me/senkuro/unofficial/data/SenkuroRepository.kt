@@ -377,6 +377,54 @@ class SenkuroRepository(private val api: SenkuroApi) {
         api.execute("deleteComment", "deleteComment", vars, JsonElement.serializer())
     }
 
+    // ---------------------------------------------------------------- Оценки, прогресс чтения
+
+    /** Текущая оценка пользователя (1..10) или null. */
+    suspend fun viewerVote(slug: String): Int? =
+        api.execute("fetchMangaViewerState", "fetchMangaViewerState", buildJsonObject { put("slug", slug) },
+            ViewerStateResponse.serializer()).manga?.viewerVote.text()?.toIntOrNull()
+
+    suspend fun vote(mangaId: String, score: Int) {
+        val vars = buildJsonObject {
+            put("input", buildJsonObject {
+                put("mangaId", mangaId)
+                put("score", score)
+            })
+        }
+        api.execute("voteManga", "voteManga", vars, JsonElement.serializer())
+    }
+
+    /** Отмечает главу прочитанной на сайте. */
+    suspend fun readChapter(mangaId: String, chapter: Chapter) {
+        val vars = buildJsonObject {
+            put("input", buildJsonObject {
+                put("branchId", chapter.branchId)
+                put("chapterId", chapter.id)
+                put("mangaId", mangaId)
+            })
+        }
+        api.execute("readMangaChapter", "readMangaChapter", vars, JsonElement.serializer())
+    }
+
+    /** type: OPEN_COMMENTS или COMPLETED_READING. */
+    suspend fun readerEvent(mangaId: String, chapter: Chapter, type: String) {
+        val vars = buildJsonObject {
+            put("input", buildJsonObject {
+                put("chapterId", chapter.id)
+                put("mangaId", mangaId)
+                put("type", type)
+            })
+        }
+        api.execute("updateMangaReaderSetting", "updateMangaReaderSetting", vars, JsonElement.serializer())
+    }
+
+    /** «Продолжить чтение»: следующие главы по закладкам. */
+    suspend fun continueReading(): List<MangaItem> =
+        api.execute("fetchMangaBookmarkNextChapters", "fetchMangaBookmarkNextChapters", buildJsonObject {},
+            NextChaptersResponse.serializer()).mangaBookmarkNextChapters.mapNotNull { n ->
+            n.manga?.toItem()?.copy(status = n.number.text()?.let { "Глава $it" })
+        }.distinctBy { it.id }
+
     private fun JsonElement?.text(): String? = (this as? JsonPrimitive)?.takeIf { it !is JsonNull }?.contentOrNull
 
     private fun NotifFeedDto.toItem(): NotificationItem {

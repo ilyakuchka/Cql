@@ -1,0 +1,18 @@
+query fetchMangaBookmarkNextChapters {
+  mangaBookmarkNextChapters {
+    id
+    slug
+    number
+    volume
+    name
+    manga {
+      id
+      slug
+      originalName { lang content }
+      titles { lang content }
+      status
+      rating
+      cover { original { url } }
+    }
+  }
+}

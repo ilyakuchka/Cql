@@ -316,3 +316,18 @@ class CommentsConn(val edges: List<CommentEdge> = emptyList(), val pageInfo: Pag
 
 @Serializable
 class CommentsResponse(val comments: CommentsConn = CommentsConn())
+
+@Serializable
+class ViewerVoteManga(val viewerVote: kotlinx.serialization.json.JsonElement? = null)
+
+@Serializable
+class ViewerStateResponse(val manga: ViewerVoteManga? = null)
+
+@Serializable
+class NextChapterDto(
+    val number: kotlinx.serialization.json.JsonElement? = null,
+    val manga: MangaCardDto? = null,
+)
+
+@Serializable
+class NextChaptersResponse(val mangaBookmarkNextChapters: List<NextChapterDto> = emptyList())

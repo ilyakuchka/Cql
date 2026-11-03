@@ -1,0 +1,5 @@
+mutation readMangaChapter($input: ReadMangaChapterInput!) {
+  readMangaChapter(input: $input) {
+    success
+  }
+}

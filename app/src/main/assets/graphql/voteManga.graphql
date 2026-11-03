@@ -1,0 +1,5 @@
+mutation voteManga($input: VoteMangaInput!) {
+  voteManga(input: $input) {
+    success
+  }
+}

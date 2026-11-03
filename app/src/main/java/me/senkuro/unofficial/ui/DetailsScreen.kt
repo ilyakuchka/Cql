@@ -109,8 +109,11 @@ fun DetailsScreen(
         if (bookmarkDialog) {
             BookmarkDialog(mangaId = mangaId, onLogin = onLogin, onDismiss = { bookmarkDialog = false })
         }
+        var rateDialog by remember { mutableStateOf(false) }
+        if (rateDialog && item != null) RateDialog(item.id, item.slug, onLogin) { rateDialog = false }
         TopActions(
             onBack = onBack,
+            onRate = { rateDialog = true },
             onBookmark = { bookmarkDialog = true },
             loaded = item != null,
             onShare = { item?.let { shareManga(context, it) } },
@@ -123,6 +126,7 @@ fun DetailsScreen(
 private fun TopActions(
     onBack: () -> Unit,
     onBookmark: () -> Unit,
+    onRate: () -> Unit,
     loaded: Boolean,
     onShare: () -> Unit,
 ) {
@@ -139,6 +143,17 @@ private fun TopActions(
         }
         if (loaded) {
             Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = "★ Оценка",
+                    color = Color.Black,
+                    fontSize = 11.sp,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(25.dp))
+                        .background(Color.White)
+                        .clickable(onClick = onRate)
+                        .padding(horizontal = 12.dp, vertical = 5.dp),
+                )
+                androidx.compose.foundation.layout.Spacer(Modifier.padding(horizontal = 3.dp))
                 Text(
                     text = "+ Закладки",
                     color = Color.Black,
