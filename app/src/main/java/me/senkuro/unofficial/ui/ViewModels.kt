@@ -176,7 +176,6 @@ class DetailsViewModel : ViewModel() {
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                me.senkuro.unofficial.data.ReaderErrorLog.add("Загрузка главы", "manga=$mangaId chapter=$chapterId", e)
                 UiState.Error(e.readable())
             }
         }
