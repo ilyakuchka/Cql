@@ -45,7 +45,7 @@ private const val SSO_URL = "https://sso.senkuro.net/"
  */
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
-fun LoginScreen(onBack: () -> Unit, onDone: () -> Unit) {
+fun WebLoginScreen(onBack: () -> Unit, onDone: () -> Unit) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var status by remember { mutableStateOf("Войдите в аккаунт — приложение подхватит вход само.") }

@@ -37,6 +37,7 @@
 | `fetchViewerUnreadNotifications`, `fetchNotificationFeeds` | уведомления |
 | `bulkReadNotifications`, `bulkDeleteNotifications` | «Прочитать все», удаление уведомлений |
 | `fetchUser`, `fetchUserAchievements` | экран профиля (аватар в шапке) и достижения |
+| SSO `/api/v1/captcha-config`, `/api/v1/auth/login`, `/oauth/authorize`, `/oauth/token` | нативный вход: форма почта/пароль/2FA, капча в WebView, OAuth+PKCE делает приложение |
 | `fetchThreadComments`, `createComment`, `updateComment`, `deleteComment` | комментарии к странице в ридере |
 | `viewManga` | засчитывает просмотр тайтла |
 | `voteManga`, `fetchMangaViewerState` | оценка тайтла 1–10 («★ Оценка» на экране тайтла) |
