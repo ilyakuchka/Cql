@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -60,6 +61,8 @@ fun ReaderScreen(
     var controls by remember { mutableStateOf(true) }
     val scope = androidx.compose.runtime.rememberCoroutineScope()
     var showComments by remember { mutableStateOf(false) }
+    var showErrors by remember { mutableStateOf(false) }
+    val errorCount = me.senkuro.unofficial.data.ReaderErrorLog.entries.size
     val listState = androidx.compose.foundation.lazy.rememberLazyListState()
 
     Box(
@@ -83,6 +86,8 @@ fun ReaderScreen(
                 Button(onClick = { vm.load(mangaId, chapterId, force = true) }, modifier = Modifier.padding(top = 16.dp)) {
                     Text("Повторить")
                 }
+                androidx.compose.material3.TextButton(onClick = { showErrors = true }) { Text("Журнал ошибок ($errorCount)", color = Color.White) }
+                if (showErrors) ReaderErrorsDialog(context = "Манга $mangaId, глава $chapterId", onDismiss = { showErrors = false })
             }
 
             is UiState.Ready -> {
@@ -129,6 +134,12 @@ fun ReaderScreen(
                             contentDescription = "Страница ${index + 1}",
                             contentScale = ContentScale.FillWidth,
                             modifier = Modifier.fillMaxWidth(),
+                            onError = { st ->
+                                me.senkuro.unofficial.data.ReaderErrorLog.add(
+                                    "Картинка: страница ${index + 1}" + if (siteTried) " (после переключения на метод сайта)" else "",
+                                    url, st.result.throwable,
+                                )
+                            },
                             loading = {
                                 Box(
                                     Modifier
@@ -142,10 +153,14 @@ fun ReaderScreen(
                                 LaunchedEffect(data.chapter.id) {
                                     if (!siteTried) {
                                         siteTried = true
+                                        me.senkuro.unofficial.data.ReaderErrorLog.add("Переключение на метод сайта", "глава ${data.chapter.slug}")
                                         try {
                                             val alt = AppGraph.repository.sitePages(data.chapter)
                                             if (alt.isNotEmpty() && alt != urls) urls = alt
-                                        } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Exception) { }
+                                            else me.senkuro.unofficial.data.ReaderErrorLog.add("Метод сайта", "новых адресов нет (${alt.size} шт.)")
+                                        } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) {
+                                            me.senkuro.unofficial.data.ReaderErrorLog.add("Метод сайта", "запрос не удался", e)
+                                        }
                                     }
                                 }
                                 Box(
@@ -200,6 +215,9 @@ fun ReaderScreen(
                             }
                             Text(data.chapter.title, color = Color(0xFFCCCCCC), style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
+                        if (errorCount > 0) androidx.compose.material3.TextButton(onClick = { showErrors = true }) {
+                            Text("Ошибки ($errorCount)", color = Color(0xFFFF8A80))
+                        }
                         androidx.compose.material3.TextButton(onClick = {
                             showComments = true
                             report { AppGraph.repository.readerEvent(mangaId, data.chapter, "OPEN_COMMENTS") }
@@ -208,6 +226,10 @@ fun ReaderScreen(
                         }
                     }
                 }
+                if (showErrors) ReaderErrorsDialog(
+                    context = "Манга ${data.manga?.title.orEmpty()} (${mangaId}), глава ${data.chapter.title} [${data.chapter.slug}], страниц: ${urls.size}",
+                    onDismiss = { showErrors = false },
+                )
                 if (showComments) {
                     CommentsSheet(
                         chapterSlug = data.chapter.slug,
@@ -218,4 +240,32 @@ fun ReaderScreen(
             }
         }
     }
+}
+
+@Composable
+private fun ReaderErrorsDialog(context: String, onDismiss: () -> Unit) {
+    val clipboard = androidx.compose.ui.platform.LocalClipboardManager.current
+    val log = me.senkuro.unofficial.data.ReaderErrorLog
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Ошибки ридера") },
+        text = {
+            androidx.compose.foundation.text.selection.SelectionContainer {
+                Text(
+                    log.text(context).ifBlank { "Ошибок нет" },
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState()),
+                )
+            }
+        },
+        confirmButton = {
+            androidx.compose.material3.TextButton(onClick = { clipboard.setText(androidx.compose.ui.text.AnnotatedString(log.text(context))) }) { Text("Копировать") }
+        },
+        dismissButton = {
+            Row {
+                androidx.compose.material3.TextButton(onClick = { log.clear() }) { Text("Очистить") }
+                androidx.compose.material3.TextButton(onClick = onDismiss) { Text("Закрыть") }
+            }
+        },
+    )
 }

@@ -185,9 +185,12 @@ class SenkuroRepository(private val api: SenkuroApi) {
                 PagesResponse.serializer(),
             ).mangaTachiyomiChapterPages.pages.map { it.url }.filter { it.isNotBlank() }
         }
+        primary.exceptionOrNull()?.let { ReaderErrorLog.add("Страницы: tachiyomi-запрос", "глава ${chapter.slug} (${chapter.id})", it) }
+        if (primary.isSuccess && primary.getOrNull().isNullOrEmpty()) ReaderErrorLog.add("Страницы: tachiyomi-запрос", "пустой список, глава ${chapter.slug}")
         primary.getOrNull()?.takeIf { it.isNotEmpty() }?.let { return it }
 
         val fallback = runCatching { sitePages(chapter) }
+        fallback.exceptionOrNull()?.let { ReaderErrorLog.add("Страницы: запрос сайта", "глава ${chapter.slug}", it) }
         fallback.getOrNull()?.takeIf { it.isNotEmpty() }?.let { return it }
 
         throw (primary.exceptionOrNull() ?: fallback.exceptionOrNull() ?: ApiException("В главе нет страниц"))
