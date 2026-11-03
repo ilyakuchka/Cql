@@ -119,7 +119,32 @@ class SenkuroRepository(private val api: SenkuroApi) {
         )
         val dto = response.mangaTachiyomiChapters
         val teams = dto.teams.associate { it.id to it.name }
-        val chapters = dto.chapters.map { c ->
+        // tachiyomi-ответ бывает неполным (новые главы приходят позже): добираем недостающие запросом сайта.
+        val known = dto.chapters.map { it.id }.toHashSet()
+        val extra = mutableListOf<ChapterDto>()
+        for (branch in dto.chapters.map { it.branchId }.filter { it.isNotBlank() }.distinct()) {
+            runCatching {
+                var after: String? = null
+                var guard = 0
+                do {
+                    val vars = buildJsonObject {
+                        put("branchId", branch)
+                        put("orderBy", buildJsonObject { put("field", "NUMBER"); put("direction", "DESC") })
+                        if (after != null) put("after", after)
+                    }
+                    val page = api.execute("fetchMangaChapters", "fetchMangaChapters", vars, SiteChaptersResponse.serializer()).mangaChapters
+                    var allKnown = true
+                    page.edges.forEach { e ->
+                        if (known.add(e.node.id)) { extra.add(e.node.copy(branchId = branch)); allKnown = false }
+                    }
+                    after = page.pageInfo.endCursor.takeIf { page.pageInfo.hasNextPage && !allKnown }
+                } while (after != null && ++guard < 5)
+            }
+        }
+        val merged = if (extra.isEmpty()) dto.chapters else (dto.chapters + extra).sortedWith(
+            compareByDescending<ChapterDto> { it.volume.toDoubleOrNull() ?: 0.0 }.thenByDescending { it.number.toDoubleOrNull() ?: 0.0 },
+        )
+        val chapters = merged.map { c ->
             Chapter(
                 id = c.id,
                 slug = c.slug,

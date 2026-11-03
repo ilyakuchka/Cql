@@ -38,6 +38,7 @@
 | `bulkReadNotifications`, `bulkDeleteNotifications` | «Прочитать все», удаление уведомлений |
 | `fetchUser`, `fetchUserAchievements` | экран профиля (аватар в шапке) и достижения |
 | SSO `/api/v1/captcha-config`, `/api/v1/auth/login`, `/oauth/authorize`, `/oauth/token` | нативный вход: форма почта/пароль/2FA, капча в WebView, OAuth+PKCE делает приложение |
+| `fetchMangaChapters` | добор глав, которых нет в tachiyomi-ответе |
 | `fetchThreadComments`, `createComment`, `updateComment`, `deleteComment` | комментарии к странице в ридере |
 | `fetchConversations`, `fetchConversationMessages`, `createConversationMessage`, `readConversationMessage`, `bulkDeleteConversationMessages` | личная переписка (Настройки → Сообщения) |
 | `fetchGuilds`, `fetchGuild`, `fetchGuildMembers` | гильдии (Настройки → Гильдии) |

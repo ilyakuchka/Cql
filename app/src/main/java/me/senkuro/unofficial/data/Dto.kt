@@ -59,7 +59,7 @@ class MangaInfoDto(
 )
 
 @Serializable
-class ChapterDto(
+data class ChapterDto(
     val id: String = "",
     val slug: String = "",
     val branchId: String = "",
@@ -361,3 +361,12 @@ class CharactersResponse(val mangaCharacters: CharactersConn = CharactersConn())
 
 @Serializable
 class PopularQueriesResponse(val popularTodaySearchQueries: List<String> = emptyList())
+
+@Serializable
+class SiteChapterEdge(val node: ChapterDto)
+
+@Serializable
+class SiteChaptersConn(val edges: List<SiteChapterEdge> = emptyList(), val pageInfo: PageInfoDto = PageInfoDto())
+
+@Serializable
+class SiteChaptersResponse(val mangaChapters: SiteChaptersConn = SiteChaptersConn())

@@ -1,0 +1,16 @@
+query fetchMangaChapters($branchId: ID!, $after: String, $orderBy: MangaChapterOrder!) {
+  mangaChapters(first: 100, branchId: $branchId, after: $after, orderBy: $orderBy) {
+    edges {
+      node {
+        id
+        slug
+        teamIds
+        name
+        number
+        volume
+        createdAt
+      }
+    }
+    pageInfo { hasNextPage endCursor }
+  }
+}
