@@ -6,7 +6,7 @@ plugins {
 }
 
 // Подпись release: если заданы переменные окружения (их выставляет workflow из секретов),
-// используется ваш keystore, иначе release подписывается постоянным debug-ключом из app/debug.keystore.
+// используется ваш keystore, иначе release подписывается постоянным общим ключом из app/release.keystore.
 val releaseKeystorePath: String? = System.getenv("KEYSTORE_PATH")?.takeIf { it.isNotBlank() }
 
 android {
@@ -31,12 +31,19 @@ android {
             keyAlias = "androiddebugkey"
             keyPassword = "android"
         }
-        if (releaseKeystorePath != null) {
-            create("release") {
+        // Постоянный общий (публичный) release-ключ лежит в репозитории (app/release.keystore, пароль senkuro-public).
+        // Если workflow передал свои секреты подписи, они имеют приоритет.
+        create("release") {
+            if (releaseKeystorePath != null) {
                 storeFile = file(releaseKeystorePath)
                 storePassword = System.getenv("KEYSTORE_PASSWORD")
                 keyAlias = System.getenv("KEY_ALIAS")
                 keyPassword = System.getenv("KEY_PASSWORD")
+            } else {
+                storeFile = file("release.keystore")
+                storePassword = "senkuro-public"
+                keyAlias = "senkuro-release"
+                keyPassword = "senkuro-public"
             }
         }
     }
@@ -50,11 +57,7 @@ android {
             isMinifyEnabled = false
             // В release отладочных инструментов нет: код лежит только в src/debug, здесь пустая заглушка.
             buildConfigField("boolean", "DEBUG_TOOLS", "false")
-            signingConfig = if (releaseKeystorePath != null) {
-                signingConfigs.getByName("release")
-            } else {
-                signingConfigs.getByName("debug")
-            }
+            signingConfig = signingConfigs.getByName("release")
         }
     }
 

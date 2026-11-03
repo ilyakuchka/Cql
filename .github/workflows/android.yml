@@ -52,7 +52,7 @@ jobs:
             } >> "$GITHUB_ENV"
             echo "Release будет подписан ключом из секретов"
           else
-            echo "::notice::Секретов подписи нет: release подписан debug-ключом (ставится, но без обновлений поверх)"
+            echo "::notice::Секретов подписи нет: release подписан общим постоянным ключом app/release.keystore (обновления ставятся поверх)"
           fi
 
       - name: Build APK

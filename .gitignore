@@ -13,3 +13,4 @@ captures/
 *.keystore
 .DS_Store
 !app/debug.keystore
+!app/release.keystore
