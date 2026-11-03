@@ -174,6 +174,7 @@ class SenkuroRepository(private val api: SenkuroApi) {
         val user = viewer?.user ?: return null
         return Account(
             userId = user.id,
+            slug = user.slug,
             name = user.name.ifBlank { user.slug },
             avatar = user.avatar?.original?.url,
             collections = viewer.userBookmarkCollections
@@ -258,6 +259,39 @@ class SenkuroRepository(private val api: SenkuroApi) {
             next = conn.pageInfo.endCursor.takeIf { conn.pageInfo.hasNextPage },
         )
     }
+
+    private suspend fun bulk(op: String, ids: List<String>): BulkResultDto? {
+        val vars = buildJsonObject {
+            put("input", buildJsonObject {
+                put("notificationIds", kotlinx.serialization.json.JsonArray(ids.map { JsonPrimitive(it) }))
+            })
+        }
+        val r = api.execute(op, op, vars, BulkResponse.serializer())
+        return r.bulkReadNotifications ?: r.bulkDeleteNotifications
+    }
+
+    suspend fun markNotificationsRead(ids: List<String>): Boolean = bulk("bulkReadNotifications", ids)?.success == true
+
+    suspend fun deleteNotifications(ids: List<String>): Boolean = bulk("bulkDeleteNotifications", ids)?.success == true
+
+    suspend fun profile(slug: String): Profile? =
+        api.execute("fetchUser", "fetchUser", buildJsonObject { put("slug", slug) }, ProfileResponse.serializer()).user?.let {
+            Profile(it.id, it.slug, it.name.ifBlank { it.slug }, it.verified, it.level, it.createdAt?.take(10),
+                it.lastOnlineAt?.take(10), it.avatar?.original?.url, it.banner?.original?.url)
+        }
+
+    suspend fun achievements(userId: String): List<AchievementItem> =
+        api.execute("fetchUserAchievements", "fetchUserAchievements", buildJsonObject { put("userId", userId) },
+            AchievementsResponse.serializer()).userAchievements.map {
+            AchievementItem(
+                title = it.currentLevel?.titles?.localized() ?: it.achievement?.slug.orEmpty(),
+                level = it.level,
+                points = it.currentLevel?.points,
+                done = it.completedAt != null,
+                progress = it.progress.text(),
+                cover = it.currentLevel?.cover?.original?.url,
+            )
+        }
 
     private fun JsonElement?.text(): String? = (this as? JsonPrimitive)?.takeIf { it !is JsonNull }?.contentOrNull
 

@@ -1,0 +1,13 @@
+query fetchUser($slug: String!) {
+  user(slug: $slug) {
+    id
+    slug
+    name
+    verified
+    level
+    createdAt
+    lastOnlineAt
+    avatar { original { url } }
+    banner { original { url } }
+  }
+}

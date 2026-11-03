@@ -35,6 +35,8 @@
 | `readerChapter` | запасной вариант получения страниц по slug главы |
 | `fetchViewer` | аккаунт и коллекции закладок |
 | `fetchViewerUnreadNotifications`, `fetchNotificationFeeds` | уведомления |
+| `bulkReadNotifications`, `bulkDeleteNotifications` | «Прочитать все», удаление уведомлений |
+| `fetchUser`, `fetchUserAchievements` | экран профиля (аватар в шапке) и достижения |
 | `fetchUserBookmarks`, `fetchBookmarkable`, `updateUserBookmark`, `deleteUserBookmark` | закладки на сайте |
 | `homeLatest`, `homeNew`, `homePopular`, `homeRecommendations` | секции главной |
 

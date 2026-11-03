@@ -1,0 +1,6 @@
+mutation bulkDeleteNotifications($input: BulkDeleteNotificationsInput!) {
+  bulkDeleteNotifications(input: $input) {
+    success
+    notificationsAffected
+  }
+}

@@ -23,6 +23,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -75,6 +77,31 @@ class NotificationsViewModel : ViewModel() {
         fetch()
     }
 
+    var message by mutableStateOf<String?>(null)
+        private set
+
+    fun consumeMessage() { message = null }
+
+    /** Помечает прочитанными (или удаляет) все показанные уведомления; id — из списка групп, формат на сервере не проверен. */
+    fun act(delete: Boolean, only: List<NotificationItem> = items) {
+        val ids = only.map { it.id }
+        if (ids.isEmpty()) return
+        viewModelScope.launch {
+            try {
+                val ok = if (delete) AppGraph.repository.deleteNotifications(ids)
+                else AppGraph.repository.markNotificationsRead(ids)
+                if (ok) {
+                    items = items.filterNot { it.id in ids }
+                    AppGraph.refreshUnread()
+                } else message = "Сервер не принял действие"
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                message = e.message?.takeIf { it.isNotBlank() } ?: "Ошибка сети"
+            }
+        }
+    }
+
     fun loadMore() {
         if (loading || !hasMore) return
         fetch()
@@ -125,6 +152,13 @@ fun NotificationsScreen(onBack: () -> Unit, onManga: (MangaItem) -> Unit, vm: No
             FilterChip(selected = !vm.read, onClick = { vm.select(false) }, label = { Text("Новые") })
             FilterChip(selected = vm.read, onClick = { vm.select(true) }, label = { Text("Прочитанные") })
         }
+        Row(Modifier.padding(horizontal = 4.dp)) {
+            if (!vm.read) TextButton(onClick = { vm.act(false) }, enabled = vm.items.isNotEmpty()) { Text("Прочитать все") }
+            TextButton(onClick = { vm.act(true) }, enabled = vm.items.isNotEmpty()) { Text("Удалить все") }
+        }
+        vm.message?.let {
+            Text(it, color = MaterialTheme.colorScheme.error, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 16.dp))
+        }
         Box(Modifier.fillMaxSize()) {
             val error = vm.error
             when {
@@ -136,7 +170,7 @@ fun NotificationsScreen(onBack: () -> Unit, onManga: (MangaItem) -> Unit, vm: No
                 else -> LazyColumn(contentPadding = PaddingValues(top = 8.dp, bottom = 16.dp)) {
                     itemsIndexed(vm.items) { index, item ->
                         if (index >= vm.items.size - 3) LaunchedEffect(vm.items.size) { vm.loadMore() }
-                        NotificationRow(item, onClick = { item.manga?.let(onManga) })
+                        NotificationRow(item, onClick = { item.manga?.let(onManga) }, onDelete = { vm.act(true, listOf(item)) })
                         HorizontalDivider(color = MaterialTheme.colorScheme.outline, thickness = 0.8.dp)
                     }
                 }
@@ -146,7 +180,7 @@ fun NotificationsScreen(onBack: () -> Unit, onManga: (MangaItem) -> Unit, vm: No
 }
 
 @Composable
-private fun NotificationRow(item: NotificationItem, onClick: () -> Unit) {
+private fun NotificationRow(item: NotificationItem, onClick: () -> Unit, onDelete: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -185,5 +219,8 @@ private fun NotificationRow(item: NotificationItem, onClick: () -> Unit) {
             )
         }
         item.date?.let { Text(it, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp) }
+        IconButton(onClick = onDelete) {
+            Icon(Icons.Filled.Close, contentDescription = "Удалить", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
     }
 }

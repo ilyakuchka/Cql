@@ -79,6 +79,7 @@ data class BookmarkCollection(val id: String, val name: String, val system: Bool
 /** Аккаунт на сайте: пользователь и его коллекции закладок (только манга). */
 data class Account(
     val userId: String,
+    val slug: String,
     val name: String,
     val avatar: String?,
     val collections: List<BookmarkCollection>,
@@ -97,3 +98,17 @@ data class NotificationItem(
 )
 
 data class NotificationsPage(val items: List<NotificationItem>, val next: String?)
+
+data class Profile(
+    val id: String,
+    val slug: String,
+    val name: String,
+    val verified: Boolean,
+    val level: Int?,
+    val createdAt: String?,
+    val lastOnlineAt: String?,
+    val avatar: String?,
+    val banner: String?,
+)
+
+data class AchievementItem(val title: String, val level: Int?, val points: Int?, val done: Boolean, val progress: String?, val cover: String?)

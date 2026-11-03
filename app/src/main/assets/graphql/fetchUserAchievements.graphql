@@ -1,0 +1,14 @@
+query fetchUserAchievements($userId: ID!) {
+  userAchievements(userId: $userId) {
+    progress
+    level
+    completedAt
+    achievement { id slug }
+    currentLevel {
+      titles { lang content }
+      threshold
+      points
+      cover { original { url } }
+    }
+  }
+}

@@ -238,3 +238,48 @@ class NotifConn(val edges: List<NotifEdge> = emptyList(), val pageInfo: PageInfo
 
 @Serializable
 class NotifResponse(val notificationFeeds: NotifConn = NotifConn())
+
+@Serializable
+class BulkResultDto(val success: Boolean = false, val notificationsAffected: Int? = null)
+
+@Serializable
+class BulkResponse(val bulkReadNotifications: BulkResultDto? = null, val bulkDeleteNotifications: BulkResultDto? = null)
+
+@Serializable
+class ProfileUserDto(
+    val id: String = "",
+    val slug: String = "",
+    val name: String = "",
+    val verified: Boolean = false,
+    val level: Int? = null,
+    val createdAt: String? = null,
+    val lastOnlineAt: String? = null,
+    val avatar: Cover? = null,
+    val banner: Cover? = null,
+)
+
+@Serializable
+class ProfileResponse(val user: ProfileUserDto? = null)
+
+@Serializable
+class AchievementRefDto(val id: String = "", val slug: String = "")
+
+@Serializable
+class AchievementLevelDto(
+    val titles: List<Title> = emptyList(),
+    val threshold: kotlinx.serialization.json.JsonElement? = null,
+    val points: Int? = null,
+    val cover: Cover? = null,
+)
+
+@Serializable
+class UserAchievementDto(
+    val progress: kotlinx.serialization.json.JsonElement? = null,
+    val level: Int? = null,
+    val completedAt: String? = null,
+    val achievement: AchievementRefDto? = null,
+    val currentLevel: AchievementLevelDto? = null,
+)
+
+@Serializable
+class AchievementsResponse(val userAchievements: List<UserAchievementDto> = emptyList())

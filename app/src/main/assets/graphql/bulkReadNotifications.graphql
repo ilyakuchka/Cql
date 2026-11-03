@@ -1,0 +1,6 @@
+mutation bulkReadNotifications($input: BulkReadNotificationsInput!) {
+  bulkReadNotifications(input: $input) {
+    success
+    notificationsAffected
+  }
+}

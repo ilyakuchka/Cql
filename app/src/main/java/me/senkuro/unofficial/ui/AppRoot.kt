@@ -59,6 +59,7 @@ private object Routes {
     const val LOGIN = "login"
     const val SETTINGS = "settings"
     const val NOTIFICATIONS = "notifications"
+    const val PROFILE = "profile"
     const val MANGA = "manga/{id}"
     const val READER = "reader/{mangaId}/{chapterId}"
 
@@ -115,7 +116,7 @@ fun AppRoot() {
                                 onSearch = { navigateTop(Routes.CATALOG) },
                                 onMore = { navigateTop(Routes.CATALOG) },
                                 onLogin = { nav.navigate(Routes.LOGIN) },
-                                onProfile = { navigateTop(Routes.LIBRARY) },
+                                onProfile = { nav.navigate(Routes.PROFILE) },
                                 onNotifications = { nav.navigate(Routes.NOTIFICATIONS) },
                             )
                         }
@@ -135,6 +136,9 @@ fun AppRoot() {
                         UnofficialTheme(dark = appDark) {
                             NotificationsScreen(onBack = { nav.popBackStack() }, onManga = openManga)
                         }
+                    }
+                    composable(Routes.PROFILE) {
+                        UnofficialTheme(dark = appDark) { ProfileScreen(onBack = { nav.popBackStack() }) }
                     }
                     composable(Routes.SETTINGS) { UnofficialTheme(dark = appDark) { SettingsScreen() } }
                     composable(Routes.LOGIN) {
