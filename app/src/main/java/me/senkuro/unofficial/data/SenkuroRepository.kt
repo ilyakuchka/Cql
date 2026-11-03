@@ -163,6 +163,16 @@ class SenkuroRepository(private val api: SenkuroApi) {
 
     // ------------------------------------------------------------------ Ридер
 
+    /** Страницы тем же запросом, что использует сайт (по slug главы). */
+    suspend fun sitePages(chapter: Chapter): List<String> {
+        val vars = buildJsonObject {
+            put("slug", chapter.slug)
+            put("cdn_quality", "red")
+        }
+        return api.execute("Reader", "readerChapter", vars, ReaderResponse.serializer())
+            .mangaChapter?.pages?.mapNotNull { it.image?.original?.url }?.filter { it.isNotBlank() }.orEmpty()
+    }
+
     /** Сначала tachiyomi-запрос страниц, при неудаче — запрос ридера сайта по slug главы. */
     suspend fun pages(mangaId: String, chapter: Chapter): List<String> {
         val primary = runCatching {
@@ -177,15 +187,7 @@ class SenkuroRepository(private val api: SenkuroApi) {
         }
         primary.getOrNull()?.takeIf { it.isNotEmpty() }?.let { return it }
 
-        val vars = buildJsonObject {
-            put("slug", chapter.slug)
-            put("cdn_quality", "red")
-        }
-        val fallback = runCatching {
-            api.execute("Reader", "readerChapter", vars, ReaderResponse.serializer())
-                .mangaChapter?.pages?.mapNotNull { it.image?.original?.url }?.filter { it.isNotBlank() }
-                .orEmpty()
-        }
+        val fallback = runCatching { sitePages(chapter) }
         fallback.getOrNull()?.takeIf { it.isNotEmpty() }?.let { return it }
 
         throw (primary.exceptionOrNull() ?: fallback.exceptionOrNull() ?: ApiException("В главе нет страниц"))

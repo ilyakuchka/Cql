@@ -87,6 +87,8 @@ fun ReaderScreen(
 
             is UiState.Ready -> {
                 val data = state.data
+                var urls by remember(data.chapter.id) { mutableStateOf(data.pages) }
+                var siteTried by remember(data.chapter.id) { mutableStateOf(false) }
                 val hasToken by AppGraph.auth.token.collectAsState()
                 fun report(block: suspend () -> Unit) {
                     if (hasToken == null) return
@@ -121,7 +123,7 @@ fun ReaderScreen(
                             indication = null,
                         ) { controls = !controls },
                 ) {
-                    itemsIndexed(data.pages) { index, url ->
+                    itemsIndexed(urls) { index, url ->
                         SubcomposeAsyncImage(
                             model = url,
                             contentDescription = "Страница ${index + 1}",
@@ -136,6 +138,16 @@ fun ReaderScreen(
                                 ) { CircularProgressIndicator(color = Color.White) }
                             },
                             error = {
+                                // Страницы по умолчанию не загрузились — один раз переключаемся на метод сайта.
+                                LaunchedEffect(data.chapter.id) {
+                                    if (!siteTried) {
+                                        siteTried = true
+                                        try {
+                                            val alt = AppGraph.repository.sitePages(data.chapter)
+                                            if (alt.isNotEmpty() && alt != urls) urls = alt
+                                        } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Exception) { }
+                                    }
+                                }
                                 Box(
                                     Modifier
                                         .fillMaxWidth()
