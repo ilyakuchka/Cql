@@ -48,6 +48,8 @@ fun ProfileScreen(onBack: () -> Unit) {
     var error by remember { mutableStateOf<String?>(null) }
     var loading by remember { mutableStateOf(true) }
     var attempt by remember { mutableStateOf(0) }
+    var showAll by remember { mutableStateOf(false) }
+    androidx.activity.compose.BackHandler(enabled = showAll) { showAll = false }
 
     LaunchedEffect(account?.slug, attempt) {
         val acc = account ?: return@LaunchedEffect
@@ -66,10 +68,10 @@ fun ProfileScreen(onBack: () -> Unit) {
 
     Column(Modifier.fillMaxSize().statusBarsPadding()) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onBack) {
+            IconButton(onClick = { if (showAll) showAll = false else onBack() }) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Назад", tint = MaterialTheme.colorScheme.onBackground)
             }
-            Text("Профиль", style = HeadingStyle, color = MaterialTheme.colorScheme.onBackground)
+            Text(if (showAll) "Достижения" else "Профиль", style = HeadingStyle, color = MaterialTheme.colorScheme.onBackground)
         }
         val p = profile
         when {
@@ -81,6 +83,9 @@ fun ProfileScreen(onBack: () -> Unit) {
             p == null -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Text("Профиль не найден", color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
+            showAll -> LazyColumn(contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 8.dp)) {
+                items(achievements) { AchievementRow(it) }
+            }
             else -> LazyColumn(contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 24.dp)) {
                 item { Header(p) }
                 item {
@@ -91,7 +96,13 @@ fun ProfileScreen(onBack: () -> Unit) {
                         modifier = Modifier.padding(16.dp),
                     )
                 }
-                items(achievements) { AchievementRow(it) }
+                items(achievements.take(3)) { AchievementRow(it) }
+                if (achievements.size > 3) item {
+                    androidx.compose.material3.TextButton(
+                        onClick = { showAll = true },
+                        modifier = Modifier.padding(horizontal = 8.dp),
+                    ) { Text("Посмотреть все достижения (${achievements.size})") }
+                }
             }
         }
     }
