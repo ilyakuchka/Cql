@@ -209,14 +209,6 @@ class SenkuroRepository(private val api: SenkuroApi) {
         return BookmarksPage(items, conn.pageInfo.endCursor.takeIf { conn.pageInfo.hasNextPage })
     }
 
-    /** Коллекция, в которой лежит тайтл, или null. */
-    suspend fun bookmarkOf(mangaId: String): String? =
-        api.execute(
-            "fetchBookmarkable", "fetchBookmarkable",
-            buildJsonObject { put("subjectId", mangaId) },
-            BookmarkableResponse.serializer(),
-        ).bookmarkable?.collectionId
-
     suspend fun setBookmark(mangaId: String, collectionId: String) {
         val vars = buildJsonObject {
             put("input", buildJsonObject {

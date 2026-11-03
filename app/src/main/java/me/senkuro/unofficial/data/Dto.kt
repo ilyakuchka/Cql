@@ -192,7 +192,6 @@ class SuccessDto(val success: Boolean = false)
 class MutationResponse(val updateUserBookmark: SuccessDto? = null, val deleteUserBookmark: SuccessDto? = null)
 
 @Serializable
-class BookmarkableResponse(val bookmarkable: BookmarkNodeDto? = null)
 
 // ---------------------------------------------------------------- Уведомления
 

@@ -1,8 +1,0 @@
-query fetchBookmarkable($subjectId: ID!) {
-  bookmarkable(subjectId: $subjectId) {
-    entityId
-    collectionId
-    page
-    number
-  }
-}

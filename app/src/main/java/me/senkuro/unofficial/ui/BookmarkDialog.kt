@@ -28,17 +28,11 @@ fun BookmarkDialog(mangaId: String, onLogin: () -> Unit, onDismiss: () -> Unit) 
     var message by remember { mutableStateOf<String?>(null) }
     var busy by remember { mutableStateOf(false) }
 
-    LaunchedEffect(mangaId, token, account) {
-        if (token == null) return@LaunchedEffect
-        try {
-            val id = AppGraph.repository.bookmarkOf(mangaId)
-            // Закладка считается существующей, только если её коллекция есть среди коллекций аккаунта.
-            current = id?.takeIf { cid -> account?.collections?.any { it.id == cid } != false && cid.isNotBlank() }
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            message = e.message
-        }
+    val marks by AppGraph.marks.collectAsState()
+    // Запрос bookmarkable на сервере не существует: коллекцию берём из загруженных закладок аккаунта.
+    LaunchedEffect(mangaId, token, account, marks) {
+        val name = marks[mangaId]
+        current = account?.collections?.firstOrNull { it.name == name }?.id
     }
 
     fun run(block: suspend () -> Unit) {
