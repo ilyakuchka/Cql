@@ -44,6 +44,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.SubcomposeAsyncImage
+import coil3.request.allowHardware
 import kotlinx.coroutines.launch
 import me.senkuro.unofficial.data.AppGraph
 import me.senkuro.unofficial.data.Chapter
@@ -62,6 +63,8 @@ fun ReaderScreen(
     val scope = androidx.compose.runtime.rememberCoroutineScope()
     var showComments by remember { mutableStateOf(false) }
     var showErrors by remember { mutableStateOf(false) }
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val widthPx = ctx.resources.displayMetrics.widthPixels
     val errorCount = me.senkuro.unofficial.data.ReaderErrorLog.entries.size
     val listState = androidx.compose.foundation.lazy.rememberLazyListState()
 
@@ -145,6 +148,7 @@ fun ReaderScreen(
                             contentScale = ContentScale.FillWidth,
                             modifier = Modifier.fillMaxWidth(),
                             onError = { st ->
+                                if (st.result.throwable is OutOfMemoryError) siteTried = true
                                 me.senkuro.unofficial.data.ReaderErrorLog.add(
                                     "Картинка: страница ${index + 1}" + if (siteTried) " (после переключения на метод сайта)" else "",
                                     url, st.result.throwable,
