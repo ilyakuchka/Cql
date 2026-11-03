@@ -331,3 +331,33 @@ class NextChapterDto(
 
 @Serializable
 class NextChaptersResponse(val mangaBookmarkNextChapters: List<NextChapterDto> = emptyList())
+
+@Serializable
+class RelationNodeDto(val relation: String? = null, val destination: MangaCardDto? = null)
+
+@Serializable
+class RelationEdge(val node: RelationNodeDto)
+
+@Serializable
+class RelationsConn(val edges: List<RelationEdge> = emptyList())
+
+@Serializable
+class RelationsResponse(val mangaRelations: RelationsConn = RelationsConn())
+
+@Serializable
+class CharacterDto(val id: String = "", val name: String = "", val titles: List<Title>? = null, val cover: Cover? = null)
+
+@Serializable
+class CharacterNodeDto(val role: String? = null, val character: CharacterDto? = null)
+
+@Serializable
+class CharacterEdge(val node: CharacterNodeDto)
+
+@Serializable
+class CharactersConn(val edges: List<CharacterEdge> = emptyList())
+
+@Serializable
+class CharactersResponse(val mangaCharacters: CharactersConn = CharactersConn())
+
+@Serializable
+class PopularQueriesResponse(val popularTodaySearchQueries: List<String> = emptyList())

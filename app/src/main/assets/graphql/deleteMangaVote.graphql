@@ -1,0 +1,5 @@
+mutation deleteMangaVote($input: DeleteMangaVoteInput!) {
+  deleteMangaVote(input: $input) {
+    success
+  }
+}

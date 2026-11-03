@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -76,6 +77,7 @@ fun DetailsScreen(
     onBack: () -> Unit,
     onRead: (Chapter) -> Unit,
     onLogin: () -> Unit,
+    onOpenManga: (MangaItem) -> Unit = {},
     vm: DetailsViewModel = viewModel(key = "details-$mangaId"),
 ) {
     LaunchedEffect(mangaId) { vm.load(mangaId) }
@@ -103,7 +105,7 @@ fun DetailsScreen(
         when (val state = vm.state) {
             is UiState.Loading -> LoadingBox()
             is UiState.Error -> ErrorBox(state.message, { vm.load(mangaId, force = true) })
-            is UiState.Ready -> DetailsContent(state.data, readIds, onRead)
+            is UiState.Ready -> DetailsContent(state.data, readIds, onRead, onOpenManga)
         }
         var bookmarkDialog by remember { mutableStateOf(false) }
         if (bookmarkDialog) {
@@ -181,8 +183,14 @@ private fun shareManga(context: Context, item: MangaItem) {
 }
 
 @Composable
-private fun DetailsContent(data: DetailsData, readIds: Set<String>, onRead: (Chapter) -> Unit) {
+private fun DetailsContent(data: DetailsData, readIds: Set<String>, onRead: (Chapter) -> Unit, onOpenManga: (MangaItem) -> Unit) {
     val details = data.details
+    val extras by androidx.compose.runtime.produceState(DetailsExtras(), details.item.id) {
+        value = DetailsExtras(
+            relations = runCatching { AppGraph.repository.relations(details.item.id) }.getOrDefault(emptyList()),
+            characters = runCatching { AppGraph.repository.characters(details.item.id) }.getOrDefault(emptyList()),
+        )
+    }
     val branches = data.chapters.branches
     var branchIndex by rememberSaveable { mutableIntStateOf(0) }
     val branch = branches.getOrNull(branchIndex) ?: branches.firstOrNull()
@@ -252,6 +260,48 @@ private fun DetailsContent(data: DetailsData, readIds: Set<String>, onRead: (Cha
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     details.labels.forEach { OutlineChip(it, selected = false, onClick = null) }
+                }
+            }
+        }
+
+        if (extras.relations.isNotEmpty()) {
+            item(key = "relations") {
+                Column(Modifier.padding(top = 12.dp)) {
+                    Text("Связанное", style = HeadingStyle, color = MaterialTheme.colorScheme.onBackground, modifier = Modifier.padding(horizontal = 21.dp, vertical = 6.dp))
+                    androidx.compose.foundation.lazy.LazyRow(
+                        contentPadding = PaddingValues(horizontal = 21.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    ) {
+                        items(extras.relations, key = { it.manga.id }) { r ->
+                            Column(Modifier.width(110.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                MangaCard(r.manga, onClick = { onOpenManga(r.manga) })
+                                r.relation?.let { Text(relationName(it), color = AppColors.DarkSecondary, fontSize = 10.sp) }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        if (extras.characters.isNotEmpty()) {
+            item(key = "characters") {
+                Column(Modifier.padding(top = 12.dp)) {
+                    Text("Персонажи", style = HeadingStyle, color = MaterialTheme.colorScheme.onBackground, modifier = Modifier.padding(horizontal = 21.dp, vertical = 6.dp))
+                    androidx.compose.foundation.lazy.LazyRow(
+                        contentPadding = PaddingValues(horizontal = 21.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    ) {
+                        items(extras.characters) { c ->
+                            Column(Modifier.width(80.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                                coil3.compose.AsyncImage(
+                                    model = c.cover, contentDescription = c.name,
+                                    contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                                    modifier = Modifier.size(64.dp).clip(androidx.compose.foundation.shape.CircleShape).background(MaterialTheme.colorScheme.surfaceVariant),
+                                )
+                                Text(c.name, color = MaterialTheme.colorScheme.onBackground, fontSize = 11.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -438,4 +488,24 @@ private fun ChapterRow(chapter: Chapter, cover: String?, read: Boolean, onClick:
         }
         Text("#${chapter.number}", color = Color.White, fontSize = 14.sp, modifier = Modifier.padding(end = 12.dp))
     }
+}
+
+private class DetailsExtras(
+    val relations: List<me.senkuro.unofficial.data.RelatedManga> = emptyList(),
+    val characters: List<me.senkuro.unofficial.data.CharacterItem> = emptyList(),
+)
+
+private fun relationName(raw: String): String = when (raw.uppercase()) {
+    "SEQUEL" -> "Продолжение"
+    "PREQUEL" -> "Предыстория"
+    "SIDE_STORY" -> "Побочная история"
+    "SPIN_OFF" -> "Спин-офф"
+    "ADAPTATION" -> "Адаптация"
+    "ALTERNATIVE_VERSION" -> "Альтернативная версия"
+    "ALTERNATIVE_SETTING" -> "Альтернативный сеттинг"
+    "SUMMARY" -> "Краткое изложение"
+    "FULL_STORY" -> "Полная история"
+    "CHARACTER" -> "Общие персонажи"
+    "OTHER" -> "Другое"
+    else -> raw.lowercase().replace('_', ' ')
 }

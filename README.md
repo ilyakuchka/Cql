@@ -40,6 +40,9 @@
 | `fetchThreadComments`, `createComment`, `updateComment`, `deleteComment` | комментарии к странице в ридере |
 | `viewManga` | засчитывает просмотр тайтла |
 | `voteManga`, `fetchMangaViewerState` | оценка тайтла 1–10 («★ Оценка» на экране тайтла) |
+| `deleteMangaVote` | «Убрать оценку» |
+| `fetchMangaRelations`, `fetchMangaCharacters` | блоки «Связанное» и «Персонажи» на экране тайтла |
+| `fetchPopularTodaySearchQueries` | популярные запросы чипами в каталоге |
 | `readMangaChapter`, `updateMangaReaderSetting` | прогресс чтения: глава прочитана, конец главы, открыты комментарии |
 | `fetchMangaBookmarkNextChapters` | «Продолжить чтение» на главной |
 | `fetchUserBookmarks`, `updateUserBookmark`, `deleteUserBookmark` | закладки на сайте |

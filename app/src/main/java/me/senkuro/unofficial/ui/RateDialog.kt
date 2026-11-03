@@ -76,6 +76,26 @@ fun RateDialog(mangaId: String, slug: String, onLogin: () -> Unit, onDismiss: ()
                             }
                         }
                     }
+                    if (current != null) {
+                        TextButton(
+                            enabled = !busy,
+                            onClick = {
+                                busy = true
+                                scope.launch {
+                                    try {
+                                        AppGraph.repository.deleteVote(mangaId)
+                                        current = null
+                                        message = null
+                                    } catch (e: CancellationException) {
+                                        throw e
+                                    } catch (e: Exception) {
+                                        message = e.message ?: "Ошибка сети"
+                                    }
+                                    busy = false
+                                }
+                            },
+                        ) { Text("Убрать оценку") }
+                    }
                     message?.let { Text(it, color = MaterialTheme.colorScheme.error, fontSize = 12.sp) }
                 }
             }

@@ -1,0 +1,22 @@
+query fetchMangaRelations($mangaId: ID!, $after: String) {
+  mangaRelations(mangaId: $mangaId, first: 100, after: $after) {
+    edges {
+      node {
+        id
+        relation
+        destination {
+          __typename
+          ... on Manga {
+            id
+            slug
+            originalName { lang content }
+            titles { lang content }
+            status
+            rating
+            cover { original { url } }
+          }
+        }
+      }
+    }
+  }
+}

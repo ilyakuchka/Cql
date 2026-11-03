@@ -161,6 +161,7 @@ fun AppRoot() {
                                 onBack = { nav.popBackStack() },
                                 onRead = { chapter -> nav.navigate(Routes.reader(id, chapter.id)) },
                                 onLogin = { nav.navigate(Routes.LOGIN) },
+                                onOpenManga = openManga,
                             )
                         }
                     }

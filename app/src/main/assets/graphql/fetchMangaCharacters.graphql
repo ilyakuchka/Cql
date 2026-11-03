@@ -1,0 +1,18 @@
+query fetchMangaCharacters($mangaId: ID!, $after: String) {
+  mangaCharacters(mangaId: $mangaId, first: 100, after: $after) {
+    edges {
+      node {
+        id
+        role
+        character {
+          id
+          slug
+          name
+          titles { lang content }
+          cover { original { url } }
+        }
+      }
+    }
+    pageInfo { hasNextPage endCursor }
+  }
+}

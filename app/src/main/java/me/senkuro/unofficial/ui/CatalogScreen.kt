@@ -2,6 +2,7 @@
 
 package me.senkuro.unofficial.ui
 
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -116,6 +117,32 @@ fun CatalogScreen(onManga: (MangaItem) -> Unit, vm: CatalogViewModel = viewModel
                 val active = vm.filters.activeCount
                 TextButton(onClick = { showFilters = true }) {
                     Text(if (active > 0) "Фильтры ($active)" else "Фильтры", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp)
+                }
+            }
+
+            var popular by remember { mutableStateOf<List<String>>(emptyList()) }
+            LaunchedEffect(Unit) {
+                popular = try {
+                    me.senkuro.unofficial.data.AppGraph.repository.popularSearches()
+                } catch (e: kotlinx.coroutines.CancellationException) {
+                    throw e
+                } catch (_: Exception) {
+                    emptyList()
+                }
+            }
+            if (vm.query.isBlank() && popular.isNotEmpty()) {
+                Row(
+                    Modifier
+                        .horizontalScroll(androidx.compose.foundation.rememberScrollState())
+                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    popular.take(12).forEach { q ->
+                        androidx.compose.material3.AssistChip(
+                            onClick = { text = q; focus.clearFocus(); vm.submit(q) },
+                            label = { Text(q, fontSize = 12.sp) },
+                        )
+                    }
                 }
             }
 

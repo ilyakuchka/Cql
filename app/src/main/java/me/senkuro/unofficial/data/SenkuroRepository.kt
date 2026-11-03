@@ -425,6 +425,30 @@ class SenkuroRepository(private val api: SenkuroApi) {
             n.manga?.toItem()?.copy(status = n.number.text()?.let { "Глава $it" })
         }.distinctBy { it.id }
 
+    // ---------------------------------------------------------------- Связанное, персонажи, поиск
+
+    suspend fun deleteVote(mangaId: String) {
+        val vars = buildJsonObject { put("input", buildJsonObject { put("mangaId", mangaId) }) }
+        api.execute("deleteMangaVote", "deleteMangaVote", vars, JsonElement.serializer())
+    }
+
+    suspend fun relations(mangaId: String): List<RelatedManga> =
+        api.execute("fetchMangaRelations", "fetchMangaRelations", mangaVars(mangaId), RelationsResponse.serializer())
+            .mangaRelations.edges.mapNotNull { e ->
+                e.node.destination?.toItem()?.let { RelatedManga(it, e.node.relation) }
+            }
+
+    suspend fun characters(mangaId: String): List<CharacterItem> =
+        api.execute("fetchMangaCharacters", "fetchMangaCharacters", mangaVars(mangaId), CharactersResponse.serializer())
+            .mangaCharacters.edges.mapNotNull { e ->
+                val c = e.node.character ?: return@mapNotNull null
+                CharacterItem(c.titles?.localized() ?: c.name, e.node.role, c.cover?.original?.url)
+            }
+
+    suspend fun popularSearches(): List<String> =
+        api.execute("fetchPopularTodaySearchQueries", "fetchPopularTodaySearchQueries", buildJsonObject {},
+            PopularQueriesResponse.serializer()).popularTodaySearchQueries
+
     private fun JsonElement?.text(): String? = (this as? JsonPrimitive)?.takeIf { it !is JsonNull }?.contentOrNull
 
     private fun NotifFeedDto.toItem(): NotificationItem {
