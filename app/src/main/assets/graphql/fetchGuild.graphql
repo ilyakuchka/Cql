@@ -1,0 +1,29 @@
+query fetchGuild($slug: String!) {
+  guild(slug: $slug) {
+    id
+    slug
+    name
+    tag
+    level
+    experience
+    nextLevelExperience
+    points
+    rank
+    score
+    members
+    maxMembers
+    inviteOnly
+    avatar { original { url } }
+    banner { original { url } }
+    description {
+      __typename
+      ... on TiptapNodeNestedBlock {
+        content {
+          __typename
+          ... on TiptapNodeText { text }
+        }
+      }
+    }
+    viewerIsMember
+  }
+}

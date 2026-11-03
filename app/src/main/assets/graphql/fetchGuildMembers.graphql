@@ -1,0 +1,15 @@
+query fetchGuildMembers($first: Int!, $after: String, $guildId: ID!, $orderBy: GuildMemberOrder) {
+  guildMembers(first: $first, after: $after, guildId: $guildId, orderBy: $orderBy) {
+    totalCount
+    edges {
+      node {
+        userId
+        level
+        points
+        role
+        user { id name avatar { original { url } } }
+      }
+    }
+    pageInfo { hasNextPage endCursor }
+  }
+}

@@ -1,5 +1,6 @@
 package me.senkuro.unofficial.ui
 
+import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -60,6 +61,11 @@ private object Routes {
     const val SETTINGS = "settings"
     const val NOTIFICATIONS = "notifications"
     const val PROFILE = "profile"
+    const val CONVERSATIONS = "conversations"
+    const val CHAT = "chat/{id}/{title}"
+    const val GUILDS = "guilds"
+    const val GUILD = "guild/{slug}"
+    const val CARDS = "cards"
     const val MANGA = "manga/{id}"
     const val READER = "reader/{mangaId}/{chapterId}"
 
@@ -140,7 +146,48 @@ fun AppRoot() {
                     composable(Routes.PROFILE) {
                         UnofficialTheme(dark = appDark) { ProfileScreen(onBack = { nav.popBackStack() }) }
                     }
-                    composable(Routes.SETTINGS) { UnofficialTheme(dark = appDark) { SettingsScreen() } }
+                    composable(Routes.SETTINGS) {
+                        UnofficialTheme(dark = appDark) {
+                            SettingsScreen(
+                                onMessages = { nav.navigate(Routes.CONVERSATIONS) },
+                                onGuilds = { nav.navigate(Routes.GUILDS) },
+                                onCards = { nav.navigate(Routes.CARDS) },
+                            )
+                        }
+                    }
+                    composable(Routes.CONVERSATIONS) {
+                        UnofficialTheme(dark = appDark) {
+                            ConversationsScreen(
+                                onBack = { nav.popBackStack() },
+                                onOpen = { id, title -> nav.navigate("chat/" + Uri.encode(id) + "/" + Uri.encode(title)) },
+                            )
+                        }
+                    }
+                    composable(
+                        Routes.CHAT,
+                        arguments = listOf(navArgument("id") { type = NavType.StringType }, navArgument("title") { type = NavType.StringType }),
+                    ) { b ->
+                        UnofficialTheme(dark = appDark) {
+                            ChatScreen(
+                                conversationId = b.arguments?.getString("id").orEmpty(),
+                                title = b.arguments?.getString("title").orEmpty(),
+                                onBack = { nav.popBackStack() },
+                            )
+                        }
+                    }
+                    composable(Routes.GUILDS) {
+                        UnofficialTheme(dark = appDark) {
+                            GuildsScreen(onBack = { nav.popBackStack() }, onOpen = { nav.navigate("guild/" + Uri.encode(it)) })
+                        }
+                    }
+                    composable(Routes.GUILD, arguments = listOf(navArgument("slug") { type = NavType.StringType })) { b ->
+                        UnofficialTheme(dark = appDark) {
+                            GuildScreen(slug = b.arguments?.getString("slug").orEmpty(), onBack = { nav.popBackStack() })
+                        }
+                    }
+                    composable(Routes.CARDS) {
+                        UnofficialTheme(dark = appDark) { CardsScreen(onBack = { nav.popBackStack() }) }
+                    }
                     composable(Routes.LOGIN) {
                         UnofficialTheme(dark = appDark) {
                             LoginScreen(onBack = { nav.popBackStack() }, onDone = { nav.popBackStack() })

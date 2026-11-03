@@ -22,7 +22,7 @@ import me.senkuro.unofficial.data.SenkuroConfig
 
 /** Настройки: пока только переключатель тёмной темы. */
 @Composable
-fun SettingsScreen() {
+fun SettingsScreen(onMessages: () -> Unit = {}, onGuilds: () -> Unit = {}, onCards: () -> Unit = {}) {
     val dark by AppGraph.themeDark.collectAsState()
     val token by AppGraph.auth.token.collectAsState()
     val account by AppGraph.account.collectAsState()
@@ -52,6 +52,11 @@ fun SettingsScreen() {
                 )
             }
             Switch(checked = dark, onCheckedChange = AppGraph::setDarkTheme)
+        }
+        if (token != null) {
+            TextButton(onClick = onMessages, modifier = Modifier.padding(horizontal = 8.dp)) { Text("Сообщения") }
+            TextButton(onClick = onGuilds, modifier = Modifier.padding(horizontal = 8.dp)) { Text("Гильдии") }
+            TextButton(onClick = onCards, modifier = Modifier.padding(horizontal = 8.dp)) { Text("Мои карточки") }
         }
         if (token != null) {
             Row(

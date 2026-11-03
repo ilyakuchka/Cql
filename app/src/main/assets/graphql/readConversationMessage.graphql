@@ -1,0 +1,6 @@
+mutation readConversationMessage($input: ReadConversationMessageInput!) {
+  readConversationMessage(input: $input) {
+    unreadCount
+    success
+  }
+}

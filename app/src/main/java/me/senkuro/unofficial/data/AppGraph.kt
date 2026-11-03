@@ -21,6 +21,8 @@ object AppGraph {
         private set
     lateinit var repository: SenkuroRepository
         private set
+    lateinit var social: SocialRepository
+        private set
     lateinit var library: LibraryStore
         private set
     lateinit var auth: AuthStore
@@ -99,7 +101,9 @@ object AppGraph {
         _themeDark.value = settings.getBoolean(KEY_DARK, false)
         auth = AuthStore(app)
         httpClient = createHttpClient { auth.current }
-        repository = SenkuroRepository(SenkuroApi(app, httpClient))
+        val api = SenkuroApi(app, httpClient)
+        repository = SenkuroRepository(api)
+        social = SocialRepository(api)
         library = LibraryStore(app)
         refreshAccount()
     }

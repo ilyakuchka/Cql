@@ -1,0 +1,25 @@
+query fetchConversationMessages($conversationId: ID!, $first: Int, $after: String, $last: Int, $before: String) {
+  conversationMessages(conversationId: $conversationId, first: $first, after: $after, last: $last, before: $before) {
+    edges {
+      cursor
+      node {
+        id
+        type
+        content {
+      __typename
+      ... on TiptapNodeNestedBlock {
+        content {
+          __typename
+          ... on TiptapNodeText { text }
+        }
+      }
+    }
+        createdAt
+        viewerDidAuthor
+        viewerCanDelete
+        user { id name avatar { original { url } } }
+      }
+    }
+    pageInfo { hasNextPage hasPreviousPage }
+  }
+}

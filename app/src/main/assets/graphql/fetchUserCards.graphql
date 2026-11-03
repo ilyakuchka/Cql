@@ -1,0 +1,19 @@
+query fetchUserCards($after: String, $userId: ID!) {
+  userCards(first: 24, after: $after, userId: $userId, orderBy: {field: CREATED_AT, direction: DESC}) {
+    edges {
+      node {
+        quantity
+        modifier
+        locked
+        card {
+          id
+          slug
+          titles { lang content }
+          rank
+          image { original { url } }
+        }
+      }
+    }
+    pageInfo { hasNextPage endCursor }
+  }
+}

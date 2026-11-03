@@ -1,0 +1,5 @@
+mutation bulkDeleteConversationMessages($input: BulkDeleteConversationMessagesInput!) {
+  bulkDeleteConversationMessages(input: $input) {
+    success
+  }
+}

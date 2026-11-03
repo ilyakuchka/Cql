@@ -1,0 +1,18 @@
+query fetchGuilds($after: String, $orderBy: GuildOrder, $name: String) {
+  guilds(first: 24, after: $after, orderBy: $orderBy, name: $name) {
+    totalCount
+    edges {
+      node {
+        id
+        slug
+        name
+        level
+        color
+        avatar { original { url } }
+        rank
+        score
+      }
+    }
+    pageInfo { hasNextPage endCursor }
+  }
+}
