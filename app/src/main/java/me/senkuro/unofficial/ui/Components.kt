@@ -156,13 +156,19 @@ fun ErrorBox(message: String, onRetry: () -> Unit, modifier: Modifier = Modifier
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        Text(
-            text = message,
-            style = MaterialTheme.typography.bodyMedium,
-            textAlign = TextAlign.Center,
-        )
+        androidx.compose.foundation.text.selection.SelectionContainer {
+            Text(
+                text = message,
+                style = MaterialTheme.typography.bodyMedium,
+                textAlign = TextAlign.Center,
+            )
+        }
+        val clipboard = androidx.compose.ui.platform.LocalClipboardManager.current
         Button(onClick = onRetry, modifier = Modifier.padding(top = 16.dp)) {
             Text("Повторить")
+        }
+        androidx.compose.material3.TextButton(onClick = { clipboard.setText(androidx.compose.ui.text.AnnotatedString(message)) }) {
+            Text("Копировать ошибку")
         }
     }
 }

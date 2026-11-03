@@ -103,10 +103,10 @@ class SGuildMembersConn(val edges: List<SGuildMemberEdge> = emptyList(), val pag
 class SGuildMembersResponse(val guildMembers: SGuildMembersConn = SGuildMembersConn())
 
 @Serializable
-class SCardDto(val titles: List<Title>? = null, val rank: String? = null, val image: Cover? = null)
+class SCardDto(val titles: List<Title>? = null, val rank: JsonElement? = null, val image: Cover? = null)
 
 @Serializable
-class SUserCardDto(val quantity: Int? = null, val modifier: String? = null, val locked: Boolean = false, val card: SCardDto? = null)
+class SUserCardDto(val quantity: Int? = null, val modifier: JsonElement? = null, val locked: Boolean = false, val card: SCardDto? = null)
 
 @Serializable
 class SUserCardEdge(val node: SUserCardDto)
@@ -148,6 +148,14 @@ class SocialRepository(private val api: SenkuroApi) {
         orEmpty().joinToString("\n") { b -> b.content.orEmpty().joinToString("") { it.text.orEmpty() } }.trim()
 
     private fun JsonElement?.s(): String? = (this as? JsonPrimitive)?.takeIf { it !is JsonNull }?.content
+
+    /** rank/modifier на сервере могут быть строкой или объектом: берём читаемое поле. */
+    private fun JsonElement?.label(): String? = when (this) {
+        null, is JsonNull -> null
+        is JsonPrimitive -> content
+        is kotlinx.serialization.json.JsonObject -> listOf("name", "title", "slug", "value", "type").firstNotNullOfOrNull { (get(it) as? JsonPrimitive)?.content }
+        else -> null
+    }
 
     private fun List<Title>?.pick(): String? =
         orEmpty().let { l -> l.firstOrNull { it.lang.equals("RU", true) } ?: l.firstOrNull { it.lang.equals("EN", true) } ?: l.firstOrNull() }?.content
@@ -270,8 +278,8 @@ class SocialRepository(private val api: SenkuroApi) {
         val c = api.execute("fetchUserCards", "fetchUserCards", vars, SUserCardsResponse.serializer()).userCards
         return c.edges.mapNotNull { e ->
             val card = e.node.card ?: return@mapNotNull null
-            UserCardItem(card.titles.pick() ?: "Карточка", card.rank, card.image?.original?.url,
-                e.node.quantity ?: 1, e.node.modifier, e.node.locked)
+            UserCardItem(card.titles.pick() ?: "Карточка", card.rank.label(), card.image?.original?.url,
+                e.node.quantity ?: 1, e.node.modifier.label(), e.node.locked)
         } to c.pageInfo.endCursor.takeIf { c.pageInfo.hasNextPage }
     }
 }
