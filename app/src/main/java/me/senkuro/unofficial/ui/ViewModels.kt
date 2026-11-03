@@ -163,7 +163,7 @@ class DetailsViewModel : ViewModel() {
                 coroutineScope {
                     val repo = AppGraph.repository
                     val details = async { repo.details(mangaId) }
-                    val chapters = async { runCatching { repo.chapters(mangaId, force) } }
+                    val chapters = async { runCatching { repo.chapters(mangaId, force = true) } }
                     val result = chapters.await()
                     UiState.Ready(
                         DetailsData(
