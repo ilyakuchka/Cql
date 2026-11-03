@@ -98,6 +98,7 @@ fun SiteBookmarksTab(onManga: (MangaItem) -> Unit, onLogin: () -> Unit, vm: Site
     val token by AppGraph.auth.token.collectAsState()
     val account by AppGraph.account.collectAsState()
     val accountError by AppGraph.accountError.collectAsState()
+    val marks by AppGraph.marks.collectAsState()
 
     if (token == null) {
         Column(
@@ -156,14 +157,14 @@ fun SiteBookmarksTab(onManga: (MangaItem) -> Unit, onLogin: () -> Unit, vm: Site
                 vm.items.isEmpty() && vm.loading -> LoadingBox()
                 vm.items.isEmpty() -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("Здесь пока пусто") }
                 else -> LazyVerticalGrid(
-                    columns = GridCells.Adaptive(110.dp),
-                    contentPadding = PaddingValues(12.dp, 12.dp, 12.dp, 12.dp + LocalBottomInset.current),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                    columns = GridCells.Fixed(5),
+                    contentPadding = PaddingValues(8.dp, 12.dp, 8.dp, 12.dp + LocalBottomInset.current),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     itemsIndexed(vm.items) { index, entry ->
                         if (index >= vm.items.size - 4) LaunchedEffect(vm.items.size) { vm.loadMore() }
-                        MangaCard(entry.manga, onClick = { onManga(entry.manga) })
+                        MangaCard(entry.manga, onClick = { onManga(entry.manga) }, label = marks[entry.manga.id], compact = true)
                     }
                 }
             }

@@ -43,6 +43,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -64,6 +65,7 @@ import me.senkuro.unofficial.data.Tri
 
 @Composable
 fun CatalogScreen(onManga: (MangaItem) -> Unit, vm: CatalogViewModel = viewModel()) {
+    val marks by me.senkuro.unofficial.data.AppGraph.marks.collectAsState()
     var text by rememberSaveable { mutableStateOf(vm.query) }
     var showFilters by remember { mutableStateOf(false) }
     val focus: FocusManager = LocalFocusManager.current
@@ -85,7 +87,7 @@ fun CatalogScreen(onManga: (MangaItem) -> Unit, vm: CatalogViewModel = viewModel
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(start = 12.dp, end = 12.dp, top = 8.dp),
+                    .padding(start = 8.dp, end = 8.dp, top = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
@@ -120,19 +122,19 @@ fun CatalogScreen(onManga: (MangaItem) -> Unit, vm: CatalogViewModel = viewModel
             Box(Modifier.weight(1f)) {
                 LazyVerticalGrid(
                     state = gridState,
-                    columns = GridCells.Adaptive(110.dp),
+                    columns = GridCells.Fixed(5),
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(
-                        start = 12.dp,
+                        start = 8.dp,
                         top = 12.dp,
-                        end = 12.dp,
+                        end = 8.dp,
                         bottom = 12.dp + LocalBottomInset.current,
                     ),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     items(vm.items, key = { it.id }) { manga ->
-                        MangaCard(manga, onClick = { onManga(manga) })
+                        MangaCard(manga, onClick = { onManga(manga) }, label = marks[manga.id], compact = true)
                     }
                     if (vm.loading && vm.items.isNotEmpty()) {
                         item(span = { GridItemSpan(maxLineSpan) }) {

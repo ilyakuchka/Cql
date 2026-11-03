@@ -41,6 +41,46 @@ object AppGraph {
     /** Число непрочитанных уведомлений (0, если не вошли). */
     val unread: StateFlow<Int> = _unread.asStateFlow()
 
+    private val _marks = MutableStateFlow<Map<String, String>>(emptyMap())
+
+    /** id тайтла -> название коллекции закладок (для подписей на постерах). */
+    val marks: StateFlow<Map<String, String>> = _marks.asStateFlow()
+
+    private var marksJob: Job? = null
+
+    /** Загружает все закладки аккаунта, чтобы подписывать постеры («Брошено», «Прочитано»…). */
+    fun refreshMarks() {
+        marksJob?.cancel()
+        val acc = _account.value
+        if (acc == null) {
+            _marks.value = emptyMap()
+            return
+        }
+        val names = acc.collections.associate { it.id to it.name }
+        marksJob = scope.launch {
+            try {
+                val result = HashMap<String, String>()
+                var cursor: String? = null
+                var pages = 0
+                do {
+                    val page = repository.bookmarks(acc.userId, null, cursor)
+                    page.items.forEach { e -> e.collectionId?.let { names[it] }?.let { result[e.manga.id] = it } }
+                    cursor = page.next
+                    pages++
+                } while (cursor != null && pages < 60)
+                _marks.value = result
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+            }
+        }
+    }
+
+    /** Локально обновляет подпись после изменения закладки (name == null — закладка снята). */
+    fun setMark(mangaId: String, name: String?) {
+        _marks.value = if (name == null) _marks.value - mangaId else _marks.value + (mangaId to name)
+    }
+
     private val _account = MutableStateFlow<Account?>(null)
     private val _accountError = MutableStateFlow<String?>(null)
 
@@ -102,6 +142,7 @@ object AppGraph {
         _accountError.value = null
         if (auth.current == null) {
             _account.value = null
+            _marks.value = emptyMap()
             return
         }
         accountJob = scope.launch {
@@ -109,7 +150,10 @@ object AppGraph {
                 val account = repository.viewer()
                 if (account == null) auth.clear()
                 _account.value = account
-                if (account != null) refreshUnread()
+                if (account != null) {
+                    refreshUnread()
+                    refreshMarks()
+                }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {

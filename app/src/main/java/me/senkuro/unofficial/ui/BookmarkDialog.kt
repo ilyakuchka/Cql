@@ -75,6 +75,7 @@ fun BookmarkDialog(mangaId: String, onLogin: () -> Unit, onDismiss: () -> Unit) 
                                     run {
                                         AppGraph.repository.setBookmark(mangaId, c.id)
                                         current = c.id
+                                        AppGraph.setMark(mangaId, c.name)
                                     }
                                 },
                                 modifier = Modifier.fillMaxWidth(),
@@ -87,6 +88,7 @@ fun BookmarkDialog(mangaId: String, onLogin: () -> Unit, onDismiss: () -> Unit) 
                                     run {
                                         AppGraph.repository.removeBookmark(mangaId)
                                         current = null
+                                        AppGraph.setMark(mangaId, null)
                                     }
                                 },
                                 modifier = Modifier.fillMaxWidth(),

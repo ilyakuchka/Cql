@@ -37,7 +37,13 @@ val LocalBottomInset = compositionLocalOf<Dp> { 0.dp }
 
 /** Постер 2:3 со скруглением 4 и подписями слева под ним: название 13sp и статус серым 11sp (как в ките). */
 @Composable
-fun MangaCard(item: MangaItem, onClick: () -> Unit, modifier: Modifier = Modifier) {
+fun MangaCard(
+    item: MangaItem,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    label: String? = null,
+    compact: Boolean = false,
+) {
     Column(
         modifier = modifier
             .clip(RoundedCornerShape(4.dp))
@@ -57,12 +63,27 @@ fun MangaCard(item: MangaItem, onClick: () -> Unit, modifier: Modifier = Modifie
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize(),
             )
+            if (label != null) {
+                Text(
+                    text = label,
+                    color = androidx.compose.ui.graphics.Color.Black,
+                    fontSize = if (compact) 8.sp else 10.sp,
+                    lineHeight = if (compact) 10.sp else 12.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier
+                        .align(Alignment.BottomStart)
+                        .padding(4.dp)
+                        .background(AppColors.Accent, RoundedCornerShape(3.dp))
+                        .padding(horizontal = 4.dp, vertical = 1.dp),
+                )
+            }
         }
         Text(
             text = item.title,
             color = MaterialTheme.colorScheme.onBackground,
-            fontSize = 13.sp,
-            lineHeight = 16.sp,
+            fontSize = if (compact) 10.sp else 13.sp,
+            lineHeight = if (compact) 12.sp else 16.sp,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
         )
