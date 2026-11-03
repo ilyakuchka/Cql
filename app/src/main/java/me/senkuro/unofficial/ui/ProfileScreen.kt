@@ -76,7 +76,7 @@ fun ProfileScreen(onBack: () -> Unit) {
             account == null -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Text("Войдите в аккаунт", color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            error != null && p == null -> ErrorBox(error!!) { attempt++ }
+            error != null && p == null -> ErrorBox(error!!, onRetry = { attempt++ })
             p == null && loading -> LoadingBox()
             p == null -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Text("Профиль не найден", color = MaterialTheme.colorScheme.onSurfaceVariant)
