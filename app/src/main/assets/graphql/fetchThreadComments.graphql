@@ -1,0 +1,38 @@
+query fetchThreadComments($subjectId: ID!, $after: String, $orderBy: CommentOrder) {
+  comments(subjectId: $subjectId, after: $after, first: 15, orderBy: $orderBy) {
+    edges {
+      node {
+        ...CommentBase
+        replies { ...CommentBase }
+      }
+    }
+    pageInfo { hasNextPage endCursor }
+  }
+}
+fragment CommentBase on Comment {
+  id
+  threadId
+  parentId
+  depth
+  content {
+    __typename
+    ... on TiptapNodeNestedBlock {
+      content {
+        __typename
+        ... on TiptapNodeText { text }
+      }
+    }
+  }
+  upvotes
+  downvotes
+  createdAt
+  deletedAt
+  viewerDidAuthor
+  viewerCanUpdate
+  viewerCanDelete
+  author {
+    id
+    name
+    avatar { original { url } }
+  }
+}

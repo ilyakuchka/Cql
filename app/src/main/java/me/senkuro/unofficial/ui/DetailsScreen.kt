@@ -79,6 +79,17 @@ fun DetailsScreen(
     vm: DetailsViewModel = viewModel(key = "details-$mangaId"),
 ) {
     LaunchedEffect(mangaId) { vm.load(mangaId) }
+    // Засчитываем просмотр тайтла на сайте (как это делает веб-клиент).
+    LaunchedEffect(mangaId) {
+        if (AppGraph.auth.current != null) {
+            try {
+                AppGraph.repository.viewManga(mangaId)
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (_: Exception) {
+            }
+        }
+    }
     val library = AppGraph.library
     val readIds by library.readIds.collectAsState()
     val context = LocalContext.current

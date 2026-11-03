@@ -132,7 +132,7 @@ class ReaderImage(val url: String = "")
 class ReaderImageSizes(val original: ReaderImage? = null)
 
 @Serializable
-class ReaderPageDto(val image: ReaderImageSizes? = null)
+class ReaderPageDto(val id: String = "", val image: ReaderImageSizes? = null)
 
 @Serializable
 class ReaderChapterDto(val pages: List<ReaderPageDto> = emptyList())
@@ -280,3 +280,39 @@ class UserAchievementDto(
 
 @Serializable
 class AchievementsResponse(val userAchievements: List<UserAchievementDto> = emptyList())
+
+@Serializable
+class TiptapChildDto(val text: String? = null)
+
+@Serializable
+class TiptapBlockDto(val content: List<TiptapChildDto>? = null)
+
+@Serializable
+class CommentAuthorDto(val id: String = "", val name: String = "", val avatar: Cover? = null)
+
+@Serializable
+class CommentDto(
+    val id: String = "",
+    val threadId: String? = null,
+    val parentId: String? = null,
+    val depth: Int? = null,
+    val content: List<TiptapBlockDto>? = null,
+    val upvotes: Int? = null,
+    val downvotes: Int? = null,
+    val createdAt: String? = null,
+    val deletedAt: String? = null,
+    val viewerDidAuthor: Boolean = false,
+    val viewerCanUpdate: Boolean = false,
+    val viewerCanDelete: Boolean = false,
+    val author: CommentAuthorDto? = null,
+    val replies: List<CommentDto>? = null,
+)
+
+@Serializable
+class CommentEdge(val node: CommentDto)
+
+@Serializable
+class CommentsConn(val edges: List<CommentEdge> = emptyList(), val pageInfo: PageInfoDto = PageInfoDto())
+
+@Serializable
+class CommentsResponse(val comments: CommentsConn = CommentsConn())

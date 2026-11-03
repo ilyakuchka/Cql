@@ -55,6 +55,8 @@ fun ReaderScreen(
 ) {
     LaunchedEffect(mangaId, chapterId) { vm.load(mangaId, chapterId) }
     var controls by remember { mutableStateOf(true) }
+    var showComments by remember { mutableStateOf(false) }
+    val listState = androidx.compose.foundation.lazy.rememberLazyListState()
 
     Box(
         modifier = Modifier
@@ -82,6 +84,7 @@ fun ReaderScreen(
             is UiState.Ready -> {
                 val data = state.data
                 LazyColumn(
+                    state = listState,
                     modifier = Modifier
                         .fillMaxSize()
                         .clickable(
@@ -156,7 +159,17 @@ fun ReaderScreen(
                             }
                             Text(data.chapter.title, color = Color(0xFFCCCCCC), style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
+                        androidx.compose.material3.TextButton(onClick = { showComments = true }) {
+                            Text("Комментарии", color = Color.White)
+                        }
                     }
+                }
+                if (showComments) {
+                    CommentsSheet(
+                        chapterSlug = data.chapter.slug,
+                        pageIndex = listState.firstVisibleItemIndex.coerceAtMost((data.pages.size - 1).coerceAtLeast(0)),
+                        onDismiss = { showComments = false },
+                    )
                 }
             }
         }

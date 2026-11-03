@@ -37,6 +37,8 @@
 | `fetchViewerUnreadNotifications`, `fetchNotificationFeeds` | уведомления |
 | `bulkReadNotifications`, `bulkDeleteNotifications` | «Прочитать все», удаление уведомлений |
 | `fetchUser`, `fetchUserAchievements` | экран профиля (аватар в шапке) и достижения |
+| `fetchThreadComments`, `createComment`, `updateComment`, `deleteComment` | комментарии к странице в ридере |
+| `viewManga` | засчитывает просмотр тайтла |
 | `fetchUserBookmarks`, `updateUserBookmark`, `deleteUserBookmark` | закладки на сайте |
 | `homeLatest`, `homeNew`, `homePopular`, `homeRecommendations` | секции главной |
 

@@ -112,3 +112,19 @@ data class Profile(
 )
 
 data class AchievementItem(val title: String, val level: Int?, val points: Int?, val done: Boolean, val progress: String?, val cover: String?)
+
+data class CommentItem(
+    val id: String,
+    val threadId: String,
+    val depth: Int,
+    val author: String,
+    val avatar: String?,
+    val text: String,
+    val date: String?,
+    val up: Int,
+    val down: Int,
+    val canEdit: Boolean,
+    val canDelete: Boolean,
+)
+
+data class CommentsPage(val items: List<CommentItem>, val next: String?)

@@ -285,6 +285,98 @@ class SenkuroRepository(private val api: SenkuroApi) {
             )
         }
 
+    // ---------------------------------------------------------------- Комментарии и просмотры
+
+    suspend fun viewManga(mangaId: String) {
+        api.execute(
+            "viewManga", "viewManga",
+            buildJsonObject { put("input", buildJsonObject { put("mangaId", mangaId) }) },
+            JsonElement.serializer(),
+        )
+    }
+
+    /** id страниц главы: комментарии на сайте привязаны к странице. */
+    suspend fun pageIds(chapterSlug: String): List<String> {
+        val vars = buildJsonObject {
+            put("slug", chapterSlug)
+            put("cdn_quality", "red")
+        }
+        return api.execute("Reader", "readerChapter", vars, ReaderResponse.serializer())
+            .mangaChapter?.pages?.map { it.id }?.filter { it.isNotBlank() }.orEmpty()
+    }
+
+    suspend fun comments(subjectId: String, after: String?): CommentsPage {
+        val vars = buildJsonObject {
+            put("subjectId", subjectId)
+            if (after != null) put("after", after)
+            put("orderBy", buildJsonObject {
+                put("field", "CREATED_AT")
+                put("direction", "DESC")
+            })
+        }
+        val conn = api.execute("fetchThreadComments", "fetchThreadComments", vars, CommentsResponse.serializer()).comments
+        val items = conn.edges.flatMap { e -> listOf(e.node) + e.node.replies.orEmpty() }
+            .filter { it.deletedAt == null }
+            .map { c ->
+                CommentItem(
+                    id = c.id,
+                    threadId = c.threadId ?: c.id,
+                    depth = c.depth ?: 0,
+                    author = c.author?.name.orEmpty(),
+                    avatar = c.author?.avatar?.original?.url,
+                    text = c.content.orEmpty().joinToString("\n") { b -> b.content.orEmpty().joinToString("") { it.text.orEmpty() } }.trim(),
+                    date = c.createdAt?.take(10),
+                    up = c.upvotes ?: 0,
+                    down = c.downvotes ?: 0,
+                    canEdit = c.viewerCanUpdate,
+                    canDelete = c.viewerCanDelete,
+                )
+            }
+        return CommentsPage(items, conn.pageInfo.endCursor.takeIf { conn.pageInfo.hasNextPage })
+    }
+
+    private fun commentBody(text: String) = kotlinx.serialization.json.JsonArray(
+        text.split("\n").map { line ->
+            buildJsonObject {
+                put("type", "paragraph")
+                if (line.isNotEmpty()) put("content", kotlinx.serialization.json.JsonArray(listOf(
+                    buildJsonObject { put("type", "text"); put("text", line) },
+                )))
+            }
+        },
+    )
+
+    suspend fun addComment(subjectId: String, text: String) {
+        val vars = buildJsonObject {
+            put("input", buildJsonObject {
+                put("authorId", JsonNull)
+                put("content", commentBody(text))
+                put("subjectId", subjectId)
+            })
+        }
+        api.execute("createComment", "createComment", vars, JsonElement.serializer())
+    }
+
+    suspend fun editComment(commentId: String, text: String) {
+        val vars = buildJsonObject {
+            put("input", buildJsonObject {
+                put("commentId", commentId)
+                put("content", commentBody(text))
+            })
+        }
+        api.execute("updateComment", "updateComment", vars, JsonElement.serializer())
+    }
+
+    suspend fun deleteComment(commentId: String, threadId: String) {
+        val vars = buildJsonObject {
+            put("input", buildJsonObject {
+                put("commentId", commentId)
+                put("threadId", threadId)
+            })
+        }
+        api.execute("deleteComment", "deleteComment", vars, JsonElement.serializer())
+    }
+
     private fun JsonElement?.text(): String? = (this as? JsonPrimitive)?.takeIf { it !is JsonNull }?.contentOrNull
 
     private fun NotifFeedDto.toItem(): NotificationItem {
