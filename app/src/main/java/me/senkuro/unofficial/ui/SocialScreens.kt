@@ -289,7 +289,7 @@ fun GuildScreen(slug: String, onBack: () -> Unit) {
         try {
             val g = AppGraph.social.guild(slug)
             guild = g
-            if (g != null) runCatching { AppGraph.social.viewGuild(g.id) }
+            if (g != null) runCatching { AppGraph.social.viewGuild(g.item.id) }
             if (g == null) error = "Гильдия не найдена" else members = Pager { AppGraph.social.guildMembers(g.item.id, it) }.also { it.reload() }
         } catch (e: CancellationException) {
             throw e

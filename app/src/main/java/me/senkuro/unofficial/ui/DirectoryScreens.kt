@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.items as gridItems
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.FilterChip
@@ -231,7 +232,7 @@ fun PersonScreen(slug: String, onBack: () -> Unit, onManga: (MangaItem) -> Unit)
                         Text(p.name, Modifier.padding(start = 12.dp), fontSize = 18.sp, color = MaterialTheme.colorScheme.onBackground)
                     }
                 }
-                items(w.items) { m -> MangaCard(m, onClick = { onManga(m) }, compact = true) }
+                gridItems(w.items) { m -> MangaCard(m, onClick = { onManga(m) }, compact = true) }
                 item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) { LaunchedEffect(w.items.size) { w.more() } }
             }
         }
