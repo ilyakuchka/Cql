@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -151,5 +152,43 @@ fun TopsRibbon() {
             }
         }
     }
+    }
+}
+
+/** Тонкий рекламный баннер (как «Реклама» на сайте). Пусто или не удалось — не показывается. viewAd уходит через 2 секунды видимости. */
+@Composable
+fun AdStrip() {
+    var ad by remember { mutableStateOf<me.senkuro.unofficial.data.AdBanner?>(null) }
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    LaunchedEffect(Unit) {
+        ad = try {
+            AppGraph.offers.mainAd()
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (_: Exception) {
+            null
+        }
+    }
+    val a = ad ?: return
+    LaunchedEffect(a.id) {
+        kotlinx.coroutines.delay(2000)
+        try { AppGraph.offers.viewAd(a.id) } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Exception) { }
+    }
+    Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+        Text("Реклама", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        AsyncImage(
+            model = a.image, contentDescription = "Реклама", contentScale = ContentScale.Crop,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp)
+                .padding(top = 2.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant)
+                .clickable(enabled = !a.link.isNullOrBlank()) {
+                    runCatching {
+                        ctx.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(a.link)).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
+                    }
+                },
+        )
     }
 }

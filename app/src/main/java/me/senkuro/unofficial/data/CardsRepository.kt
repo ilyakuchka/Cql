@@ -219,6 +219,8 @@ data class OfferItem(
 data class TopUser(val id: String, val name: String, val avatar: String?, val level: Int?, val experience: Int?, val hasExp: Boolean, val hasCredits: Boolean)
 
 class OffersRepository(private val api: SenkuroApi) {
+    internal val adApi get() = api
+
     private fun JsonElement?.s(): String? = (this as? JsonPrimitive)?.takeIf { it !is JsonNull }?.content
 
     private fun OPreview?.item(): PreviewItem? {
@@ -264,4 +266,27 @@ class OffersRepository(private val api: SenkuroApi) {
         }
         return byId.values.toList()
     }
+}
+
+// ---- реклама (баннер на главной, как на сайте)
+
+@Serializable
+class AdMediaDto(val __typename: String? = null, val url: String? = null)
+
+@Serializable
+class AdDto(val id: String = "", val link: String? = null, val media: AdMediaDto? = null)
+
+@Serializable
+class AdResponse(val ad: AdDto? = null)
+
+data class AdBanner(val id: String, val link: String?, val image: String)
+
+suspend fun OffersRepository.mainAd(): AdBanner? {
+    val a = adApi.execute("fetchMainAd", "fetchMainAd", buildJsonObject {}, AdResponse.serializer()).ad ?: return null
+    val url = a.media?.url?.takeIf { a.media?.__typename == "AdMediaImage" && it.isNotBlank() } ?: return null
+    return AdBanner(a.id, a.link, url)
+}
+
+suspend fun OffersRepository.viewAd(id: String) {
+    adApi.execute("viewAd", "viewAd", buildJsonObject { put("input", buildJsonObject { put("adId", id) }) }, JsonElement.serializer())
 }

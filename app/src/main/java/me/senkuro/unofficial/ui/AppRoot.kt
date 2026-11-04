@@ -23,6 +23,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -80,11 +81,12 @@ private object Routes {
 
 private class TopLevel(val route: String, val title: String, val icon: ImageVector)
 
-// Порядок: главная, каталог, закладки, настройки.
+// Порядок: главная, каталог, закладки, уведомления, настройки.
 private val topLevel = listOf(
     TopLevel(Routes.HOME, "Главная", Icons.Filled.Home),
     TopLevel(Routes.CATALOG, "Каталог", CompassIcon),
     TopLevel(Routes.LIBRARY, "Закладки", Icons.Filled.Star),
+    TopLevel(Routes.NOTIFICATIONS, "Уведомления", Icons.Filled.Notifications),
     TopLevel(Routes.SETTINGS, "Настройки", Icons.Filled.Settings),
 )
 
@@ -128,7 +130,7 @@ fun AppRoot() {
                                 onMore = { navigateTop(Routes.CATALOG) },
                                 onLogin = { nav.navigate(Routes.LOGIN) },
                                 onProfile = { nav.navigate(Routes.PROFILE) },
-                                onNotifications = { nav.navigate(Routes.NOTIFICATIONS) },
+                                onNotifications = { navigateTop(Routes.NOTIFICATIONS) },
                             )
                         }
                     }
@@ -282,6 +284,7 @@ fun AppRoot() {
 /** Нижняя панель в стиле кита: белый фон, линия сверху #E0E0E0, значок и подпись, выбранный пункт тёмный с зелёной чертой. */
 @Composable
 private fun BottomBar(route: String?, onSelect: (String) -> Unit, modifier: Modifier = Modifier) {
+    val unread by AppGraph.unread.collectAsState()
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -311,7 +314,12 @@ private fun BottomBar(route: String?, onSelect: (String) -> Unit, modifier: Modi
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center,
                 ) {
-                    Icon(item.icon, contentDescription = item.title, tint = tint, modifier = Modifier.size(22.dp))
+                    Box {
+                        Icon(item.icon, contentDescription = item.title, tint = tint, modifier = Modifier.size(22.dp))
+                        if (item.route == Routes.NOTIFICATIONS && unread > 0) {
+                            Box(Modifier.align(Alignment.TopEnd).size(8.dp).background(AppColors.Accent, androidx.compose.foundation.shape.CircleShape))
+                        }
+                    }
                     Text(item.title, color = tint, fontSize = 10.sp)
                     Box(
                         Modifier

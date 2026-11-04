@@ -48,6 +48,7 @@
 | `fetchUserTasks` | задания (Настройки → Задания) |
 | `fetchCardOffers`, `acceptCardOffer`, `closeCardOffer` | обмены карточек (Настройки → Обмены карточек) |
 | `fetchMainUserTops` | лента топов дня на главной |
+| `fetchMainAd`, `viewAd` | тонкий рекламный баннер на главной под «Популярным за день» |
 | `viewManga` | засчитывает просмотр тайтла |
 | `voteManga`, `fetchMangaViewerState` | оценка тайтла 1–10 («★ Оценка» на экране тайтла) |
 | `deleteMangaVote` | «Убрать оценку» |

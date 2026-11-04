@@ -1,0 +1,10 @@
+query fetchMainAd {
+  ad(page: "main") {
+    id
+    link
+    media {
+      __typename
+      ... on AdMediaImage { url }
+    }
+  }
+}

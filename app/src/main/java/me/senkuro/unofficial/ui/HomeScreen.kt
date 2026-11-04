@@ -89,6 +89,7 @@ fun HomeScreen(
                     item(key = "tops") { TopsRibbon() }
                     cardsSection("Продолжить чтение", resume, onManga, onMore, showMore = false)
                     trendingSection("Популярное за день", data.popular, onManga)
+                    item(key = "ad") { AdStrip() }
                     cardsSection("Свежие обновления", data.latest, onManga, onMore)
                     cardsSection("Новые тайтлы", data.newTitles, onManga, onMore)
                     cardsSection("Рекомендации", data.recommendations, onManga, onMore)

@@ -1,0 +1,3 @@
+mutation viewAd($input: ViewAdInput!) {
+  viewAd(input: $input) { success }
+}
