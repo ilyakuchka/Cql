@@ -127,12 +127,21 @@ fun TopsRibbon() {
         }
     }
     if (tops.isEmpty()) return
+    var filter by remember { mutableStateOf("все") }
+    val shown = if (filter == "все") tops else tops.filter { it.kind == filter }
+    Column(Modifier.fillMaxWidth()) {
+        Text("Топ пользователей", style = HeadingStyle, color = MaterialTheme.colorScheme.onBackground, modifier = Modifier.padding(horizontal = 16.dp))
+        Row(Modifier.padding(horizontal = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            listOf("все" to "Все", "опыт" to "Опыт", "кредиты" to "Кредиты").forEach { (key, label) ->
+                androidx.compose.material3.FilterChip(selected = filter == key, onClick = { filter = key }, label = { Text(label) })
+            }
+        }
     LazyRow(
         contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(14.dp),
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
     ) {
-        items(tops) { t ->
+        items(shown) { t ->
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Avatar(t.avatar, 32)
                 Column(Modifier.padding(start = 6.dp)) {
@@ -141,5 +150,6 @@ fun TopsRibbon() {
                 }
             }
         }
+    }
     }
 }
