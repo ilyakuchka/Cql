@@ -128,7 +128,7 @@ fun TopsRibbon() {
     }
     if (tops.isEmpty()) return
     var filter by remember { mutableStateOf("все") }
-    val shown = if (filter == "все") tops else tops.filter { it.kind == filter }
+    val shown = when (filter) { "опыт" -> tops.filter { it.hasExp }; "кредиты" -> tops.filter { it.hasCredits }; else -> tops }
     Column(Modifier.fillMaxWidth()) {
         Text("Топ пользователей", style = HeadingStyle, color = MaterialTheme.colorScheme.onBackground, modifier = Modifier.padding(horizontal = 16.dp))
         Row(Modifier.padding(horizontal = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -146,7 +146,7 @@ fun TopsRibbon() {
                 Avatar(t.avatar, 32)
                 Column(Modifier.padding(start = 6.dp)) {
                     Text(t.name, fontSize = 12.sp, maxLines = 1, color = MaterialTheme.colorScheme.onBackground, modifier = Modifier.width(80.dp), overflow = TextOverflow.Ellipsis)
-                    Text(t.kind + (t.level?.let { " · ур. $it" } ?: ""), fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(listOfNotNull(if (t.hasExp) "опыт" else null, if (t.hasCredits) "кредиты" else null).joinToString(" + ") + (t.level?.let { " · ур. $it" } ?: ""), fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         }

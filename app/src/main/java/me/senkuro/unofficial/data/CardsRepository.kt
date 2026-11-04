@@ -216,7 +216,7 @@ data class OfferItem(
     val offer: PreviewItem?, val request: PreviewItem?, val canAccept: Boolean, val canClose: Boolean, val mine: Boolean,
 )
 
-data class TopUser(val name: String, val avatar: String?, val level: Int?, val kind: String)
+data class TopUser(val id: String, val name: String, val avatar: String?, val level: Int?, val experience: Int?, val hasExp: Boolean, val hasCredits: Boolean)
 
 class OffersRepository(private val api: SenkuroApi) {
     private fun JsonElement?.s(): String? = (this as? JsonPrimitive)?.takeIf { it !is JsonNull }?.content
@@ -252,7 +252,16 @@ class OffersRepository(private val api: SenkuroApi) {
     suspend fun tops(): List<TopUser> {
         val vars = buildJsonObject { put("includeExperiences", true); put("includeCredits", true) }
         val r = api.execute("fetchMainUserTops", "fetchMainUserTops", vars, OTopsResponse.serializer())
-        fun List<OTopEntry>?.toTops(kind: String) = orEmpty().mapNotNull { e -> e.user?.let { TopUser(it.name, it.avatar?.original?.url, it.level, kind) } }
-        return r.experimentalSpotlightExperiences.toTops("опыт") + r.experimentalSpotlightCredits.toTops("кредиты")
+        val byId = LinkedHashMap<String, TopUser>()
+        r.experimentalSpotlightExperiences.orEmpty().forEach { e ->
+            val u = e.user ?: return@forEach
+            byId[u.id] = TopUser(u.id, u.name, u.avatar?.original?.url, u.level, e.experience, hasExp = true, hasCredits = false)
+        }
+        r.experimentalSpotlightCredits.orEmpty().forEach { e ->
+            val u = e.user ?: return@forEach
+            val old = byId[u.id]
+            byId[u.id] = old?.copy(hasCredits = true) ?: TopUser(u.id, u.name, u.avatar?.original?.url, u.level, null, hasExp = false, hasCredits = true)
+        }
+        return byId.values.toList()
     }
 }
