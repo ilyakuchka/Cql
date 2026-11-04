@@ -76,7 +76,7 @@ jobs:
           echo "OK: отладочных инструментов в release-APK нет"
 
       - name: Upload APK
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: me.senkuro.unofficial-${{ inputs.build_type }}
           path: app/build/outputs/apk/${{ inputs.build_type }}/*.apk
