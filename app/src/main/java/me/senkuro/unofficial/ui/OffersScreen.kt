@@ -38,6 +38,8 @@ import coil3.compose.AsyncImage
 import kotlinx.coroutines.launch
 import me.senkuro.unofficial.data.AppGraph
 import me.senkuro.unofficial.data.OfferItem
+import me.senkuro.unofficial.data.mainAd
+import me.senkuro.unofficial.data.viewAd
 import me.senkuro.unofficial.data.PreviewItem
 import me.senkuro.unofficial.data.TopUser
 
