@@ -156,26 +156,6 @@ private fun HomeHeader(onSearch: () -> Unit, onRefresh: () -> Unit, onLogin: () 
             )
             Text(SenkuroConfig.current.title, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp)
         }
-        if (token != null) {
-            IconButton(onClick = onNotifications) {
-                Box {
-                    Icon(Icons.Filled.Notifications, contentDescription = "Уведомления", tint = MaterialTheme.colorScheme.onBackground)
-                    if (unread > 0) {
-                        Text(
-                            text = if (unread > 99) "99+" else unread.toString(),
-                            color = androidx.compose.ui.graphics.Color.Black,
-                            fontSize = 9.sp,
-                            modifier = Modifier
-                                .align(Alignment.TopEnd)
-                                .padding(start = 10.dp)
-                                .clip(CircleShape)
-                                .background(AppColors.Accent)
-                                .padding(horizontal = 4.dp),
-                        )
-                    }
-                }
-            }
-        }
         IconButton(onClick = onSearch) { Icon(Icons.Filled.Search, contentDescription = "Поиск", tint = MaterialTheme.colorScheme.onBackground) }
         IconButton(onClick = onRefresh) { Icon(Icons.Filled.Refresh, contentDescription = "Обновить", tint = MaterialTheme.colorScheme.onBackground) }
     }
