@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -214,18 +215,81 @@ fun TasksScreen(onBack: () -> Unit) {
             error != null -> ErrorBox(error!!, onRetry = { attempt++ })
             list == null -> LoadingBox()
             list.isEmpty() -> Text("Заданий нет", Modifier.padding(16.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
-            else -> LazyColumn(Modifier.fillMaxSize()) {
-                items(list) { t ->
-                    Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp)) {
-                        Text(t.title, fontSize = 15.sp, color = MaterialTheme.colorScheme.onBackground)
-                        Text(
-                            listOfNotNull(if (t.done) "выполнено" else "${t.progress}" + (t.threshold?.let { " / $it" } ?: ""), t.reward.takeIf { it.isNotBlank() }).joinToString(" · "),
-                            fontSize = 12.sp, color = if (t.done) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                    HorizontalDivider()
+            else -> LazyColumn(
+                Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                items(list) { t -> TaskCard(t) }
+            }
+        }
+    }
+}
+
+@Composable
+private fun RewardTile(label: String, value: Int, tint: Color, coin: Boolean, modifier: Modifier = Modifier) {
+    Column(
+        modifier.clip(RoundedCornerShape(12.dp)).background(MaterialTheme.colorScheme.surfaceVariant),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Box(Modifier.fillMaxWidth().padding(vertical = 10.dp), contentAlignment = Alignment.Center) {
+            if (coin) Box(Modifier.size(34.dp).clip(CircleShape).background(Color(0xFFFFB020)), contentAlignment = Alignment.Center) {
+                Text("◉", color = Color(0xFFFFE08A), fontSize = 18.sp)
+            } else Text(label, color = tint, fontSize = 22.sp)
+        }
+        Text("$value", color = tint, fontSize = 14.sp, modifier = Modifier.padding(bottom = 6.dp))
+    }
+}
+
+/** Карточка задания в стиле сайта: название, «NEW» и таймер, награда (опыт и очки), прогресс «N из M за период». */
+@Composable
+private fun TaskCard(t: TaskItem) {
+    var left by remember(t.endAtMillis) { mutableStateOf(t.endAtMillis?.let { it - System.currentTimeMillis() }) }
+    LaunchedEffect(t.endAtMillis) {
+        while (t.endAtMillis != null) {
+            left = t.endAtMillis - System.currentTimeMillis()
+            kotlinx.coroutines.delay(1000)
+        }
+    }
+    Column(
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(MaterialTheme.colorScheme.surface)
+            .padding(16.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("✦", color = Color(0xFF5BC0FF), fontSize = 22.sp)
+            Text(t.title, Modifier.weight(1f).padding(horizontal = 10.dp), fontSize = 16.sp, color = MaterialTheme.colorScheme.onBackground)
+            Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                if (t.progress == 0 && !t.done) Text(
+                    "NEW", fontSize = 11.sp, color = Color.Black,
+                    modifier = Modifier.clip(RoundedCornerShape(8.dp)).background(Color.White).padding(horizontal = 8.dp, vertical = 2.dp),
+                )
+                left?.takeIf { it > 0 }?.let { ms ->
+                    val sec = ms / 1000
+                    val text = if (sec >= 86400) "${sec / 86400} д ${(sec % 86400) / 3600} ч" else "%02d:%02d:%02d".format(sec / 3600, (sec % 3600) / 60, sec % 60)
+                    Text(
+                        text, fontSize = 11.sp, color = Color.White,
+                        modifier = Modifier.clip(RoundedCornerShape(8.dp)).background(Color(0xFF4F6BFF)).padding(horizontal = 8.dp, vertical = 2.dp),
+                    )
                 }
             }
+        }
+        Text("Награда", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 12.dp, bottom = 6.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            RewardTile("XP", t.exp, Color(0xFF4CD964), coin = false, modifier = Modifier.weight(1f))
+            RewardTile("", t.points, Color(0xFFFFB020), coin = true, modifier = Modifier.weight(1f))
+        }
+        val total = t.threshold ?: 0
+        val frac = if (t.done) 1f else if (total > 0) (t.progress.toFloat() / total).coerceIn(0f, 1f) else 0f
+        Row(Modifier.padding(top = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text("${t.progress}", fontSize = 15.sp, color = MaterialTheme.colorScheme.onBackground)
+            androidx.compose.material3.LinearProgressIndicator(
+                progress = { frac },
+                modifier = Modifier.weight(1f).padding(horizontal = 10.dp).height(6.dp).clip(CircleShape),
+                trackColor = MaterialTheme.colorScheme.surfaceVariant,
+            )
+            Text(
+                if (t.done) "выполнено" else listOfNotNull(total.takeIf { it > 0 }?.let { "из $it" }, t.period.takeIf { it.isNotBlank() }).joinToString(" "),
+                fontSize = 13.sp, color = if (t.done) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     }
 }

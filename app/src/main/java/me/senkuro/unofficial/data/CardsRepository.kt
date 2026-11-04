@@ -65,7 +65,7 @@ class CMangasResponse(val mangas: Connection2 = Connection2())
 class Connection2(val edges: List<Edge> = emptyList(), val pageInfo: PageInfoDto = PageInfoDto())
 
 @Serializable
-class CTask(val titles: List<Title>? = null, val threshold: Int? = null, val experience: Int? = null, val points: Int? = null, val enabled: Boolean = true, val active: Boolean = true)
+class CTask(val titles: List<Title>? = null, val type: JsonElement? = null, val endAt: String? = null, val threshold: Int? = null, val experience: Int? = null, val points: Int? = null, val enabled: Boolean = true, val active: Boolean = true)
 
 @Serializable
 class CUserTask(val progress: Int? = null, val completedAt: String? = null, val task: CTask? = null)
@@ -86,7 +86,7 @@ data class CardDetails(
 
 data class CharacterProfile(val id: String, val name: String, val cover: String?, val gender: String?)
 
-data class TaskItem(val title: String, val progress: Int, val threshold: Int?, val reward: String, val done: Boolean)
+data class TaskItem(val title: String, val progress: Int, val threshold: Int?, val exp: Int, val points: Int, val done: Boolean, val period: String, val endAtMillis: Long?)
 
 /** Каталог карточек, карточка, персонаж и задания (запросы перехвачены на сайте). */
 class CardsRepository(private val api: SenkuroApi) {
@@ -160,11 +160,13 @@ class CardsRepository(private val api: SenkuroApi) {
         }
         return api.execute("fetchUserTasks", "fetchUserTasks", vars, CTasksResponse.serializer()).userTasks.mapNotNull { t ->
             val task = t.task ?: return@mapNotNull null
-            TaskItem(
-                task.titles.pick() ?: "Задание", t.progress ?: 0, task.threshold,
-                listOfNotNull(task.experience?.takeIf { it > 0 }?.let { "$it опыта" }, task.points?.takeIf { it > 0 }?.let { "$it очков" }).joinToString(", "),
-                t.completedAt != null,
-            )
+            val period = when (task.type.label()?.uppercase()) {
+                "DAILY" -> "за день"; "WEEKLY" -> "за неделю"; "MONTHLY" -> "за месяц"; else -> ""
+            }
+            val end = task.endAt?.let { runCatching {
+                java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", java.util.Locale.US).apply { timeZone = java.util.TimeZone.getTimeZone("UTC") }.parse(it.take(19))?.time
+            }.getOrNull() }
+            TaskItem(task.titles.pick() ?: "Задание", t.progress ?: 0, task.threshold, task.experience ?: 0, task.points ?: 0, t.completedAt != null, period, end)
         }
     }
 }
