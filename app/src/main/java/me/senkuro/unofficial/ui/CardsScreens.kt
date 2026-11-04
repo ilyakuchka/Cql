@@ -242,7 +242,7 @@ private fun RewardTile(label: String, value: Int, tint: Color, coin: Boolean, mo
 
 /** Карточка задания в стиле сайта: название, «NEW» и таймер, награда (опыт и очки), прогресс «N из M за период». */
 @Composable
-private fun TaskCard(t: TaskItem) {
+internal fun TaskCard(t: TaskItem, modifier: Modifier = Modifier.fillMaxWidth()) {
     var left by remember(t.endAtMillis) { mutableStateOf(t.endAtMillis?.let { it - System.currentTimeMillis() }) }
     LaunchedEffect(t.endAtMillis) {
         while (t.endAtMillis != null) {
@@ -251,7 +251,7 @@ private fun TaskCard(t: TaskItem) {
         }
     }
     Column(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(MaterialTheme.colorScheme.surface)
+        modifier.clip(RoundedCornerShape(16.dp)).background(MaterialTheme.colorScheme.surface)
             .padding(16.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {

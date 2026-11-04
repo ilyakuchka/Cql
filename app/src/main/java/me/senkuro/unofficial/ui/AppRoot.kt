@@ -151,7 +151,7 @@ fun AppRoot() {
                         }
                     }
                     composable(Routes.PROFILE) {
-                        UnofficialTheme(dark = appDark) { ProfileScreen(onBack = { nav.popBackStack() }) }
+                        UnofficialTheme(dark = appDark) { ProfileScreen(onBack = { nav.popBackStack() }, onOpenTasks = { nav.navigate(Routes.TASKS) }) }
                     }
                     composable(Routes.SETTINGS) {
                         UnofficialTheme(dark = appDark) {

@@ -9,6 +9,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -41,7 +43,7 @@ import me.senkuro.unofficial.data.Profile
 
 /** Профиль текущего пользователя и его достижения (fetchUser + fetchUserAchievements). */
 @Composable
-fun ProfileScreen(onBack: () -> Unit) {
+fun ProfileScreen(onBack: () -> Unit, onOpenTasks: () -> Unit = {}) {
     val account by AppGraph.account.collectAsState()
     var profile by remember { mutableStateOf<Profile?>(null) }
     var achievements by remember { mutableStateOf<List<AchievementItem>>(emptyList()) }
@@ -88,6 +90,7 @@ fun ProfileScreen(onBack: () -> Unit) {
             }
             else -> LazyColumn(contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 24.dp)) {
                 item { Header(p) }
+                item { TasksCarousel(onOpenTasks) }
                 item {
                     Text(
                         "Достижения (${achievements.size})",
@@ -155,6 +158,39 @@ private fun AchievementRow(a: AchievementItem) {
                 if (a.done) "выполнено" else a.progress?.let { "прогресс $it" },
             )
             if (parts.isNotEmpty()) Text(parts.joinToString(" · "), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+        }
+    }
+}
+
+
+/** Карусель «Задания для тебя» (как в профиле на сайте); нажатие на заголовок открывает полный список. */
+@Composable
+private fun TasksCarousel(onOpen: () -> Unit) {
+    val me = AppGraph.account.value?.userId.orEmpty()
+    var tasks by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<List<me.senkuro.unofficial.data.TaskItem>>(emptyList()) }
+    androidx.compose.runtime.LaunchedEffect(me) {
+        tasks = try {
+            AppGraph.cards.tasks(me, true)
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (_: Exception) {
+            emptyList()
+        }
+    }
+    if (tasks.isEmpty()) return
+    Column(Modifier.padding(top = 8.dp)) {
+        androidx.compose.foundation.layout.Row(
+            Modifier.fillMaxWidth().clickable { onOpen() }.padding(horizontal = 16.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text("Задания для тебя", style = HeadingStyle, color = MaterialTheme.colorScheme.onBackground, modifier = Modifier.weight(1f))
+            Text("›", fontSize = 22.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        androidx.compose.foundation.lazy.LazyRow(
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            items(tasks) { t -> TaskCard(t, Modifier.width(290.dp)) }
         }
     }
 }
