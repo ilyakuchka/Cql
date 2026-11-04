@@ -1,0 +1,3 @@
+mutation closeCardOffer($input: CloseCardOfferInput!) {
+  closeCardOffer(input: $input) { success }
+}

@@ -70,6 +70,7 @@ private object Routes {
     const val CARD = "card/{slug}"
     const val CHARACTER = "character/{slug}"
     const val TASKS = "tasks"
+    const val OFFERS = "offers"
     const val MANGA = "manga/{id}"
     const val READER = "reader/{mangaId}/{chapterId}"
 
@@ -158,6 +159,7 @@ fun AppRoot() {
                                 onCards = { nav.navigate(Routes.CARDS) },
                                 onCardCatalog = { nav.navigate(Routes.CARD_CATALOG) },
                                 onTasks = { nav.navigate(Routes.TASKS) },
+                                onOffers = { nav.navigate(Routes.OFFERS) },
                             )
                         }
                     }
@@ -216,6 +218,9 @@ fun AppRoot() {
                                 onCard = { nav.navigate("card/" + Uri.encode(it)) },
                             )
                         }
+                    }
+                    composable(Routes.OFFERS) {
+                        UnofficialTheme(dark = appDark) { OffersScreen(onBack = { nav.popBackStack() }, onCard = { nav.navigate("card/" + Uri.encode(it)) }) }
                     }
                     composable(Routes.TASKS) { UnofficialTheme(dark = appDark) { TasksScreen(onBack = { nav.popBackStack() }) } }
                     composable(Routes.LOGIN) {

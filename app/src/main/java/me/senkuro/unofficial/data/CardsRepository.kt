@@ -168,3 +168,91 @@ class CardsRepository(private val api: SenkuroApi) {
         }
     }
 }
+
+// ---- обмены и топы
+
+@Serializable
+class OPreview(val modifier: JsonElement? = null, val quantity: Int? = null, val shard: JsonElement? = null, val card: CCardNode? = null)
+
+@Serializable
+class OUser(val id: String = "", val name: String = "", val avatar: Cover? = null, val level: Int? = null)
+
+@Serializable
+class OOffer(
+    val id: String = "",
+    val status: JsonElement? = null,
+    val noTrade: Boolean = false,
+    val createdAt: String? = null,
+    val user: OUser? = null,
+    val offer: OPreview? = null,
+    val request: OPreview? = null,
+    val viewerDidAuthor: Boolean = false,
+    val viewerCanAccept: Boolean = false,
+    val viewerCanClose: Boolean = false,
+)
+
+@Serializable
+class OOfferEdge(val node: OOffer)
+
+@Serializable
+class OOffersConn(val edges: List<OOfferEdge> = emptyList(), val pageInfo: PageInfoDto = PageInfoDto())
+
+@Serializable
+class OOffersResponse(val cardOffers: OOffersConn = OOffersConn())
+
+@Serializable
+class OTopEntry(val experience: Int? = null, val user: OUser? = null)
+
+@Serializable
+class OTopsResponse(
+    val experimentalSpotlightExperiences: List<OTopEntry>? = null,
+    val experimentalSpotlightCredits: List<OTopEntry>? = null,
+)
+
+data class PreviewItem(val title: String, val image: String?, val slug: String, val note: String)
+
+data class OfferItem(
+    val id: String, val status: String?, val user: String, val avatar: String?, val date: String?,
+    val offer: PreviewItem?, val request: PreviewItem?, val canAccept: Boolean, val canClose: Boolean, val mine: Boolean,
+)
+
+data class TopUser(val name: String, val avatar: String?, val level: Int?, val kind: String)
+
+class OffersRepository(private val api: SenkuroApi) {
+    private fun JsonElement?.s(): String? = (this as? JsonPrimitive)?.takeIf { it !is JsonNull }?.content
+
+    private fun OPreview?.item(): PreviewItem? {
+        val c = this?.card ?: return null
+        val title = c.titles.orEmpty().let { l -> l.firstOrNull { it.lang.equals("RU", true) } ?: l.firstOrNull() }?.content ?: "Карточка"
+        val note = listOfNotNull(c.rank.s(), modifier.s(), quantity?.takeIf { it > 1 }?.let { "×$it" }).joinToString(" · ")
+        return PreviewItem(title, c.image?.original?.url, c.slug, note)
+    }
+
+    /** mineUserId != null — только обмены этого пользователя; иначе — все открытые. */
+    suspend fun offers(after: String?, mineUserId: String?): Pair<List<OfferItem>, String?> {
+        val vars = buildJsonObject {
+            if (after != null) put("after", after)
+            if (mineUserId != null) put("userId", mineUserId) else put("status", "PENDING")
+        }
+        val c = api.execute("fetchCardOffers", "fetchCardOffers", vars, OOffersResponse.serializer()).cardOffers
+        return c.edges.map { e ->
+            val n = e.node
+            OfferItem(n.id, n.status.s(), n.user?.name.orEmpty(), n.user?.avatar?.original?.url, n.createdAt?.take(10),
+                n.offer.item(), n.request.item().takeIf { !n.noTrade }, n.viewerCanAccept, n.viewerCanClose, n.viewerDidAuthor)
+        } to c.pageInfo.endCursor.takeIf { c.pageInfo.hasNextPage }
+    }
+
+    private suspend fun act(name: String, offerId: String) {
+        api.execute(name, name, buildJsonObject { put("input", buildJsonObject { put("offerId", offerId) }) }, JsonElement.serializer())
+    }
+
+    suspend fun accept(offerId: String) = act("acceptCardOffer", offerId)
+    suspend fun close(offerId: String) = act("closeCardOffer", offerId)
+
+    suspend fun tops(): List<TopUser> {
+        val vars = buildJsonObject { put("includeExperiences", true); put("includeCredits", true) }
+        val r = api.execute("fetchMainUserTops", "fetchMainUserTops", vars, OTopsResponse.serializer())
+        fun List<OTopEntry>?.toTops(kind: String) = orEmpty().mapNotNull { e -> e.user?.let { TopUser(it.name, it.avatar?.original?.url, it.level, kind) } }
+        return r.experimentalSpotlightExperiences.toTops("опыт") + r.experimentalSpotlightCredits.toTops("кредиты")
+    }
+}

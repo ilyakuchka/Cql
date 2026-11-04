@@ -1,0 +1,14 @@
+query fetchCardOffers($after: String, $userId: ID, $status: CardOfferStatus) {
+  cardOffers(first: 20, after: $after, userId: $userId, status: $status, orderBy: {field: CREATED_AT, direction: DESC}) {
+    edges {
+      node {
+        id status noTrade createdAt
+        user { id name avatar { original { url } } }
+        offer { modifier quantity shard card { slug titles { lang content } rank image { original { url } } } }
+        request { modifier quantity shard card { slug titles { lang content } rank image { original { url } } } }
+        viewerDidAuthor viewerCanAccept viewerCanClose
+      }
+    }
+    pageInfo { hasNextPage endCursor }
+  }
+}

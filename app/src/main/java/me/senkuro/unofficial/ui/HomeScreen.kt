@@ -86,6 +86,7 @@ fun HomeScreen(
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     val data = state.data
+                    item(key = "tops") { TopsRibbon() }
                     cardsSection("Продолжить чтение", resume, onManga, onMore, showMore = false)
                     trendingSection("Популярное за день", data.popular, onManga)
                     cardsSection("Свежие обновления", data.latest, onManga, onMore)
