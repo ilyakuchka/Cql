@@ -1,0 +1,10 @@
+query fetchTeam($slug: String!) {
+  team(slug: $slug) {
+    id slug name activity verified
+    avatar { original { url } }
+    banner { original { url } }
+    projects chapters views members subscribers createdAt viewerIsMember
+    about { __typename ... on TiptapNodeNestedBlock { content { __typename ... on TiptapNodeText { text } } } }
+    links { title url }
+  }
+}

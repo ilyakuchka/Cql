@@ -80,6 +80,7 @@ fun DetailsScreen(
     onLogin: () -> Unit,
     onOpenManga: (MangaItem) -> Unit = {},
     onOpenCharacter: (String) -> Unit = {},
+    onOpenPerson: (String) -> Unit = {},
     vm: DetailsViewModel = viewModel(key = "details-$mangaId"),
 ) {
     LaunchedEffect(mangaId) { vm.load(mangaId) }
@@ -107,7 +108,7 @@ fun DetailsScreen(
         when (val state = vm.state) {
             is UiState.Loading -> LoadingBox()
             is UiState.Error -> ErrorBox(state.message, { vm.load(mangaId, force = true) })
-            is UiState.Ready -> DetailsContent(state.data, readIds, onRead, onOpenManga, onOpenCharacter)
+            is UiState.Ready -> DetailsContent(state.data, readIds, onRead, onOpenManga, onOpenCharacter, onOpenPerson)
         }
         var bookmarkDialog by remember { mutableStateOf(false) }
         if (bookmarkDialog) {
@@ -185,12 +186,13 @@ private fun shareManga(context: Context, item: MangaItem) {
 }
 
 @Composable
-private fun DetailsContent(data: DetailsData, readIds: Set<String>, onRead: (Chapter) -> Unit, onOpenManga: (MangaItem) -> Unit, onOpenCharacter: (String) -> Unit) {
+private fun DetailsContent(data: DetailsData, readIds: Set<String>, onRead: (Chapter) -> Unit, onOpenManga: (MangaItem) -> Unit, onOpenCharacter: (String) -> Unit, onOpenPerson: (String) -> Unit) {
     val details = data.details
     val extras by androidx.compose.runtime.produceState(DetailsExtras(), details.item.id) {
         value = DetailsExtras(
             relations = runCatching { AppGraph.repository.relations(details.item.id) }.getOrDefault(emptyList()),
             characters = runCatching { AppGraph.repository.characters(details.item.id) }.getOrDefault(emptyList()),
+            staff = runCatching { AppGraph.directory.staff(details.item.id) }.getOrDefault(emptyList()),
         )
     }
     val branches = data.chapters.branches
@@ -292,6 +294,25 @@ private fun DetailsContent(data: DetailsData, readIds: Set<String>, onRead: (Cha
             }
         }
 
+        if (extras.staff.isNotEmpty()) {
+            item(key = "staff") {
+                Column(Modifier.padding(top = 12.dp)) {
+                    Text("Авторы", style = HeadingStyle, color = MaterialTheme.colorScheme.onBackground, modifier = Modifier.padding(horizontal = 21.dp, vertical = 6.dp))
+                    androidx.compose.foundation.lazy.LazyRow(contentPadding = PaddingValues(horizontal = 21.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        items(extras.staff) { p ->
+                            Column(Modifier.width(80.dp).clickable(enabled = p.slug.isNotBlank()) { onOpenPerson(p.slug) }, horizontalAlignment = Alignment.CenterHorizontally) {
+                                coil3.compose.AsyncImage(
+                                    model = p.cover, contentDescription = p.name, contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                                    modifier = Modifier.size(64.dp).clip(androidx.compose.foundation.shape.CircleShape).background(MaterialTheme.colorScheme.surfaceVariant),
+                                )
+                                Text(p.name, color = MaterialTheme.colorScheme.onBackground, fontSize = 11.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                                Text(p.role, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 9.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            }
+                        }
+                    }
+                }
+            }
+        }
         if (extras.characters.isNotEmpty()) {
             item(key = "characters") {
                 Column(Modifier.padding(top = 12.dp)) {
@@ -520,6 +541,7 @@ private fun ChapterRow(chapter: Chapter, cover: String?, read: Boolean, onClick:
 private class DetailsExtras(
     val relations: List<me.senkuro.unofficial.data.RelatedManga> = emptyList(),
     val characters: List<me.senkuro.unofficial.data.CharacterItem> = emptyList(),
+    val staff: List<me.senkuro.unofficial.data.StaffItem> = emptyList(),
 )
 
 private fun relationName(raw: String): String = when (raw.uppercase()) {

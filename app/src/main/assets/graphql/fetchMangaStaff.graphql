@@ -1,0 +1,6 @@
+query fetchMangaStaff($mangaId: ID!, $after: String) {
+  mangaStaff(mangaId: $mangaId, first: 100, after: $after) {
+    edges { node { id roles person { id slug name titles { lang content } cover { original { url } } } } }
+    pageInfo { hasNextPage endCursor }
+  }
+}

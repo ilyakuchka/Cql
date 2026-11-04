@@ -1,0 +1,6 @@
+query fetchPerson($slug: String!) {
+  person(slug: $slug) {
+    id slug name titles { lang content }
+    cover { original { url } }
+  }
+}

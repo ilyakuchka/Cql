@@ -27,6 +27,8 @@ object AppGraph {
         private set
     lateinit var offers: OffersRepository
         private set
+    lateinit var directory: DirectoryRepository
+        private set
     lateinit var library: LibraryStore
         private set
     lateinit var auth: AuthStore
@@ -110,6 +112,7 @@ object AppGraph {
         social = SocialRepository(api)
         cards = CardsRepository(api)
         offers = OffersRepository(api)
+        directory = DirectoryRepository(api)
         library = LibraryStore(app)
         refreshAccount()
     }

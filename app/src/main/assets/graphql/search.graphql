@@ -1,0 +1,15 @@
+query search($query: String!, $type: SearchType!) {
+  search(query: $query, type: $type, first: 20) {
+    edges {
+      node {
+        __typename
+        ... on SearchUser { id slug name avatar { original { url } } }
+        ... on SearchTeam { id slug name avatar { original { url } } }
+        ... on SearchGuild { id slug name level avatar { original { url } } }
+        ... on SearchManga { id slug titles { lang content } cover { original { url } } }
+        ... on SearchPerson { id slug name titles { lang content } cover { original { url } } }
+        ... on SearchCharacter { id slug name titles { lang content } cover { original { url } } }
+      }
+    }
+  }
+}

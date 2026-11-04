@@ -1,0 +1,6 @@
+query fetchTeams($after: String, $name: String) {
+  teams(first: 24, after: $after, name: $name) {
+    edges { node { id slug name activity verified subscribers views avatar { original { url } } } }
+    pageInfo { hasNextPage endCursor }
+  }
+}

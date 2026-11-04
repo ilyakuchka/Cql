@@ -72,6 +72,10 @@ private object Routes {
     const val CHARACTER = "character/{slug}"
     const val TASKS = "tasks"
     const val OFFERS = "offers"
+    const val SEARCH = "sitesearch"
+    const val TEAMS = "teams"
+    const val TEAM = "team/{slug}"
+    const val PERSON = "person/{slug}"
     const val MANGA = "manga/{id}"
     const val READER = "reader/{mangaId}/{chapterId}"
 
@@ -161,6 +165,8 @@ fun AppRoot() {
                                 onCards = { nav.navigate(Routes.CARDS) },
                                 onCardCatalog = { nav.navigate(Routes.CARD_CATALOG) },
                                 onOffers = { nav.navigate(Routes.OFFERS) },
+                                onSearch = { nav.navigate(Routes.SEARCH) },
+                                onTeams = { nav.navigate(Routes.TEAMS) },
                             )
                         }
                     }
@@ -220,6 +226,29 @@ fun AppRoot() {
                             )
                         }
                     }
+                    composable(Routes.SEARCH) {
+                        UnofficialTheme(dark = appDark) {
+                            SiteSearchScreen(
+                                onBack = { nav.popBackStack() },
+                                onManga = { nav.navigate(Routes.manga(it)) },
+                                onTeam = { nav.navigate("team/" + Uri.encode(it)) },
+                                onGuild = { nav.navigate("guild/" + Uri.encode(it)) },
+                                onPerson = { nav.navigate("person/" + Uri.encode(it)) },
+                                onCharacter = { nav.navigate("character/" + Uri.encode(it)) },
+                            )
+                        }
+                    }
+                    composable(Routes.TEAMS) {
+                        UnofficialTheme(dark = appDark) { TeamsScreen(onBack = { nav.popBackStack() }, onOpen = { nav.navigate("team/" + Uri.encode(it)) }) }
+                    }
+                    composable(Routes.TEAM, arguments = listOf(navArgument("slug") { type = NavType.StringType })) { b ->
+                        UnofficialTheme(dark = appDark) { TeamScreen(slug = b.arguments?.getString("slug").orEmpty(), onBack = { nav.popBackStack() }) }
+                    }
+                    composable(Routes.PERSON, arguments = listOf(navArgument("slug") { type = NavType.StringType })) { b ->
+                        UnofficialTheme(dark = appDark) {
+                            PersonScreen(slug = b.arguments?.getString("slug").orEmpty(), onBack = { nav.popBackStack() }, onManga = openManga)
+                        }
+                    }
                     composable(Routes.OFFERS) {
                         UnofficialTheme(dark = appDark) { OffersScreen(onBack = { nav.popBackStack() }, onCard = { nav.navigate("card/" + Uri.encode(it)) }) }
                     }
@@ -246,6 +275,7 @@ fun AppRoot() {
                                 onLogin = { nav.navigate(Routes.LOGIN) },
                                 onOpenManga = openManga,
                                 onOpenCharacter = { nav.navigate("character/" + Uri.encode(it)) },
+                                onOpenPerson = { nav.navigate("person/" + Uri.encode(it)) },
                             )
                         }
                     }
