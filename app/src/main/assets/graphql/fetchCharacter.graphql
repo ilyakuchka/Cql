@@ -1,0 +1,6 @@
+query fetchCharacter($slug: String!) {
+  character(slug: $slug) {
+    id slug name titles { lang content } gender
+    cover { original { url } }
+  }
+}

@@ -43,6 +43,9 @@
 | `fetchConversations`, `fetchConversationMessages`, `createConversationMessage`, `readConversationMessage`, `bulkDeleteConversationMessages` | личная переписка (Настройки → Сообщения) |
 | `fetchGuilds`, `fetchGuild`, `fetchGuildMembers` | гильдии (Настройки → Гильдии) |
 | `fetchUserCards` | мои карточки (Настройки → Мои карточки) |
+| `fetchCards`, `fetchCard`, `viewCard` | каталог карточек (Настройки → Каталог карточек), страница карточки |
+| `fetchCharacter`, `fetchMangas` | страница персонажа: тайтлы и карточки (нажатие на персонажа в тайтле или карточке) |
+| `fetchUserTasks` | задания (Настройки → Задания) |
 | `viewManga` | засчитывает просмотр тайтла |
 | `voteManga`, `fetchMangaViewerState` | оценка тайтла 1–10 («★ Оценка» на экране тайтла) |
 | `deleteMangaVote` | «Убрать оценку» |

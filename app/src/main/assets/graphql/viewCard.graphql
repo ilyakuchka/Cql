@@ -1,0 +1,3 @@
+mutation viewCard($input: ViewCardInput!) {
+  viewCard(input: $input) { success }
+}

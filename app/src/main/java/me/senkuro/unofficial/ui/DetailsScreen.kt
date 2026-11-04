@@ -78,6 +78,7 @@ fun DetailsScreen(
     onRead: (Chapter) -> Unit,
     onLogin: () -> Unit,
     onOpenManga: (MangaItem) -> Unit = {},
+    onOpenCharacter: (String) -> Unit = {},
     vm: DetailsViewModel = viewModel(key = "details-$mangaId"),
 ) {
     LaunchedEffect(mangaId) { vm.load(mangaId) }
@@ -105,7 +106,7 @@ fun DetailsScreen(
         when (val state = vm.state) {
             is UiState.Loading -> LoadingBox()
             is UiState.Error -> ErrorBox(state.message, { vm.load(mangaId, force = true) })
-            is UiState.Ready -> DetailsContent(state.data, readIds, onRead, onOpenManga)
+            is UiState.Ready -> DetailsContent(state.data, readIds, onRead, onOpenManga, onOpenCharacter)
         }
         var bookmarkDialog by remember { mutableStateOf(false) }
         if (bookmarkDialog) {
@@ -183,7 +184,7 @@ private fun shareManga(context: Context, item: MangaItem) {
 }
 
 @Composable
-private fun DetailsContent(data: DetailsData, readIds: Set<String>, onRead: (Chapter) -> Unit, onOpenManga: (MangaItem) -> Unit) {
+private fun DetailsContent(data: DetailsData, readIds: Set<String>, onRead: (Chapter) -> Unit, onOpenManga: (MangaItem) -> Unit, onOpenCharacter: (String) -> Unit) {
     val details = data.details
     val extras by androidx.compose.runtime.produceState(DetailsExtras(), details.item.id) {
         value = DetailsExtras(
@@ -292,7 +293,7 @@ private fun DetailsContent(data: DetailsData, readIds: Set<String>, onRead: (Cha
                         horizontalArrangement = Arrangement.spacedBy(10.dp),
                     ) {
                         items(extras.characters) { c ->
-                            Column(Modifier.width(80.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                            Column(Modifier.width(80.dp).clickable(enabled = c.slug.isNotBlank()) { onOpenCharacter(c.slug) }, horizontalAlignment = Alignment.CenterHorizontally) {
                                 coil3.compose.AsyncImage(
                                     model = c.cover, contentDescription = c.name,
                                     contentScale = androidx.compose.ui.layout.ContentScale.Crop,

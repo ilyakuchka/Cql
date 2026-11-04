@@ -1,0 +1,6 @@
+query fetchCards($after: String, $orderField: CardOrderField = POPULARITY_SCORE, $orderDirection: OrderDirection = DESC, $character: CardCharacterFilter, $rank: CardRankFilter) {
+  cards(first: 24, after: $after, orderBy: {field: $orderField, direction: $orderDirection}, character: $character, rank: $rank) {
+    edges { node { id slug titles { lang content } rank animated image { original { url } } } }
+    pageInfo { hasNextPage endCursor }
+  }
+}

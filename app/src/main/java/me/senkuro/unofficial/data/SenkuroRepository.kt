@@ -472,7 +472,7 @@ class SenkuroRepository(private val api: SenkuroApi) {
         api.execute("fetchMangaCharacters", "fetchMangaCharacters", mangaVars(mangaId), CharactersResponse.serializer())
             .mangaCharacters.edges.mapNotNull { e ->
                 val c = e.node.character ?: return@mapNotNull null
-                CharacterItem(c.titles?.localized() ?: c.name, e.node.role, c.cover?.original?.url)
+                CharacterItem(c.titles?.localized() ?: c.name, e.node.role, c.cover?.original?.url, c.slug)
             }
 
     suspend fun popularSearches(): List<String> =

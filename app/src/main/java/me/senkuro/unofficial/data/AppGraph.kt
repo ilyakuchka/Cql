@@ -23,6 +23,8 @@ object AppGraph {
         private set
     lateinit var social: SocialRepository
         private set
+    lateinit var cards: CardsRepository
+        private set
     lateinit var library: LibraryStore
         private set
     lateinit var auth: AuthStore
@@ -104,6 +106,7 @@ object AppGraph {
         val api = SenkuroApi(app, httpClient)
         repository = SenkuroRepository(api)
         social = SocialRepository(api)
+        cards = CardsRepository(api)
         library = LibraryStore(app)
         refreshAccount()
     }

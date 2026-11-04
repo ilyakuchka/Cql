@@ -1,0 +1,7 @@
+query fetchUserTasks($first: Int, $userId: ID!, $onlyIncompleted: Boolean) {
+  userTasks(first: $first, userId: $userId, onlyIncompleted: $onlyIncompleted) {
+    progress
+    completedAt
+    task { id titles { lang content } threshold experience points enabled active }
+  }
+}

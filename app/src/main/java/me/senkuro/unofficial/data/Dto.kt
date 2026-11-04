@@ -345,7 +345,7 @@ class RelationsConn(val edges: List<RelationEdge> = emptyList())
 class RelationsResponse(val mangaRelations: RelationsConn = RelationsConn())
 
 @Serializable
-class CharacterDto(val id: String = "", val name: String = "", val titles: List<Title>? = null, val cover: Cover? = null)
+class CharacterDto(val id: String = "", val slug: String = "", val name: String = "", val titles: List<Title>? = null, val cover: Cover? = null)
 
 @Serializable
 class CharacterNodeDto(val role: String? = null, val character: CharacterDto? = null)

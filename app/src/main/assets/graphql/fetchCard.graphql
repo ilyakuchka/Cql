@@ -1,0 +1,12 @@
+query fetchCard($slug: String!) {
+  card(slug: $slug) {
+    id slug titles { lang content } rank animated
+    image { original { url } }
+    owners wishes upvotes views createdAt
+    description { __typename ... on TiptapNodeNestedBlock { content { __typename ... on TiptapNodeText { text } } } }
+    author { name }
+    character { id slug titles { lang content } }
+    entity { __typename ... on Manga { id slug titles { lang content } } ... on Anime { id slug titles { lang content } } }
+    viewerCards { modifier quantity shard }
+  }
+}

@@ -66,6 +66,10 @@ private object Routes {
     const val GUILDS = "guilds"
     const val GUILD = "guild/{slug}"
     const val CARDS = "cards"
+    const val CARD_CATALOG = "cardcatalog"
+    const val CARD = "card/{slug}"
+    const val CHARACTER = "character/{slug}"
+    const val TASKS = "tasks"
     const val MANGA = "manga/{id}"
     const val READER = "reader/{mangaId}/{chapterId}"
 
@@ -152,6 +156,8 @@ fun AppRoot() {
                                 onMessages = { nav.navigate(Routes.CONVERSATIONS) },
                                 onGuilds = { nav.navigate(Routes.GUILDS) },
                                 onCards = { nav.navigate(Routes.CARDS) },
+                                onCardCatalog = { nav.navigate(Routes.CARD_CATALOG) },
+                                onTasks = { nav.navigate(Routes.TASKS) },
                             )
                         }
                     }
@@ -186,8 +192,32 @@ fun AppRoot() {
                         }
                     }
                     composable(Routes.CARDS) {
-                        UnofficialTheme(dark = appDark) { CardsScreen(onBack = { nav.popBackStack() }) }
+                        UnofficialTheme(dark = appDark) { CardsScreen(onBack = { nav.popBackStack() }, onCard = { nav.navigate("card/" + Uri.encode(it)) }) }
                     }
+                    composable(Routes.CARD_CATALOG) {
+                        UnofficialTheme(dark = appDark) { CardCatalogScreen(onBack = { nav.popBackStack() }, onCard = { nav.navigate("card/" + Uri.encode(it)) }) }
+                    }
+                    composable(Routes.CARD, arguments = listOf(navArgument("slug") { type = NavType.StringType })) { b ->
+                        UnofficialTheme(dark = appDark) {
+                            CardScreen(
+                                slug = b.arguments?.getString("slug").orEmpty(),
+                                onBack = { nav.popBackStack() },
+                                onCharacter = { nav.navigate("character/" + Uri.encode(it)) },
+                                onManga = { nav.navigate(Routes.manga(it)) },
+                            )
+                        }
+                    }
+                    composable(Routes.CHARACTER, arguments = listOf(navArgument("slug") { type = NavType.StringType })) { b ->
+                        UnofficialTheme(dark = appDark) {
+                            CharacterScreen(
+                                slug = b.arguments?.getString("slug").orEmpty(),
+                                onBack = { nav.popBackStack() },
+                                onManga = openManga,
+                                onCard = { nav.navigate("card/" + Uri.encode(it)) },
+                            )
+                        }
+                    }
+                    composable(Routes.TASKS) { UnofficialTheme(dark = appDark) { TasksScreen(onBack = { nav.popBackStack() }) } }
                     composable(Routes.LOGIN) {
                         UnofficialTheme(dark = appDark) {
                             LoginScreen(onBack = { nav.popBackStack() }, onDone = { nav.popBackStack() })
@@ -209,6 +239,7 @@ fun AppRoot() {
                                 onRead = { chapter -> nav.navigate(Routes.reader(id, chapter.id)) },
                                 onLogin = { nav.navigate(Routes.LOGIN) },
                                 onOpenManga = openManga,
+                                onOpenCharacter = { nav.navigate("character/" + Uri.encode(it)) },
                             )
                         }
                     }

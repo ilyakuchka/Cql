@@ -103,7 +103,7 @@ class SGuildMembersConn(val edges: List<SGuildMemberEdge> = emptyList(), val pag
 class SGuildMembersResponse(val guildMembers: SGuildMembersConn = SGuildMembersConn())
 
 @Serializable
-class SCardDto(val titles: List<Title>? = null, val rank: JsonElement? = null, val image: Cover? = null)
+class SCardDto(val slug: String = "", val titles: List<Title>? = null, val rank: JsonElement? = null, val image: Cover? = null)
 
 @Serializable
 class SUserCardDto(val quantity: Int? = null, val modifier: JsonElement? = null, val locked: Boolean = false, val card: SCardDto? = null)
@@ -139,7 +139,7 @@ data class GuildProfile(
 
 data class GuildMemberItem(val name: String, val avatar: String?, val level: Int?, val role: String?)
 
-data class UserCardItem(val title: String, val rank: String?, val image: String?, val quantity: Int, val modifier: String?, val locked: Boolean)
+data class UserCardItem(val title: String, val rank: String?, val image: String?, val quantity: Int, val modifier: String?, val locked: Boolean, val slug: String = "")
 
 /** Переписка, гильдии и карточки (запросы восстановлены по js сайта). */
 class SocialRepository(private val api: SenkuroApi) {
@@ -279,7 +279,7 @@ class SocialRepository(private val api: SenkuroApi) {
         return c.edges.mapNotNull { e ->
             val card = e.node.card ?: return@mapNotNull null
             UserCardItem(card.titles.pick() ?: "Карточка", card.rank.label(), card.image?.original?.url,
-                e.node.quantity ?: 1, e.node.modifier.label(), e.node.locked)
+                e.node.quantity ?: 1, e.node.modifier.label(), e.node.locked, card.slug)
         } to c.pageInfo.endCursor.takeIf { c.pageInfo.hasNextPage }
     }
 }

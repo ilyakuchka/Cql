@@ -131,4 +131,4 @@ data class CommentsPage(val items: List<CommentItem>, val next: String?)
 
 data class RelatedManga(val manga: MangaItem, val relation: String?)
 
-data class CharacterItem(val name: String, val role: String?, val cover: String?)
+data class CharacterItem(val name: String, val role: String?, val cover: String?, val slug: String = "")

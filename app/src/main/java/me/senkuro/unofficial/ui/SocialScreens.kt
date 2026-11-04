@@ -57,10 +57,10 @@ import me.senkuro.unofficial.data.GuildProfile
 import me.senkuro.unofficial.data.MessageItem
 import me.senkuro.unofficial.data.UserCardItem
 
-private fun Throwable.msg() = message?.takeIf { it.isNotBlank() } ?: "Ошибка запроса"
+internal fun Throwable.msg() = message?.takeIf { it.isNotBlank() } ?: "Ошибка запроса"
 
 @Composable
-private fun Top(title: String, onBack: () -> Unit) {
+internal fun Top(title: String, onBack: () -> Unit) {
     Row(Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
         TextButton(onClick = onBack) { Text("Назад") }
         Text(title, style = HeadingStyle, color = MaterialTheme.colorScheme.onBackground, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -68,7 +68,7 @@ private fun Top(title: String, onBack: () -> Unit) {
 }
 
 @Composable
-private fun Avatar(url: String?, size: Int = 40) {
+internal fun Avatar(url: String?, size: Int = 40) {
     AsyncImage(
         model = url, contentDescription = null, contentScale = ContentScale.Crop,
         modifier = Modifier.size(size.dp).clip(CircleShape),
@@ -76,7 +76,7 @@ private fun Avatar(url: String?, size: Int = 40) {
 }
 
 /** Универсальная постраничная загрузка списка. */
-private class Pager<T>(private val fetch: suspend (String?) -> Pair<List<T>, String?>) {
+internal class Pager<T>(private val fetch: suspend (String?) -> Pair<List<T>, String?>) {
     val items = mutableStateListOf<T>()
     var cursor: String? = null
     var loading by mutableStateOf(false)
@@ -102,7 +102,7 @@ private class Pager<T>(private val fetch: suspend (String?) -> Pair<List<T>, Str
 }
 
 @Composable
-private fun <T> PagerError(pager: Pager<T>) {
+internal fun <T> PagerError(pager: Pager<T>) {
     val scope = rememberCoroutineScope()
     ErrorBox(pager.error.orEmpty(), onRetry = { scope.launch { pager.reload() } })
 }
@@ -328,7 +328,7 @@ fun GuildScreen(slug: String, onBack: () -> Unit) {
 // ---------------- Карточки
 
 @Composable
-fun CardsScreen(onBack: () -> Unit) {
+fun CardsScreen(onBack: () -> Unit, onCard: (String) -> Unit = {}) {
     val me = AppGraph.account.value?.userId.orEmpty()
     val pager = remember { Pager { AppGraph.social.userCards(me, it) } }
     LaunchedEffect(Unit) { pager.reload() }
@@ -340,7 +340,7 @@ fun CardsScreen(onBack: () -> Unit) {
             pager.items.isEmpty() -> Text("Карточек нет", Modifier.padding(16.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
             else -> LazyVerticalGrid(GridCells.Fixed(3), Modifier.fillMaxSize(), contentPadding = androidx.compose.foundation.layout.PaddingValues(12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(pager.items) { c: UserCardItem ->
-                    Column {
+                    Column(Modifier.clickable(enabled = c.slug.isNotBlank()) { onCard(c.slug) }) {
                         Box(Modifier.fillMaxWidth().aspectRatio(0.7f).clip(RoundedCornerShape(8.dp))) {
                             AsyncImage(c.image, null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
                             if (c.quantity > 1) Text("×${c.quantity}", fontSize = 11.sp, color = androidx.compose.ui.graphics.Color.White,
