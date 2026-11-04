@@ -150,6 +150,7 @@ fun SiteBookmarksTab(onManga: (MangaItem) -> Unit, onLogin: () -> Unit, vm: Site
                 FilterChip(selected = vm.collectionId == c.id, onClick = { vm.select(c.id) }, label = { Text(c.name) })
             }
         }
+        CollectionTools(acc.collections, vm.collectionId, onChanged = { vm.select(null); AppGraph.refreshAccount() })
         Box(Modifier.fillMaxSize()) {
             val error = vm.error
             when {
@@ -170,4 +171,53 @@ fun SiteBookmarksTab(onManga: (MangaItem) -> Unit, onLogin: () -> Unit, vm: Site
             }
         }
     }
+}
+
+
+/** Создание, переименование и удаление своих коллекций закладок (системные не удаляются). */
+@Composable
+private fun CollectionTools(collections: List<me.senkuro.unofficial.data.BookmarkCollection>, selected: String?, onChanged: () -> Unit) {
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    var dialog by androidx.compose.runtime.remember { mutableStateOf<String?>(null) } // "new" | "rename" | "delete"
+    var name by androidx.compose.runtime.remember { mutableStateOf("") }
+    var error by androidx.compose.runtime.remember { mutableStateOf<String?>(null) }
+    val cur = collections.firstOrNull { it.id == selected }
+    Row(Modifier.padding(horizontal = 8.dp)) {
+        TextButton(onClick = { name = ""; error = null; dialog = "new" }) { Text("＋ Коллекция") }
+        if (cur != null && !cur.system) {
+            TextButton(onClick = { name = cur.name; error = null; dialog = "rename" }) { Text("Переименовать") }
+            TextButton(onClick = { error = null; dialog = "delete" }) { Text("Удалить") }
+        }
+    }
+    val d = dialog ?: return
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = { dialog = null },
+        title = { Text(when (d) { "new" -> "Новая коллекция"; "rename" -> "Переименовать"; else -> "Удалить «${cur?.name}»?" }) },
+        text = {
+            Column {
+                if (d != "delete") androidx.compose.material3.OutlinedTextField(name, { name = it }, singleLine = true, label = { Text("Название") })
+                error?.let { Text(it, color = androidx.compose.material3.MaterialTheme.colorScheme.error) }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = {
+                scope.launch {
+                    try {
+                        when (d) {
+                            "new" -> AppGraph.repository.createCollection(name.trim())
+                            "rename" -> AppGraph.repository.renameCollection(cur!!.id, name.trim())
+                            else -> AppGraph.repository.deleteCollection(cur!!.id)
+                        }
+                        dialog = null
+                        onChanged()
+                    } catch (e: kotlinx.coroutines.CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        error = e.message ?: "Ошибка"
+                    }
+                }
+            }, enabled = d == "delete" || name.isNotBlank()) { Text("Готово") }
+        },
+        dismissButton = { TextButton(onClick = { dialog = null }) { Text("Отмена") } },
+    )
 }

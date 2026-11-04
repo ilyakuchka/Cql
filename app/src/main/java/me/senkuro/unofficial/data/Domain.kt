@@ -125,6 +125,8 @@ data class CommentItem(
     val down: Int,
     val canEdit: Boolean,
     val canDelete: Boolean,
+    /** true — вы поставили ▲, false — ▼, null — не голосовали. */
+    val vote: Boolean? = null,
 )
 
 data class CommentsPage(val items: List<CommentItem>, val next: String?)

@@ -42,6 +42,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import kotlinx.coroutines.launch
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -207,6 +208,13 @@ private fun DetailsContent(data: DetailsData, readIds: Set<String>, onRead: (Cha
         else -> "Начать читать"
     }
     val navBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+    val bookmarkScope = androidx.compose.runtime.rememberCoroutineScope()
+    var bookmarkNumber by remember(data.details.item.slug) { mutableStateOf<String?>(null) }
+    androidx.compose.runtime.LaunchedEffect(data.details.item.slug, AppGraph.account.collectAsState().value?.userId) {
+        bookmarkNumber = if (AppGraph.account.value == null) null else try {
+            AppGraph.repository.bookmarkNumber(data.details.item.slug)
+        } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Exception) { null }
+    }
     var expanded by rememberSaveable { mutableStateOf(false) }
 
     LazyColumn(
@@ -304,6 +312,24 @@ private fun DetailsContent(data: DetailsData, readIds: Set<String>, onRead: (Cha
                         }
                     }
                 }
+            }
+        }
+
+        bookmarkNumber?.let { num ->
+            item(key = "bookmark-jump") {
+                androidx.compose.material3.TextButton(
+                    modifier = Modifier.padding(horizontal = 13.dp),
+                    onClick = {
+                        val all = branches.flatMap { it.chapters }
+                        val local = all.firstOrNull { it.number == num && (branch == null || it.branchId == branch.id) } ?: all.firstOrNull { it.number == num }
+                        if (local != null) onRead(local) else bookmarkScope.launch {
+                            val slug = try {
+                                AppGraph.repository.bookmarkChapterSlug(branch?.id.orEmpty(), num)
+                            } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Exception) { null }
+                            all.firstOrNull { it.slug == slug }?.let(onRead)
+                        }
+                    },
+                ) { Text("К закладке: глава $num") }
             }
         }
 

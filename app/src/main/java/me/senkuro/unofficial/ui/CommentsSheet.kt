@@ -99,6 +99,22 @@ fun CommentsSheet(chapterSlug: String, pageIndex: Int, onDismiss: () -> Unit) {
                 items(items, key = { it.id }) { c ->
                     CommentRow(
                         c,
+                        onVote = { up ->
+                            if (!busy) {
+                                busy = true
+                                guarded {
+                                    if (c.vote == up) AppGraph.repository.deleteCommentVote(c.id) else AppGraph.repository.voteComment(c.id, up)
+                                    val now = if (c.vote == up) null else up
+                                    items = items.map {
+                                        if (it.id != c.id) it else it.copy(
+                                            vote = now,
+                                            up = it.up - (if (it.vote == true) 1 else 0) + (if (now == true) 1 else 0),
+                                            down = it.down - (if (it.vote == false) 1 else 0) + (if (now == false) 1 else 0),
+                                        )
+                                    }
+                                }
+                            }
+                        },
                         onEdit = { editing = c; input = c.text },
                         onDelete = {
                             if (!busy) {
@@ -150,7 +166,7 @@ fun CommentsSheet(chapterSlug: String, pageIndex: Int, onDismiss: () -> Unit) {
 }
 
 @Composable
-private fun CommentRow(c: CommentItem, onEdit: () -> Unit, onDelete: () -> Unit) {
+private fun CommentRow(c: CommentItem, onVote: (Boolean) -> Unit, onEdit: () -> Unit, onDelete: () -> Unit) {
     Column(
         Modifier
             .fillMaxWidth()
@@ -163,7 +179,12 @@ private fun CommentRow(c: CommentItem, onEdit: () -> Unit, onDelete: () -> Unit)
         )
         Text(c.text.ifBlank { "…" }, color = MaterialTheme.colorScheme.onSurface, fontSize = 14.sp)
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("▲ ${c.up}  ▼ ${c.down}", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp)
+            TextButton(onClick = { onVote(true) }) {
+                Text("▲ ${c.up}", fontSize = 12.sp, color = if (c.vote == true) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            TextButton(onClick = { onVote(false) }) {
+                Text("▼ ${c.down}", fontSize = 12.sp, color = if (c.vote == false) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant)
+            }
             Row(Modifier.weight(1f)) {}
             if (c.canEdit) TextButton(onClick = onEdit) { Text("Изменить", fontSize = 12.sp) }
             if (c.canDelete) TextButton(onClick = onDelete) { Text("Удалить", fontSize = 12.sp) }

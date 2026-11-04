@@ -360,9 +360,20 @@ class SenkuroRepository(private val api: SenkuroApi) {
                     down = c.downvotes ?: 0,
                     canEdit = c.viewerCanUpdate,
                     canDelete = c.viewerCanDelete,
+                    vote = c.viewerVoteDirection,
                 )
             }
         return CommentsPage(items, conn.pageInfo.endCursor.takeIf { conn.pageInfo.hasNextPage })
+    }
+
+    suspend fun voteComment(commentId: String, upvote: Boolean) {
+        val vars = buildJsonObject { put("input", buildJsonObject { put("commentId", commentId); put("upvote", upvote) }) }
+        api.execute("voteComment", "voteComment", vars, JsonElement.serializer())
+    }
+
+    suspend fun deleteCommentVote(commentId: String) {
+        val vars = buildJsonObject { put("input", buildJsonObject { put("commentId", commentId) }) }
+        api.execute("deleteCommentVote", "deleteCommentVote", vars, JsonElement.serializer())
     }
 
     private fun commentBody(text: String) = kotlinx.serialization.json.JsonArray(
@@ -410,6 +421,31 @@ class SenkuroRepository(private val api: SenkuroApi) {
     // ---------------------------------------------------------------- Оценки, прогресс чтения
 
     /** Текущая оценка пользователя (1..10) или null. */
+    /** Номер главы из закладки (null — закладки нет). */
+    suspend fun bookmarkNumber(slug: String): String? =
+        api.execute("fetchMangaViewerState", "fetchMangaViewerState", buildJsonObject { put("slug", slug) },
+            ViewerStateResponse.serializer()).manga?.viewerBookmark?.number.text()?.takeIf { it.isNotBlank() }
+
+    suspend fun bookmarkChapterSlug(branchId: String, number: String): String? =
+        api.execute("fetchMangaBookmarkChapter", "fetchMangaBookmarkChapter",
+            buildJsonObject { put("branchId", branchId); put("number", number) },
+            BookmarkChapterResponse.serializer()).mangaBookmarkChapter?.slug?.takeIf { it.isNotBlank() }
+
+    suspend fun createCollection(name: String) {
+        val vars = buildJsonObject { put("input", buildJsonObject { put("subjectType", "MANGA"); put("name", name) }) }
+        api.execute("createUserBookmarkCollection", "createUserBookmarkCollection", vars, JsonElement.serializer())
+    }
+
+    suspend fun renameCollection(id: String, name: String) {
+        val vars = buildJsonObject { put("input", buildJsonObject { put("collectionId", id); put("name", name) }) }
+        api.execute("updateUserBookmarkCollection", "updateUserBookmarkCollection", vars, JsonElement.serializer())
+    }
+
+    suspend fun deleteCollection(id: String) {
+        val vars = buildJsonObject { put("input", buildJsonObject { put("collectionId", id) }) }
+        api.execute("deleteUserBookmarkCollection", "deleteUserBookmarkCollection", vars, JsonElement.serializer())
+    }
+
     suspend fun viewerVote(slug: String): Int? =
         api.execute("fetchMangaViewerState", "fetchMangaViewerState", buildJsonObject { put("slug", slug) },
             ViewerStateResponse.serializer()).manga?.viewerVote.text()?.toIntOrNull()

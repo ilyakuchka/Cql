@@ -1,0 +1,3 @@
+mutation deleteCommentVote($input: DeleteCommentVoteInput!) {
+  deleteCommentVote(input: $input) { success }
+}

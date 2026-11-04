@@ -1,0 +1,3 @@
+mutation createUserBookmarkCollection($input: CreateUserBookmarkCollectionInput!) {
+  createUserBookmarkCollection(input: $input) { collection { id name } }
+}

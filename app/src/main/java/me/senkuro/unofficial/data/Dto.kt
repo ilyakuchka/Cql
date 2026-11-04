@@ -299,6 +299,7 @@ class CommentDto(
     val content: List<TiptapBlockDto>? = null,
     val upvotes: Int? = null,
     val downvotes: Int? = null,
+    val viewerVoteDirection: Boolean? = null,
     val createdAt: String? = null,
     val deletedAt: String? = null,
     val viewerDidAuthor: Boolean = false,
@@ -318,7 +319,16 @@ class CommentsConn(val edges: List<CommentEdge> = emptyList(), val pageInfo: Pag
 class CommentsResponse(val comments: CommentsConn = CommentsConn())
 
 @Serializable
-class ViewerVoteManga(val viewerVote: kotlinx.serialization.json.JsonElement? = null)
+class ViewerBookmarkDto(val number: kotlinx.serialization.json.JsonElement? = null, val page: Int? = null)
+
+@Serializable
+class ViewerVoteManga(val viewerVote: kotlinx.serialization.json.JsonElement? = null, val viewerBookmark: ViewerBookmarkDto? = null)
+
+@Serializable
+class BookmarkChapterDto(val id: String = "", val slug: String = "")
+
+@Serializable
+class BookmarkChapterResponse(val mangaBookmarkChapter: BookmarkChapterDto? = null)
 
 @Serializable
 class ViewerStateResponse(val manga: ViewerVoteManga? = null)

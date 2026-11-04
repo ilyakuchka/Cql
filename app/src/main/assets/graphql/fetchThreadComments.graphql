@@ -25,6 +25,7 @@ fragment CommentBase on Comment {
   }
   upvotes
   downvotes
+  viewerVoteDirection
   createdAt
   deletedAt
   viewerDidAuthor

@@ -1,0 +1,3 @@
+query fetchMangaBookmarkChapter($branchId: ID!, $number: String!) {
+  mangaBookmarkChapter(branchId: $branchId, number: $number) { id slug }
+}

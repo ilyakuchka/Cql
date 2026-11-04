@@ -1,0 +1,3 @@
+mutation voteComment($input: VoteCommentInput!) {
+  voteComment(input: $input) { success }
+}
