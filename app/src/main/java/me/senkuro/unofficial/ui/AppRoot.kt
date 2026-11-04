@@ -160,7 +160,6 @@ fun AppRoot() {
                                 onGuilds = { nav.navigate(Routes.GUILDS) },
                                 onCards = { nav.navigate(Routes.CARDS) },
                                 onCardCatalog = { nav.navigate(Routes.CARD_CATALOG) },
-                                onTasks = { nav.navigate(Routes.TASKS) },
                                 onOffers = { nav.navigate(Routes.OFFERS) },
                             )
                         }
