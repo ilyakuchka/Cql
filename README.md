@@ -49,6 +49,16 @@
 | `fetchCardOffers`, `acceptCardOffer`, `closeCardOffer` | обмены карточек (Настройки → Обмены карточек) |
 | `fetchMainUserTops` | лента топов дня на главной |
 | `fetchMainAd`, `viewAd` | тонкий рекламный баннер на главной под «Популярным за день» |
+| `voteComment`, `deleteCommentVote` | лайк/дизлайк комментария |
+| `fetchMangaBookmarkChapter` | кнопка «К закладке» в тайтле (`viewerBookmark`) |
+| `createUserBookmarkCollection`, `updateUserBookmarkCollection`, `deleteUserBookmarkCollection` | свои коллекции закладок |
+| `search` | поиск по сайту: тайтлы, персонажи, люди, команды, гильдии, пользователи |
+| `fetchTeams`, `fetchTeam`, `fetchTeamMembers`, `viewTeam` | команды переводчиков |
+| `fetchPerson`, `fetchMangaStaff` | авторы тайтла и страница автора |
+| `fetchPosts`, `fetchPost`, `viewPost`, `fetchFeed` | посты и лента новых глав |
+| `voteCard`, `deleteCardVote` | голос за карточку |
+| `viewGuild`, `requestGuildMember`, `deleteGuildMember`, `depositGuildPoints` | действия в гильдии |
+| `updateConversationMessage` | правка своего сообщения |
 | `viewManga` | засчитывает просмотр тайтла |
 | `voteManga`, `fetchMangaViewerState` | оценка тайтла 1–10 («★ Оценка» на экране тайтла) |
 | `deleteMangaVote` | «Убрать оценку» |

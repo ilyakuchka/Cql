@@ -1,0 +1,3 @@
+mutation viewPost($input: ViewPostInput!) {
+  viewPost(input: $input) { success }
+}

@@ -1,0 +1,3 @@
+mutation depositGuildPoints($input: DepositGuildPointsInput!) {
+  depositGuildPoints(input: $input) { success }
+}

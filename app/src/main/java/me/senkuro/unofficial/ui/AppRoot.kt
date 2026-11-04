@@ -73,6 +73,9 @@ private object Routes {
     const val TASKS = "tasks"
     const val OFFERS = "offers"
     const val SEARCH = "sitesearch"
+    const val POSTS = "posts"
+    const val POST = "post/{slug}"
+    const val FEED = "feed"
     const val TEAMS = "teams"
     const val TEAM = "team/{slug}"
     const val PERSON = "person/{slug}"
@@ -166,6 +169,8 @@ fun AppRoot() {
                                 onCardCatalog = { nav.navigate(Routes.CARD_CATALOG) },
                                 onOffers = { nav.navigate(Routes.OFFERS) },
                                 onSearch = { nav.navigate(Routes.SEARCH) },
+                                onPosts = { nav.navigate(Routes.POSTS) },
+                                onFeed = { nav.navigate(Routes.FEED) },
                                 onTeams = { nav.navigate(Routes.TEAMS) },
                             )
                         }
@@ -225,6 +230,15 @@ fun AppRoot() {
                                 onCard = { nav.navigate("card/" + Uri.encode(it)) },
                             )
                         }
+                    }
+                    composable(Routes.POSTS) {
+                        UnofficialTheme(dark = appDark) { PostsScreen(onBack = { nav.popBackStack() }, onOpen = { nav.navigate("post/" + Uri.encode(it)) }) }
+                    }
+                    composable(Routes.POST, arguments = listOf(navArgument("slug") { type = NavType.StringType })) { b ->
+                        UnofficialTheme(dark = appDark) { PostScreen(slug = b.arguments?.getString("slug").orEmpty(), onBack = { nav.popBackStack() }) }
+                    }
+                    composable(Routes.FEED) {
+                        UnofficialTheme(dark = appDark) { FeedScreen(onBack = { nav.popBackStack() }, onManga = openManga) }
                     }
                     composable(Routes.SEARCH) {
                         UnofficialTheme(dark = appDark) {

@@ -1,0 +1,3 @@
+mutation requestGuildMember($input: RequestGuildMemberInput!) {
+  requestGuildMember(input: $input) { success }
+}

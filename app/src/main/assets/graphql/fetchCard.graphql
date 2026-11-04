@@ -2,7 +2,7 @@ query fetchCard($slug: String!) {
   card(slug: $slug) {
     id slug titles { lang content } rank animated
     image { original { url } }
-    owners wishes upvotes views createdAt
+    owners wishes upvotes views createdAt viewerVoteDirection
     description { __typename ... on TiptapNodeNestedBlock { content { __typename ... on TiptapNodeText { text } } } }
     author { name }
     character { id slug titles { lang content } }

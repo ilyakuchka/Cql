@@ -1,0 +1,3 @@
+mutation voteCard($input: VoteCardInput!) {
+  voteCard(input: $input) { success }
+}

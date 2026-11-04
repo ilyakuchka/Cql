@@ -1,0 +1,3 @@
+mutation viewGuild($input: ViewGuildInput!) {
+  viewGuild(input: $input) { success }
+}

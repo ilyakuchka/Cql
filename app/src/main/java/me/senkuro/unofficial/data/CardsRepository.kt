@@ -47,6 +47,7 @@ class CCardFull(
     val character: CTitled? = null,
     val entity: CTitled? = null,
     val viewerCards: List<CViewerCard>? = null,
+    val viewerVoteDirection: Boolean? = null,
 )
 
 @Serializable
@@ -82,6 +83,8 @@ data class CardDetails(
     val characterTitle: String?, val characterSlug: String?,
     val entityTitle: String?, val entityId: String?, val entityIsManga: Boolean,
     val mine: String?,
+    val id: String = "",
+    val vote: Boolean? = null,
 )
 
 data class CharacterProfile(val id: String, val name: String, val cover: String?, val gender: String?)
@@ -129,7 +132,16 @@ class CardsRepository(private val api: SenkuroApi) {
             c.owners, c.wishes, c.upvotes, c.views, c.createdAt?.take(10), c.description.plain(), c.author?.name,
             c.character?.titles.pick(), c.character?.slug?.takeIf { it.isNotBlank() },
             c.entity?.titles.pick(), c.entity?.id?.takeIf { it.isNotBlank() }, c.entity?.__typename == "Manga", mine,
+            id = c.id, vote = c.viewerVoteDirection,
         )
+    }
+
+    suspend fun voteCard(cardId: String, upvote: Boolean?) {
+        if (upvote == null) {
+            api.execute("deleteCardVote", "deleteCardVote", buildJsonObject { put("input", buildJsonObject { put("cardId", cardId) }) }, JsonElement.serializer())
+        } else {
+            api.execute("voteCard", "voteCard", buildJsonObject { put("input", buildJsonObject { put("cardId", cardId); put("upvote", upvote) }) }, JsonElement.serializer())
+        }
     }
 
     suspend fun character(slug: String): CharacterProfile? =

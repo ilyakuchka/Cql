@@ -1,0 +1,3 @@
+mutation deleteCardVote($input: DeleteCardVoteInput!) {
+  deleteCardVote(input: $input) { success }
+}

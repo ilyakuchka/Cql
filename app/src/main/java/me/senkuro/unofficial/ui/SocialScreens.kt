@@ -151,6 +151,7 @@ fun ChatScreen(conversationId: String, title: String, onBack: () -> Unit) {
     var older by remember { mutableStateOf(false) }
     var text by remember { mutableStateOf("") }
     var sending by remember { mutableStateOf(false) }
+    var editing by remember { mutableStateOf<MessageItem?>(null) }
     val state = rememberLazyListState()
     val me = AppGraph.account.value?.userId.orEmpty()
 
@@ -199,6 +200,10 @@ fun ChatScreen(conversationId: String, title: String, onBack: () -> Unit) {
                                 Text(m.text, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface)
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Text(m.date.orEmpty(), fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    if (m.mine) {
+                                        Spacer(Modifier.width(8.dp))
+                                        Text("Изменить", fontSize = 10.sp, color = MaterialTheme.colorScheme.primary, modifier = Modifier.clickable { editing = m; text = m.text })
+                                    }
                                     if (m.canDelete) {
                                         Spacer(Modifier.width(8.dp))
                                         Text("Удалить", fontSize = 10.sp, color = MaterialTheme.colorScheme.error, modifier = Modifier.clickable {
@@ -225,7 +230,9 @@ fun ChatScreen(conversationId: String, title: String, onBack: () -> Unit) {
                     val t = text.trim(); sending = true
                     scope.launch {
                         try {
-                            AppGraph.social.send(conversationId, t)
+                            val ed = editing
+                            if (ed != null) AppGraph.social.editMessage(conversationId, ed.id, t) else AppGraph.social.send(conversationId, t)
+                            editing = null
                             text = ""
                             load()
                         } catch (e: CancellationException) {
@@ -238,7 +245,7 @@ fun ChatScreen(conversationId: String, title: String, onBack: () -> Unit) {
                     }
                 },
                 modifier = Modifier.padding(start = 8.dp),
-            ) { Text("Отпр.") }
+            ) { Text(if (editing != null) "Сохр." else "Отпр.") }
         }
     }
 }
@@ -282,6 +289,7 @@ fun GuildScreen(slug: String, onBack: () -> Unit) {
         try {
             val g = AppGraph.social.guild(slug)
             guild = g
+            if (g != null) runCatching { AppGraph.social.viewGuild(g.id) }
             if (g == null) error = "Гильдия не найдена" else members = Pager { AppGraph.social.guildMembers(g.item.id, it) }.also { it.reload() }
         } catch (e: CancellationException) {
             throw e
@@ -306,6 +314,7 @@ fun GuildScreen(slug: String, onBack: () -> Unit) {
                                 Text(listOfNotNull(g.tag?.let { "[$it]" }, g.item.level?.let { "ур. $it" }, g.item.rank?.let { "место $it" }).joinToString(" · "), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 Text("Участников: ${g.members ?: "?"}" + (g.maxMembers?.let { " / $it" } ?: ""), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 if (g.viewerIsMember) Text("Вы состоите в гильдии", fontSize = 12.sp, color = MaterialTheme.colorScheme.primary)
+                                GuildActions(g)
                             }
                         }
                         if (g.description.isNotBlank()) Text(g.description, fontSize = 14.sp, color = MaterialTheme.colorScheme.onBackground, modifier = Modifier.padding(top = 12.dp))
@@ -354,4 +363,40 @@ fun CardsScreen(onBack: () -> Unit, onCard: (String) -> Unit = {}) {
             }
         }
     }
+}
+
+
+@Composable
+private fun GuildActions(g: GuildProfile) {
+    val scope = rememberCoroutineScope()
+    var info by remember { mutableStateOf<String?>(null) }
+    var deposit by remember { mutableStateOf(false) }
+    var points by remember { mutableStateOf("") }
+    val me = AppGraph.account.value?.userId.orEmpty()
+    fun run(block: suspend () -> Unit, ok: String) {
+        scope.launch {
+            info = try { block(); ok } catch (e: CancellationException) { throw e } catch (e: Exception) { e.msg() }
+        }
+    }
+    Row {
+        if (!g.viewerIsMember) TextButton(onClick = { run({ AppGraph.social.requestGuildMember(g.item.id) }, "Заявка отправлена") }) {
+            Text(if (g.inviteOnly) "Подать заявку" else "Вступить")
+        } else {
+            TextButton(onClick = { deposit = true }) { Text("Внести очки") }
+            TextButton(onClick = { run({ AppGraph.social.leaveGuild(g.item.id, me) }, "Вы вышли из гильдии") }) { Text("Выйти") }
+        }
+    }
+    info?.let { Text(it, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+    if (deposit) androidx.compose.material3.AlertDialog(
+        onDismissRequest = { deposit = false },
+        title = { Text("Внести очки в гильдию") },
+        text = { OutlinedTextField(points, { points = it.filter(Char::isDigit) }, singleLine = true, label = { Text("Сколько") }) },
+        confirmButton = {
+            TextButton(enabled = points.toIntOrNull()?.let { it > 0 } == true, onClick = {
+                deposit = false
+                run({ AppGraph.social.depositGuildPoints(g.item.id, points.toInt()) }, "Очки внесены")
+            }) { Text("Внести") }
+        },
+        dismissButton = { TextButton(onClick = { deposit = false }) { Text("Отмена") } },
+    )
 }

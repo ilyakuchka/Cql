@@ -1,0 +1,11 @@
+query fetchFeed($after: String) {
+  newMangaChapters(first: 20, orderBy: {field: CREATED_AT, direction: DESC}, after: $after) {
+    edges {
+      node {
+        id slug number volume name createdAt
+        manga { id slug originalName { lang content } titles { lang content } status rating cover { original { url } } }
+      }
+    }
+    pageInfo { hasNextPage endCursor }
+  }
+}

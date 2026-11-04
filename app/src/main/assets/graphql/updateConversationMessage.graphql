@@ -1,0 +1,3 @@
+mutation updateConversationMessage($input: UpdateConversationMessageInput!) {
+  updateConversationMessage(input: $input) { message { id } }
+}

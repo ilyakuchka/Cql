@@ -45,6 +45,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.launch
 import me.senkuro.unofficial.data.AppGraph
 import me.senkuro.unofficial.data.CardDetails
 import me.senkuro.unofficial.data.CardEntry
@@ -124,6 +125,27 @@ fun CardScreen(slug: String, onBack: () -> Unit, onCharacter: (String) -> Unit, 
                     listOfNotNull(c.owners?.let { "владельцев $it" }, c.wishes?.let { "желают $it" }, c.upvotes?.let { "👍 $it" }, c.views?.let { "просмотров $it" }).joinToString(" · "),
                     fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 4.dp),
                 )
+                var vote by remember(c.id) { mutableStateOf(c.vote) }
+                var ups by remember(c.id) { mutableStateOf(c.upvotes ?: 0) }
+                val scope = androidx.compose.runtime.rememberCoroutineScope()
+                Row(Modifier.padding(top = 8.dp)) {
+                    TextButton(onClick = {
+                        val next = if (vote == true) null else true
+                        scope.launch {
+                            runCatching { AppGraph.cards.voteCard(c.id, next) }.onSuccess {
+                                ups += (if (next == true) 1 else 0) - (if (vote == true) 1 else 0); vote = next
+                            }
+                        }
+                    }) { Text("👍 $ups", color = if (vote == true) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant) }
+                    TextButton(onClick = {
+                        val next = if (vote == false) null else false
+                        scope.launch {
+                            runCatching { AppGraph.cards.voteCard(c.id, next) }.onSuccess {
+                                ups -= if (vote == true) 1 else 0; vote = next
+                            }
+                        }
+                    }) { Text("👎", color = if (vote == false) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant) }
+                }
                 c.mine?.let { Text("У вас: $it", fontSize = 13.sp, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 8.dp)) }
                 if (c.description.isNotBlank()) SelectionContainer {
                     Text(c.description, fontSize = 14.sp, color = MaterialTheme.colorScheme.onBackground, modifier = Modifier.padding(top = 12.dp))

@@ -1,0 +1,6 @@
+query fetchPosts($after: String) {
+  posts(first: 10, after: $after, orderBy: {field: CREATED_AT, direction: DESC}) {
+    edges { node { id slug title views comments createdAt author { id name avatar { original { url } } } team { id slug name } } }
+    pageInfo { hasNextPage endCursor }
+  }
+}

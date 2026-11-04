@@ -282,4 +282,21 @@ class SocialRepository(private val api: SenkuroApi) {
                 e.node.quantity ?: 1, e.node.modifier.label(), e.node.locked, card.slug)
         } to c.pageInfo.endCursor.takeIf { c.pageInfo.hasNextPage }
     }
+
+    private suspend fun guildAct(name: String, input: kotlinx.serialization.json.JsonObject) {
+        api.execute(name, name, buildJsonObject { put("input", input) }, JsonElement.serializer())
+    }
+
+    suspend fun viewGuild(guildId: String) = guildAct("viewGuild", buildJsonObject { put("guildId", guildId) })
+    suspend fun requestGuildMember(guildId: String) = guildAct("requestGuildMember", buildJsonObject { put("guildId", guildId) })
+    suspend fun leaveGuild(guildId: String, userId: String) = guildAct("deleteGuildMember", buildJsonObject { put("guildId", guildId); put("userId", userId) })
+    suspend fun depositGuildPoints(guildId: String, points: Int) = guildAct("depositGuildPoints", buildJsonObject { put("guildId", guildId); put("points", points) })
+
+    suspend fun editMessage(conversationId: String, messageId: String, text: String) {
+        guildAct("updateConversationMessage", buildJsonObject {
+            put("conversationId", conversationId)
+            put("messageId", messageId)
+            put("content", body(text))
+        })
+    }
 }
