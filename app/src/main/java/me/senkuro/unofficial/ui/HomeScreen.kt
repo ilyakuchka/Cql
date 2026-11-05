@@ -90,8 +90,8 @@ fun HomeScreen(
                     cardsSection("Продолжить чтение", resume, onManga, onMore, showMore = false)
                     trendingSection("Популярное за день", data.popular, onManga)
                     item(key = "ad") { AdStrip() }
-                    cardsSection("Свежие обновления", data.latest, onManga, onMore)
                     cardsSection("Новые тайтлы", data.newTitles, onManga, onMore)
+                    newChaptersSection("Новые главы", data.latest.take(10), onManga, onMore)
                     cardsSection("Рекомендации", data.recommendations, onManga, onMore)
                 }
             }
@@ -225,6 +225,30 @@ private fun LazyListScope.cardsSection(
             ) {
                 items(list, key = { it.id }) { manga ->
                     MangaCard(manga, onClick = { onManga(manga) }, modifier = Modifier.width(120.dp))
+                }
+            }
+        }
+    }
+}
+
+/** Лента новых глав: список из 10 тайтлов с последними обновлениями. */
+private fun LazyListScope.newChaptersSection(title: String, list: List<MangaItem>, onManga: (MangaItem) -> Unit, onMore: () -> Unit) {
+    if (list.isEmpty()) return
+    item(key = "section-$title") {
+        Column {
+            SectionHeader(title, onMore = onMore)
+            Column(Modifier.padding(horizontal = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                list.forEach { manga ->
+                    Row(Modifier.fillMaxWidth().clickable { onManga(manga) }, verticalAlignment = Alignment.CenterVertically) {
+                        Box(Modifier.size(width = 44.dp, height = 60.dp).clip(RoundedCornerShape(6.dp)).background(MaterialTheme.colorScheme.surfaceVariant)) {
+                            AsyncImage(model = manga.cover, contentDescription = manga.title, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+                        }
+                        Column(Modifier.padding(start = 12.dp)) {
+                            Text(manga.title, color = MaterialTheme.colorScheme.onBackground, fontSize = 14.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                            val meta = listOfNotNull(manga.status, manga.age).joinToString(" · ")
+                            if (meta.isNotBlank()) Text(meta.uppercase(), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp, maxLines = 1)
+                        }
+                    }
                 }
             }
         }
