@@ -127,7 +127,7 @@ object FileCapture {
     fun manifestUrls(swText: String, swUrl: String): List<String> {
         val base = URI(swUrl)
         val all = Regex("""url:"([^"]+\.js)"""").findAll(swText).map { it.groupValues[1] }.distinct().toList()
-        val priority = Regex("graphql|api|query|queries|gql|manga|user|bookmark|comment|chapter", RegexOption.IGNORE_CASE)
+        val priority = Regex("graphql|api|query|queries|gql|manga|user|bookmark|comment|chapter|guild|conversation|card|collection|modal|_slug_|_namespace_", RegexOption.IGNORE_CASE)
         return all.sortedBy { if (priority.containsMatchIn(it)) 0 else 1 }
             .mapNotNull { runCatching { base.resolve(it).toString() }.getOrNull() }
     }
@@ -195,6 +195,9 @@ object GqlScanner {
 
     private val head = Regex("""\b(query|mutation|subscription|fragment)\s+([A-Za-z_]\w*)\s*(\([^()]*\))?\s*(on\s+\w+\s*)?\{""")
 
+    private val ast = Regex("""operation:`(query|mutation|subscription)`,name:\{kind:`Name`,value:`([A-Za-z_]\w*)`""")
+    private val inputCall = Regex("""input:\{([^{}]{3,260})\}""")
+
     fun scan(files: List<CapturedFile>): List<Found> {
         val result = LinkedHashMap<String, Found>()
         files.filter { it.name.endsWith(".js") || it.name.endsWith(".mjs") || it.name.endsWith(".json") || it.name.endsWith(".map") }
@@ -222,12 +225,24 @@ object GqlScanner {
                     val old = result[key]
                     if (old == null || clean.length > old.text.length) result[key] = Found(m.groupValues[1], m.groupValues[2], clean, f.name)
                 }
+                // Сайт хранит запросы как AST-объекты, а не строки: ищем имена операций в таком виде.
+                ast.findAll(text).forEach { m ->
+                    val key = m.groupValues[1] + " " + m.groupValues[2]
+                    if (key !in result) result[key] = Found(m.groupValues[1], m.groupValues[2], "(AST-документ, текст запроса в js не строкой)", f.name)
+                }
+                // Формы входа мутаций: вызовы вида ({input:{a:b,c:d}}) — единственный источник полей input.
+                inputCall.findAll(text).forEach { m ->
+                    val shape = m.groupValues[1].replace(Regex("\\s+"), " ")
+                    val key = "input " + f.name + " " + shape
+                    if (key !in result) result[key] = Found("input", f.name, "input:{$shape}", f.name)
+                }
             }
         return result.values.toList()
     }
 
     fun render(found: List<Found>, hideNames: Set<String>): String = buildString {
-        val shown = found.filter { it.kind == "fragment" || it.name !in hideNames }
+        val inputs = found.filter { it.kind == "input" }
+        val shown = found.filter { it.kind != "input" && (it.kind == "fragment" || it.name !in hideNames) }
         appendLine("# GraphQL, найденный в js сайта: ${found.size} всего, показано ${shown.size}")
         appendLine("# (реализованные в приложении операции скрыты; фрагменты показаны все)")
         appendLine()
@@ -235,6 +250,10 @@ object GqlScanner {
             appendLine("## ${it.kind} ${it.name}   [${it.source}]")
             appendLine(it.text)
             appendLine()
+        }
+        if (inputs.isNotEmpty()) {
+            appendLine("# Формы input мутаций (вызовы в js): ${inputs.size}")
+            inputs.forEach { appendLine("${it.source}: ${it.text}") }
         }
     }
 }
