@@ -329,6 +329,18 @@ private fun FilesTab() {
         val extra = gqlText()?.let { mapOf("_graphql-from-js.txt" to it) }.orEmpty()
         write(uri) { out -> FileCapture.writeZip(out, extra) }
     }
+    val saveSchema = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
+        if (uri != null) scope.launch(Dispatchers.IO) {
+            val message = try {
+                val bytes = FileCapture.introspect(SenkuroConfig.API_URL)
+                context.contentResolver.openOutputStream(uri)?.use { it.write(bytes) }
+                "Схема сохранена: ${bytes.size / 1024} КБ"
+            } catch (e: Exception) {
+                "Не удалось: ${e.message}"
+            }
+            withContext(Dispatchers.Main) { toast(message) }
+        }
+    }
     val saveGql = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/plain")) { uri ->
         val text = gqlText()
         if (text != null) write(uri) { out -> out.write(text.toByteArray()) }
@@ -396,6 +408,7 @@ private fun FilesTab() {
                     OutlinedButton(enabled = found != null, onClick = { saveGql.launch("graphql-from-js.txt") }) {
                         Text("Сохранить GraphQL (${found?.size ?: 0})")
                     }
+                    OutlinedButton(onClick = { saveSchema.launch("senkuro-schema.json") }) { Text("Схема GraphQL (__schema)") }
                     OutlinedButton(enabled = files.isNotEmpty(), onClick = { saveZip.launch("senkuro-files.zip") }) {
                         Text("Скачать всё (ZIP)")
                     }

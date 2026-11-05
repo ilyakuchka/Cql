@@ -7,6 +7,7 @@ import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
 import androidx.compose.runtime.mutableStateListOf
 import okhttp3.OkHttpClient
+import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.Request
 import java.io.ByteArrayInputStream
 import java.io.OutputStream
@@ -130,6 +131,22 @@ object FileCapture {
         val priority = Regex("graphql|api|query|queries|gql|manga|user|bookmark|comment|chapter|guild|conversation|card|collection|modal|_slug_|_namespace_", RegexOption.IGNORE_CASE)
         return all.sortedBy { if (priority.containsMatchIn(it)) 0 else 1 }
             .mapNotNull { runCatching { base.resolve(it).toString() }.getOrNull() }
+    }
+
+    private const val INTROSPECTION = "query IntrospectionQuery { __schema { queryType { name } mutationType { name } subscriptionType { name } " +
+        "types { kind name description fields(includeDeprecated: true) { name description args { name description defaultValue type { ...TypeRef } } type { ...TypeRef } isDeprecated } " +
+        "inputFields { name description defaultValue type { ...TypeRef } } interfaces { ...TypeRef } enumValues(includeDeprecated: true) { name description isDeprecated } possibleTypes { ...TypeRef } } } } " +
+        "fragment TypeRef on __Type { kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name } } } } } } } }"
+
+    /** Стандартный introspection-запрос к публичному API (без авторизации); возвращает JSON-ответ как есть. */
+    fun introspect(apiUrl: String): ByteArray {
+        val body = org.json.JSONObject().put("query", INTROSPECTION).put("operationName", "IntrospectionQuery").toString()
+        val req = Request.Builder().url(apiUrl).header("User-Agent", me.senkuro.unofficial.data.SenkuroConfig.USER_AGENT)
+            .post(okhttp3.RequestBody.create("application/json".toMediaType(), body)).build()
+        client.newCall(req).execute().use { r ->
+            if (!r.isSuccessful) error("HTTP ${r.code}")
+            return r.body?.bytes() ?: error("пустой ответ")
+        }
     }
 
     fun swFile(): CapturedFile? = files.firstOrNull { it.name.endsWith("/sw.js") || it.name == "sw.js" }
