@@ -23,6 +23,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.MailOutline
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
@@ -94,6 +95,7 @@ private val topLevel = listOf(
     TopLevel(Routes.CATALOG, "Каталог", CompassIcon),
     TopLevel(Routes.LIBRARY, "Закладки", Icons.Filled.Star),
     TopLevel(Routes.NOTIFICATIONS, "Уведомления", Icons.Filled.Notifications),
+    TopLevel(Routes.CONVERSATIONS, "Сообщения", Icons.Filled.MailOutline),
     TopLevel(Routes.SETTINGS, "Настройки", Icons.Filled.Settings),
 )
 
@@ -163,7 +165,6 @@ fun AppRoot() {
                     composable(Routes.SETTINGS) {
                         UnofficialTheme(dark = appDark) {
                             SettingsScreen(
-                                onMessages = { nav.navigate(Routes.CONVERSATIONS) },
                                 onGuilds = { nav.navigate(Routes.GUILDS) },
                                 onCards = { nav.navigate(Routes.CARDS) },
                                 onCardCatalog = { nav.navigate(Routes.CARD_CATALOG) },
@@ -363,7 +364,7 @@ private fun BottomBar(route: String?, onSelect: (String) -> Unit, modifier: Modi
                             Box(Modifier.align(Alignment.TopEnd).size(8.dp).background(AppColors.Accent, androidx.compose.foundation.shape.CircleShape))
                         }
                     }
-                    Text(item.title, color = tint, fontSize = 10.sp)
+                    Text(item.title, color = tint, fontSize = 10.sp, maxLines = 1, softWrap = false)
                     Box(
                         Modifier
                             .padding(top = 2.dp)
