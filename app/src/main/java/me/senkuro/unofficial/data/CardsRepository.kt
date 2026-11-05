@@ -198,8 +198,8 @@ class OOffer(
     val noTrade: Boolean = false,
     val createdAt: String? = null,
     val user: OUser? = null,
-    val offer: OPreview? = null,
-    val request: OPreview? = null,
+    val offer: JsonElement? = null,
+    val request: JsonElement? = null,
     val viewerDidAuthor: Boolean = false,
     val viewerCanAccept: Boolean = false,
     val viewerCanClose: Boolean = false,
@@ -236,6 +236,15 @@ class OffersRepository(private val api: SenkuroApi) {
     internal val adApi get() = api
 
     private fun JsonElement?.s(): String? = (this as? JsonPrimitive)?.takeIf { it !is JsonNull }?.content
+
+    private val lenient = kotlinx.serialization.json.Json { ignoreUnknownKeys = true; isLenient = true }
+
+    /** Сервер отдаёт то объект, то массив превью — берём первый элемент. */
+    private fun JsonElement?.item(): PreviewItem? {
+        val el = (if (this is kotlinx.serialization.json.JsonArray) firstOrNull() else this) ?: return null
+        if (el is JsonNull) return null
+        return runCatching { lenient.decodeFromJsonElement(OPreview.serializer(), el) }.getOrNull().item()
+    }
 
     private fun OPreview?.item(): PreviewItem? {
         val c = this?.card ?: return null
