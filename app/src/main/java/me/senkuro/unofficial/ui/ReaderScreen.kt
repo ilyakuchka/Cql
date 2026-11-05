@@ -187,6 +187,7 @@ fun ReaderScreen(
                             },
                         )
                     }
+                    item(key = "ad-manga-vertical") { YandexAdBlock(AdPositions.MANGA_VERTICAL) }
                     item(key = "end") {
                         Column(
                             modifier = Modifier

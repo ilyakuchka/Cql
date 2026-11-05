@@ -168,6 +168,7 @@ fun NotificationsScreen(onBack: () -> Unit, onManga: (MangaItem) -> Unit, vm: No
                     Text("Уведомлений нет", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 else -> LazyColumn(contentPadding = PaddingValues(top = 8.dp, bottom = 16.dp)) {
+                    item(key = "ad-notifications") { YandexAdBlock(AdPositions.NOTIFICATIONS) }
                     itemsIndexed(vm.items) { index, item ->
                         if (index >= vm.items.size - 3) LaunchedEffect(vm.items.size) { vm.loadMore() }
                         NotificationRow(item, onClick = { item.manga?.let(onManga) }, onDelete = { vm.act(true, listOf(item)) })

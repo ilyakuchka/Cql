@@ -377,6 +377,10 @@ private fun DetailsContent(data: DetailsData, readIds: Set<String>, onRead: (Cha
             }
         }
 
+        if (chaptersDescending.isNotEmpty()) {
+            item(key = "ad-manga-chapters") { YandexAdBlock(AdPositions.MANGA_CHAPTERS) }
+        }
+
         items(chaptersDescending, key = { it.id }) { chapter ->
             ChapterRow(
                 chapter = chapter,
