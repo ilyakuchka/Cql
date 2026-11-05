@@ -94,8 +94,8 @@ private val topLevel = listOf(
     TopLevel(Routes.HOME, "Главная", Icons.Filled.Home),
     TopLevel(Routes.CATALOG, "Каталог", CompassIcon),
     TopLevel(Routes.LIBRARY, "Закладки", Icons.Filled.Star),
-    TopLevel(Routes.NOTIFICATIONS, "Уведомления", Icons.Filled.Notifications),
-    TopLevel(Routes.CONVERSATIONS, "Сообщения", Icons.Filled.MailOutline),
+    TopLevel(Routes.NOTIFICATIONS, "Уведы", Icons.Filled.Notifications),
+    TopLevel(Routes.CONVERSATIONS, "Личка", Icons.Filled.MailOutline),
     TopLevel(Routes.SETTINGS, "Настройки", Icons.Filled.Settings),
 )
 
