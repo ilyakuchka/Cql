@@ -274,15 +274,24 @@ class OffersRepository(private val api: SenkuroApi) {
     suspend fun accept(offerId: String) = act("acceptCardOffer", offerId)
     suspend fun close(offerId: String) = act("closeCardOffer", offerId)
 
+    /** Как на сайте: опыт и кредиты запрашиваются отдельными запросами (includeExperiences/includeCredits по одному). Сбой одного не прячет второй. */
     suspend fun tops(): List<TopUser> {
-        val vars = buildJsonObject { put("includeExperiences", true); put("includeCredits", true) }
-        val r = api.execute("fetchMainUserTops", "fetchMainUserTops", vars, OTopsResponse.serializer())
+        suspend fun load(exp: Boolean): OTopsResponse? = try {
+            api.execute("fetchMainUserTops", "fetchMainUserTops", buildJsonObject { put("includeExperiences", exp); put("includeCredits", !exp) }, OTopsResponse.serializer())
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (_: Exception) {
+            null
+        }
+        val expResp = load(true)
+        val credResp = load(false)
+        if (expResp == null && credResp == null) throw ApiException("Топ пользователей недоступен")
         val byId = LinkedHashMap<String, TopUser>()
-        r.experimentalSpotlightExperiences.orEmpty().forEach { e ->
+        expResp?.experimentalSpotlightExperiences.orEmpty().forEach { e ->
             val u = e.user ?: return@forEach
             byId[u.id] = TopUser(u.id, u.name, u.avatar?.original?.url, u.level, e.experience, hasExp = true, hasCredits = false)
         }
-        r.experimentalSpotlightCredits.orEmpty().forEach { e ->
+        credResp?.experimentalSpotlightCredits.orEmpty().forEach { e ->
             val u = e.user ?: return@forEach
             val old = byId[u.id]
             byId[u.id] = old?.copy(hasCredits = true) ?: TopUser(u.id, u.name, u.avatar?.original?.url, u.level, null, hasExp = false, hasCredits = true)
