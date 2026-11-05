@@ -8,6 +8,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.clickable
@@ -43,7 +45,13 @@ import me.senkuro.unofficial.data.Profile
 
 /** Профиль текущего пользователя и его достижения (fetchUser + fetchUserAchievements). */
 @Composable
-fun ProfileScreen(onBack: () -> Unit, onOpenTasks: () -> Unit = {}) {
+fun ProfileScreen(
+    onBack: () -> Unit,
+    onOpenTasks: () -> Unit = {},
+    onCards: () -> Unit = {},
+    onGuilds: () -> Unit = {},
+    onLibrary: () -> Unit = {},
+) {
     val account by AppGraph.account.collectAsState()
     var profile by remember { mutableStateOf<Profile?>(null) }
     var achievements by remember { mutableStateOf<List<AchievementItem>>(emptyList()) }
@@ -90,21 +98,24 @@ fun ProfileScreen(onBack: () -> Unit, onOpenTasks: () -> Unit = {}) {
             }
             else -> LazyColumn(contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 24.dp)) {
                 item { Header(p) }
+                item { StatsRow(p, achievements) }
                 item { TasksCarousel(onOpenTasks) }
-                item {
-                    Text(
-                        "Достижения (${achievements.size})",
-                        style = HeadingStyle,
-                        color = MaterialTheme.colorScheme.onBackground,
-                        modifier = Modifier.padding(16.dp),
-                    )
+                if (achievements.isNotEmpty()) item {
+                    ProfileSection("Достижения", "Все ${achievements.size} ›", onMore = { showAll = true }) {
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            achievements.take(4).forEach { a -> AchievementTile(a, Modifier.weight(1f)) }
+                            repeat(4 - achievements.take(4).size) { Box(Modifier.weight(1f)) }
+                        }
+                    }
                 }
-                items(achievements.take(3)) { AchievementRow(it) }
-                if (achievements.size > 3) item {
-                    androidx.compose.material3.TextButton(
-                        onClick = { showAll = true },
-                        modifier = Modifier.padding(horizontal = 8.dp),
-                    ) { Text("Посмотреть все достижения (${achievements.size})") }
+                item {
+                    ProfileSection("Быстрые разделы", null, onMore = {}) {
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            NavRow("Закладки", "Моя библиотека", onLibrary)
+                            NavRow("Карточки и обмены", "Коллекция и торговля", onCards)
+                            NavRow("Гильдии", "Участие и вклад", onGuilds)
+                        }
+                    }
                 }
             }
         }
@@ -113,28 +124,102 @@ fun ProfileScreen(onBack: () -> Unit, onOpenTasks: () -> Unit = {}) {
 
 @Composable
 private fun Header(p: Profile) {
-    Box(Modifier.fillMaxWidth().height(110.dp).background(MaterialTheme.colorScheme.surfaceVariant)) {
+    val accent = MaterialTheme.colorScheme.primary
+    Box(
+        Modifier.fillMaxWidth().height(132.dp).background(
+            androidx.compose.ui.graphics.Brush.linearGradient(listOf(accent, accent.copy(alpha = 0.45f))),
+        ),
+    ) {
         AsyncImage(p.banner, null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
     }
-    Row(
-        Modifier.padding(16.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(14.dp),
-    ) {
+    Column(Modifier.padding(horizontal = 16.dp).offset(y = (-46).dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         AsyncImage(
             p.avatar, null,
             contentScale = ContentScale.Crop,
-            modifier = Modifier.size(64.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceVariant),
+            modifier = Modifier.size(92.dp)
+                .border(4.dp, MaterialTheme.colorScheme.background, CircleShape)
+                .clip(CircleShape).background(MaterialTheme.colorScheme.surfaceVariant),
         )
-        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(
                 p.name + if (p.verified) " ✓" else "",
-                color = MaterialTheme.colorScheme.onBackground, fontSize = 18.sp,
+                color = MaterialTheme.colorScheme.onBackground, fontSize = 22.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
             )
-            p.level?.let { Text("Уровень $it", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp) }
-            p.createdAt?.let { Text("На сайте с $it", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp) }
-            p.lastOnlineAt?.let { Text("Был(а) онлайн: $it", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp) }
+            p.level?.let {
+                Text(
+                    "LVL $it", color = MaterialTheme.colorScheme.onPrimary, fontSize = 11.sp,
+                    fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
+                    modifier = Modifier.clip(RoundedCornerShape(10.dp)).background(accent).padding(horizontal = 8.dp, vertical = 3.dp),
+                )
+            }
         }
+        val meta = listOfNotNull(p.createdAt?.let { "На сайте с $it" }, p.lastOnlineAt?.let { "Был(а) онлайн: $it" }).joinToString(" · ")
+        if (meta.isNotBlank()) Text(meta, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
+    }
+}
+
+@Composable
+private fun StatsRow(p: Profile, achievements: List<AchievementItem>) {
+    Row(
+        Modifier.fillMaxWidth().offset(y = (-30).dp).padding(horizontal = 16.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        StatTile("Уровень", p.level?.toString() ?: "—", Modifier.weight(1f))
+        StatTile("Достижения", achievements.size.toString(), Modifier.weight(1f))
+        StatTile("Выполнено", achievements.count { it.done }.toString(), Modifier.weight(1f))
+    }
+}
+
+@Composable
+private fun StatTile(label: String, value: String, modifier: Modifier) {
+    Column(
+        modifier.clip(RoundedCornerShape(14.dp)).background(MaterialTheme.colorScheme.surfaceVariant).padding(vertical = 12.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(2.dp),
+    ) {
+        Text(value, color = MaterialTheme.colorScheme.onBackground, fontSize = 16.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+        Text(label, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 10.sp)
+    }
+}
+
+@Composable
+private fun ProfileSection(title: String, more: String?, onMore: () -> Unit, content: @Composable () -> Unit) {
+    Column(Modifier.offset(y = (-30).dp).padding(horizontal = 16.dp, vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text(title, style = HeadingStyle, color = MaterialTheme.colorScheme.onBackground, modifier = Modifier.weight(1f))
+            if (more != null) Text(more, color = MaterialTheme.colorScheme.primary, fontSize = 13.sp, modifier = Modifier.clickable(onClick = onMore))
+        }
+        content()
+    }
+}
+
+@Composable
+private fun AchievementTile(a: AchievementItem, modifier: Modifier) {
+    Column(
+        modifier.clip(RoundedCornerShape(14.dp)).background(MaterialTheme.colorScheme.surfaceVariant).padding(vertical = 12.dp, horizontal = 4.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        AsyncImage(
+            a.cover, null, contentScale = ContentScale.Crop,
+            modifier = Modifier.size(48.dp).clip(CircleShape).background(MaterialTheme.colorScheme.background),
+        )
+        Text(a.title, color = MaterialTheme.colorScheme.onBackground, fontSize = 11.sp, maxLines = 2, textAlign = androidx.compose.ui.text.style.TextAlign.Center, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+    }
+}
+
+@Composable
+private fun NavRow(title: String, sub: String, onClick: () -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(MaterialTheme.colorScheme.surfaceVariant)
+            .clickable(onClick = onClick).padding(14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(title, color = MaterialTheme.colorScheme.onBackground, fontSize = 14.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)
+            Text(sub, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+        }
+        Text("›", fontSize = 20.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 

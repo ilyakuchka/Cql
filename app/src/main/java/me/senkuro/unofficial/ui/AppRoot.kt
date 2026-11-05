@@ -160,7 +160,7 @@ fun AppRoot() {
                         }
                     }
                     composable(Routes.PROFILE) {
-                        UnofficialTheme(dark = appDark) { ProfileScreen(onBack = { nav.popBackStack() }, onOpenTasks = { nav.navigate(Routes.TASKS) }) }
+                        UnofficialTheme(dark = appDark) { ProfileScreen(onBack = { nav.popBackStack() }, onOpenTasks = { nav.navigate(Routes.TASKS) }, onCards = { nav.navigate(Routes.CARDS) }, onGuilds = { nav.navigate(Routes.GUILDS) }, onLibrary = { nav.navigate(Routes.LIBRARY) { launchSingleTop = true } }) }
                     }
                     composable(Routes.SETTINGS) {
                         UnofficialTheme(dark = appDark) {
