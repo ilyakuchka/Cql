@@ -135,7 +135,7 @@ fun AppRoot() {
                         UnofficialTheme(dark = appDark) {
                             HomeScreen(
                                 onManga = openManga,
-                                onSearch = { navigateTop(Routes.CATALOG) },
+                                onSearch = { nav.navigate(Routes.SEARCH) },
                                 onMore = { navigateTop(Routes.CATALOG) },
                                 onLogin = { nav.navigate(Routes.LOGIN) },
                                 onProfile = { nav.navigate(Routes.PROFILE) },
@@ -169,7 +169,6 @@ fun AppRoot() {
                                 onCards = { nav.navigate(Routes.CARDS) },
                                 onCardCatalog = { nav.navigate(Routes.CARD_CATALOG) },
                                 onOffers = { nav.navigate(Routes.OFFERS) },
-                                onSearch = { nav.navigate(Routes.SEARCH) },
                                 onPosts = { nav.navigate(Routes.POSTS) },
                                 onFeed = { nav.navigate(Routes.FEED) },
                                 onTeams = { nav.navigate(Routes.TEAMS) },

@@ -120,32 +120,6 @@ fun CatalogScreen(onManga: (MangaItem) -> Unit, vm: CatalogViewModel = viewModel
                 }
             }
 
-            var popular by remember { mutableStateOf<List<String>>(emptyList()) }
-            LaunchedEffect(Unit) {
-                popular = try {
-                    me.senkuro.unofficial.data.AppGraph.repository.popularSearches()
-                } catch (e: kotlinx.coroutines.CancellationException) {
-                    throw e
-                } catch (_: Exception) {
-                    emptyList()
-                }
-            }
-            if (vm.query.isBlank() && popular.isNotEmpty()) {
-                Row(
-                    Modifier
-                        .horizontalScroll(androidx.compose.foundation.rememberScrollState())
-                        .padding(horizontal = 8.dp, vertical = 4.dp),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                ) {
-                    popular.take(12).forEach { q ->
-                        androidx.compose.material3.AssistChip(
-                            onClick = { text = q; focus.clearFocus(); vm.submit(q) },
-                            label = { Text(q, fontSize = 12.sp) },
-                        )
-                    }
-                }
-            }
-
             Box(Modifier.weight(1f)) {
                 LazyVerticalGrid(
                     state = gridState,

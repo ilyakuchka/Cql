@@ -45,69 +45,6 @@ import me.senkuro.unofficial.data.SearchHit
 import me.senkuro.unofficial.data.TeamProfile
 
 @Composable
-fun SiteSearchScreen(
-    onBack: () -> Unit,
-    onManga: (String) -> Unit,
-    onTeam: (String) -> Unit,
-    onGuild: (String) -> Unit,
-    onPerson: (String) -> Unit,
-    onCharacter: (String) -> Unit,
-) {
-    val types = listOf("MANGA" to "Тайтлы", "CHARACTER" to "Персонажи", "PERSON" to "Люди", "TEAM" to "Команды", "GUILD" to "Гильдии", "USER" to "Пользователи")
-    var query by remember { mutableStateOf("") }
-    var type by remember { mutableStateOf("MANGA") }
-    var hits by remember { mutableStateOf<List<SearchHit>>(emptyList()) }
-    var loading by remember { mutableStateOf(false) }
-    var error by remember { mutableStateOf<String?>(null) }
-    LaunchedEffect(query, type) {
-        error = null
-        if (query.trim().length < 2) { hits = emptyList(); return@LaunchedEffect }
-        delay(400)
-        loading = true
-        try {
-            hits = AppGraph.directory.search(query.trim(), type)
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            error = e.msg(); hits = emptyList()
-        } finally {
-            loading = false
-        }
-    }
-    Column(Modifier.fillMaxSize()) {
-        Top("Поиск по сайту", onBack)
-        OutlinedTextField(query, { query = it }, singleLine = true, placeholder = { Text("Что искать") }, modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp))
-        LazyRow(contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            items(types) { (key, label) -> FilterChip(selected = type == key, onClick = { type = key }, label = { Text(label) }) }
-        }
-        error?.let { Text(it, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(horizontal = 16.dp), fontSize = 12.sp) }
-        if (loading) LoadingBox() else LazyColumn(Modifier.fillMaxSize()) {
-            items(hits) { h ->
-                Row(
-                    Modifier.fillMaxWidth().clickable {
-                        when (type) {
-                            "MANGA" -> onManga(h.id)
-                            "TEAM" -> onTeam(h.slug)
-                            "GUILD" -> onGuild(h.slug)
-                            "PERSON" -> onPerson(h.slug)
-                            "CHARACTER" -> onCharacter(h.slug)
-                        }
-                    }.padding(horizontal = 16.dp, vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Avatar(h.image, 44)
-                    Column(Modifier.padding(start = 12.dp)) {
-                        Text(h.title, fontSize = 15.sp, color = MaterialTheme.colorScheme.onBackground, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                        h.subtitle?.let { Text(it, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant) }
-                    }
-                }
-                HorizontalDivider()
-            }
-        }
-    }
-}
-
-@Composable
 fun TeamsScreen(onBack: () -> Unit, onOpen: (String) -> Unit) {
     var name by remember { mutableStateOf("") }
     var pager by remember { mutableStateOf(Pager { AppGraph.directory.teams(it, null) }) }
