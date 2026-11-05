@@ -160,18 +160,16 @@ fun AppRoot() {
                         }
                     }
                     composable(Routes.PROFILE) {
-                        UnofficialTheme(dark = appDark) { ProfileScreen(onBack = { nav.popBackStack() }, onOpenTasks = { nav.navigate(Routes.TASKS) }, onCards = { nav.navigate(Routes.CARDS) }, onGuilds = { nav.navigate(Routes.GUILDS) }, onLibrary = { nav.navigate(Routes.LIBRARY) { launchSingleTop = true } }) }
+                        UnofficialTheme(dark = appDark) { ProfileScreen(onBack = { nav.popBackStack() }, onOpenTasks = { nav.navigate(Routes.TASKS) }, onCards = { nav.navigate(Routes.CARDS) }, onTeams = { nav.navigate(Routes.TEAMS) }, onLibrary = { nav.navigate(Routes.LIBRARY) { launchSingleTop = true } }) }
                     }
                     composable(Routes.SETTINGS) {
                         UnofficialTheme(dark = appDark) {
                             SettingsScreen(
-                                onGuilds = { nav.navigate(Routes.GUILDS) },
                                 onCards = { nav.navigate(Routes.CARDS) },
                                 onCardCatalog = { nav.navigate(Routes.CARD_CATALOG) },
                                 onOffers = { nav.navigate(Routes.OFFERS) },
                                 onPosts = { nav.navigate(Routes.POSTS) },
                                 onFeed = { nav.navigate(Routes.FEED) },
-                                onTeams = { nav.navigate(Routes.TEAMS) },
                             )
                         }
                     }

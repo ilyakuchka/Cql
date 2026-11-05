@@ -22,7 +22,7 @@ import me.senkuro.unofficial.data.SenkuroConfig
 
 /** Настройки: пока только переключатель тёмной темы. */
 @Composable
-fun SettingsScreen(onGuilds: () -> Unit = {}, onCards: () -> Unit = {}, onCardCatalog: () -> Unit = {}, onOffers: () -> Unit = {}, onTeams: () -> Unit = {}, onPosts: () -> Unit = {}, onFeed: () -> Unit = {}) {
+fun SettingsScreen(onCards: () -> Unit = {}, onCardCatalog: () -> Unit = {}, onOffers: () -> Unit = {}, onPosts: () -> Unit = {}, onFeed: () -> Unit = {}) {
     val dark by AppGraph.themeDark.collectAsState()
     val token by AppGraph.auth.token.collectAsState()
     val account by AppGraph.account.collectAsState()
@@ -54,11 +54,9 @@ fun SettingsScreen(onGuilds: () -> Unit = {}, onCards: () -> Unit = {}, onCardCa
             Switch(checked = dark, onCheckedChange = AppGraph::setDarkTheme)
         }
         if (token != null) {
-            TextButton(onClick = onGuilds, modifier = Modifier.padding(horizontal = 8.dp)) { Text("Гильдии") }
             TextButton(onClick = onCards, modifier = Modifier.padding(horizontal = 8.dp)) { Text("Мои карточки") }
             TextButton(onClick = onCardCatalog, modifier = Modifier.padding(horizontal = 8.dp)) { Text("Каталог карточек") }
             TextButton(onClick = onOffers, modifier = Modifier.padding(horizontal = 8.dp)) { Text("Обмены карточек") }
-            TextButton(onClick = onTeams, modifier = Modifier.padding(horizontal = 8.dp)) { Text("Команды переводчиков") }
             TextButton(onClick = onPosts, modifier = Modifier.padding(horizontal = 8.dp)) { Text("Посты") }
             TextButton(onClick = onFeed, modifier = Modifier.padding(horizontal = 8.dp)) { Text("Новые главы (лента)") }
         }

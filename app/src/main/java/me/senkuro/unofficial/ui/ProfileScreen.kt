@@ -49,7 +49,7 @@ fun ProfileScreen(
     onBack: () -> Unit,
     onOpenTasks: () -> Unit = {},
     onCards: () -> Unit = {},
-    onGuilds: () -> Unit = {},
+    onTeams: () -> Unit = {},
     onLibrary: () -> Unit = {},
 ) {
     val account by AppGraph.account.collectAsState()
@@ -113,7 +113,7 @@ fun ProfileScreen(
                         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             NavRow("Закладки", "Моя библиотека", onLibrary)
                             NavRow("Карточки и обмены", "Коллекция и торговля", onCards)
-                            NavRow("Гильдии", "Участие и вклад", onGuilds)
+                            NavRow("Команды переводчиков", "Каталог команд", onTeams)
                         }
                     }
                 }
