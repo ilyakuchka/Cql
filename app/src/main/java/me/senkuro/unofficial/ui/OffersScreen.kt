@@ -22,6 +22,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -160,6 +161,8 @@ fun TopsRibbon() {
 /** Тонкий рекламный баннер (как «Реклама» на сайте). Пусто или не удалось — не показывается. viewAd уходит через 2 секунды видимости. */
 @Composable
 fun AdStrip() {
+    val account by AppGraph.account.collectAsState()
+    if (account?.adsDisabled == true) return
     var ad by remember { mutableStateOf<me.senkuro.unofficial.data.AdBanner?>(null) }
     val ctx = androidx.compose.ui.platform.LocalContext.current
     LaunchedEffect(Unit) {

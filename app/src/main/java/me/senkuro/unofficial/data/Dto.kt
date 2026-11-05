@@ -159,7 +159,14 @@ class CollectionDto(
 )
 
 @Serializable
-class ViewerDto(val user: UserDto? = null, val userBookmarkCollections: List<CollectionDto> = emptyList())
+class ViewerPermissionsDto(val canDisableAdvertisement: Boolean = false)
+
+@Serializable
+class ViewerDto(
+    val user: UserDto? = null,
+    val userBookmarkCollections: List<CollectionDto> = emptyList(),
+    val permissions: ViewerPermissionsDto? = null,
+)
 
 @Serializable
 class ViewerResponse(val viewer: ViewerDto? = null)

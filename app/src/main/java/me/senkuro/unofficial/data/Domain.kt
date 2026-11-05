@@ -83,6 +83,8 @@ data class Account(
     val name: String,
     val avatar: String?,
     val collections: List<BookmarkCollection>,
+    /** Премиум на сайте (viewer.permissions.canDisableAdvertisement) — реклама не показывается. */
+    val adsDisabled: Boolean = false,
 )
 
 data class BookmarkEntry(val manga: MangaItem, val collectionId: String?, val page: Int?, val number: String?)

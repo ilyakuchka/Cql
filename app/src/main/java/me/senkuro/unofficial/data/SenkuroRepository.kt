@@ -207,6 +207,7 @@ class SenkuroRepository(private val api: SenkuroApi) {
             slug = user.slug,
             name = user.name.ifBlank { user.slug },
             avatar = user.avatar?.original?.url,
+            adsDisabled = viewer.permissions?.canDisableAdvertisement == true,
             collections = viewer.userBookmarkCollections
                 .filter { it.entityType?.equals("MANGA", true) != false }
                 .map { c ->
