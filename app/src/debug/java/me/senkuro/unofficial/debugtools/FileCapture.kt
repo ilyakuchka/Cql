@@ -223,6 +223,50 @@ object FileCapture {
         }
     }
 
+    private const val SCHEMA_MARKER = "__schema:JSON.parse(`"
+
+    /** Схема, зашитая в js сайта (кэш urql: {__schema:JSON.parse(`...`)}); ищем в уже загруженных index-*.js. */
+    private fun embeddedSchemaJson(): String? {
+        for (f in files.toList()) {
+            if (!f.url.substringAfterLast('/').startsWith("index-") || !f.url.endsWith(".js")) continue
+            val text = textOf(f) ?: continue
+            val start = text.indexOf(SCHEMA_MARKER).takeIf { it >= 0 } ?: continue
+            val from = start + SCHEMA_MARKER.length
+            val end = text.indexOf("`)", from).takeIf { it > from } ?: continue
+            return text.substring(from, end)
+        }
+        return null
+    }
+
+    /**
+     * Схема GraphQL. Сервер отключил introspection (отвечает {"__schema":null}), поэтому при пустом ответе
+     * берём схему, встроенную в js сайта (типы, поля, аргументы, union/interface; enum и input-типов там нет).
+     */
+    fun schemaForced(apiUrl: String): Pair<ByteArray, String> {
+        val live = runCatching { introspect(apiUrl) }.getOrNull()
+        if (live != null) {
+            val ok = runCatching {
+                !org.json.JSONObject(live.toString(Charsets.UTF_8)).getJSONObject("data").isNull("__schema")
+            }.getOrDefault(false)
+            if (ok) return live to "с сервера"
+        }
+        var json = embeddedSchemaJson()
+        if (json == null) {
+            // js ещё не загружен: берём index-*.js из манифеста sw.js
+            val swUrl = swFile()?.url ?: (me.senkuro.unofficial.data.SenkuroConfig.BASE_URL.trimEnd('/') + "/sw.js")
+            if (swFile() == null) fetchDirect(swUrl)
+            val sw = swFile()?.let { textOf(it) }
+            if (sw != null) {
+                manifestUrls(sw, swUrl).filter { it.substringAfterLast('/').startsWith("index-") }.forEach { u ->
+                    if (json == null) { fetchDirect(u); json = embeddedSchemaJson() }
+                }
+            }
+        }
+        val schema = json ?: error("introspection отключён, а схема в js сайта не найдена")
+        val out = """{"data":{"__schema":$schema},"extensions":{"source":"embedded-in-site-js","note":"introspection на сервере отключён; enum и input-типов в этой схеме нет"}}"""
+        return out.toByteArray() to "из js сайта"
+    }
+
     fun swFile(): CapturedFile? = files.firstOrNull { it.name.endsWith("/sw.js") || it.name == "sw.js" }
 
     private fun record(url: String, mime: String, bytes: ByteArray, status: Int) {

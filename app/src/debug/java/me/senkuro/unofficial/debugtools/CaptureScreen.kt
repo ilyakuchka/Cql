@@ -382,9 +382,9 @@ private fun FilesTab() {
     val saveSchema = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
         if (uri != null) scope.launch(Dispatchers.IO) {
             val message = try {
-                val bytes = FileCapture.introspect(SenkuroConfig.API_URL)
+                val (bytes, source) = FileCapture.schemaForced(SenkuroConfig.API_URL)
                 context.contentResolver.openOutputStream(uri)?.use { it.write(bytes) }
-                "Схема сохранена: ${bytes.size / 1024} КБ"
+                "Схема сохранена ($source): ${bytes.size / 1024} КБ"
             } catch (e: Exception) {
                 "Не удалось: ${e.message}"
             }
