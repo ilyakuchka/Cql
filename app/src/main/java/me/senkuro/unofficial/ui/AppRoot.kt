@@ -158,7 +158,11 @@ fun AppRoot() {
                     }
                     composable(Routes.NOTIFICATIONS) {
                         UnofficialTheme(dark = appDark) {
-                            NotificationsScreen(onBack = { nav.popBackStack() }, onManga = openManga)
+                            NotificationsScreen(
+                                onBack = { nav.popBackStack() },
+                                onManga = openManga,
+                                onChapter = { manga, chapterId -> nav.navigate(Routes.reader(manga.id, chapterId)) },
+                            )
                         }
                     }
                     composable(Routes.PROFILE) {

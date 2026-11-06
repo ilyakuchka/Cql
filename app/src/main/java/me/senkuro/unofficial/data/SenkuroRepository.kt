@@ -276,11 +276,12 @@ class SenkuroRepository(private val api: SenkuroApi) {
             buildJsonObject {}, UnreadResponse.serializer(),
         ).viewerUnreadNotifications as? JsonPrimitive)?.contentOrNull?.toIntOrNull() ?: 0
 
-    suspend fun notifications(read: Boolean, after: String?): NotificationsPage {
+    suspend fun notifications(read: Boolean, after: String?, types: List<String>? = null, first: Int = 10): NotificationsPage {
         val vars = buildJsonObject {
-            put("first", 10)
+            put("first", first)
             put("isRead", read)
             if (after != null) put("after", after)
+            if (types != null) put("types", kotlinx.serialization.json.JsonArray(types.map { JsonPrimitive(it) }))
         }
         val conn = api.execute("fetchNotificationFeeds", "fetchNotificationFeeds", vars, NotifResponse.serializer())
             .notificationFeeds
@@ -288,6 +289,18 @@ class SenkuroRepository(private val api: SenkuroApi) {
             items = conn.edges.map { it.node.toItem() },
             next = conn.pageInfo.endCursor.takeIf { conn.pageInfo.hasNextPage },
         )
+    }
+
+    /** Все id уведомлений (для «Скрыть все» / «Удалить все»: на сайте это отдельные действия над всем списком). */
+    suspend fun allNotificationIds(read: Boolean): List<String> {
+        val ids = ArrayList<String>()
+        var cursor: String? = null
+        repeat(40) {
+            val page = notifications(read, cursor, first = 50)
+            ids += page.items.map { it.id }
+            cursor = page.next ?: return ids
+        }
+        return ids
     }
 
     private suspend fun bulk(op: String, ids: List<String>): BulkResultDto? {
@@ -536,6 +549,23 @@ class SenkuroRepository(private val api: SenkuroApi) {
         val post = nodes.firstOrNull { it.typename == "Post" }?.title
         val numbers = payload?.chapters.orEmpty().mapNotNull { it.number.text() }
         val label = type.orEmpty().lowercase().replace('_', ' ')
+        val chapterRefs = payload?.chapters.orEmpty().mapNotNull { c ->
+            val cid = c.id ?: return@mapNotNull null
+            NotifChapter(cid, c.number.text().orEmpty())
+        }.ifEmpty {
+            chapterNode?.id?.let { listOf(NotifChapter(it, chapterNode.number.text().orEmpty())) }.orEmpty()
+        }
+        val caption = when (type) {
+            "NEW_MANGA_CHAPTER", "NEW_RANOBE_CHAPTER" -> "Вышли новые главы"
+            "COMMENT_REPLIED" -> "Ответили на ваш комментарий"
+            "COMMENT_UPVOTED" -> "Оценили ваш комментарий"
+            "COMMENT_MENTIONED" -> "Вас упомянули в комментарии"
+            "POST_COMMENTED" -> "Новый комментарий к посту"
+            "NEW_FRIEND_REQUEST" -> "Заявка в друзья"
+            "NEW_POST" -> "Новый пост"
+            "NEW_ACHIEVEMENT" -> "Новое достижение"
+            else -> null
+        }
 
         val subtitle = when {
             numbers.isNotEmpty() -> "Новые главы: " + numbers.take(4).joinToString(", ") + if (numbers.size > 4) "…" else ""
@@ -548,6 +578,9 @@ class SenkuroRepository(private val api: SenkuroApi) {
             subtitle = subtitle,
             date = lastEventAt?.take(10),
             manga = manga,
+            caption = caption ?: subtitle,
+            at = lastEventAt,
+            chapters = chapterRefs,
         )
     }
 

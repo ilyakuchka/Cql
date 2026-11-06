@@ -1,11 +1,13 @@
 package me.senkuro.unofficial.ui
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -16,27 +18,32 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -46,10 +53,35 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import me.senkuro.unofficial.data.AppGraph
 import me.senkuro.unofficial.data.MangaItem
+import me.senkuro.unofficial.data.NotifChapter
 import me.senkuro.unofficial.data.NotificationItem
 
+/** Типы уведомлений по разделам фильтра (как в [namespace] на сайте). «Все» — без фильтра. */
+private val NAMESPACES: List<Triple<String, String, List<String>?>> = listOf(
+    Triple("all", "Все", null),
+    Triple("update", "Обновления", listOf("NEW_MANGA_CHAPTER", "NEW_RANOBE_CHAPTER", "TRANSLATOR_CHANGED")),
+    Triple(
+        "social", "Пользователи",
+        listOf(
+            "COMMENT_MENTIONED", "COMMENT_REPLIED", "COMMENT_UPVOTED", "POST_COMMENTED", "TRANSLATOR_CHANGED",
+            "NEW_FRIEND_REQUEST", "NEW_TEAM_INVITE", "NEW_GUILD_INVITE", "NEW_FRIEND_WAIFU",
+        ),
+    ),
+    Triple(
+        "important", "Система",
+        listOf(
+            "SENKURO_BLESSING", "NEW_POST", "ACCOUNT_LOGIN", "PASSWORD_CHANGED", "NEW_ACHIEVEMENT",
+            "TRANSLATE_REQUEST_ACCEPTED", "TRANSLATE_REQUEST_DECLINED", "SUBMISSION_ACCEPTED", "SUBMISSION_DECLINED",
+            "CREATE_TEAM_ACCEPTED", "CREATE_TEAM_DECLINED", "CREATE_PROJECT_ACCEPTED", "CREATE_PROJECT_DECLINED",
+        ),
+    ),
+)
+
 class NotificationsViewModel : ViewModel() {
+    /** true — вкладка «Скрытые» (isRead = true), false — «Новые». */
     var read by mutableStateOf(false)
+        private set
+    var namespace by mutableStateOf("all")
         private set
     var items by mutableStateOf<List<NotificationItem>>(emptyList())
         private set
@@ -59,12 +91,21 @@ class NotificationsViewModel : ViewModel() {
         private set
     var hasMore by mutableStateOf(false)
         private set
+    var busy by mutableStateOf(false)
+        private set
+    var message by mutableStateOf<String?>(null)
+        private set
 
     private var cursor: String? = null
     private var job: Job? = null
 
     fun select(read: Boolean) {
         this.read = read
+        reload()
+    }
+
+    fun selectNamespace(ns: String) {
+        namespace = ns
         reload()
     }
 
@@ -77,13 +118,10 @@ class NotificationsViewModel : ViewModel() {
         fetch()
     }
 
-    var message by mutableStateOf<String?>(null)
-        private set
-
     fun consumeMessage() { message = null }
 
-    /** Помечает прочитанными (или удаляет) все показанные уведомления; id — из списка групп, формат на сервере не проверен. */
-    fun act(delete: Boolean, only: List<NotificationItem> = items) {
+    /** «Скрыть» / «Удалить» одно уведомление из карточки. */
+    fun act(delete: Boolean, only: List<NotificationItem>) {
         val ids = only.map { it.id }
         if (ids.isEmpty()) return
         viewModelScope.launch {
@@ -92,12 +130,41 @@ class NotificationsViewModel : ViewModel() {
                 else AppGraph.repository.markNotificationsRead(ids)
                 if (ok) {
                     items = items.filterNot { it.id in ids }
+                    message = if (delete) "Уведомление удалено" else "Уведомление скрыто"
                     AppGraph.refreshUnread()
                 } else message = "Сервер не принял действие"
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
                 message = e.message?.takeIf { it.isNotBlank() } ?: "Ошибка сети"
+            }
+        }
+    }
+
+    /** «Скрыть все» (все новые) или «Удалить все» (включая скрытые) — по всему списку, а не только по загруженной части. */
+    fun actAll(delete: Boolean) {
+        if (busy) return
+        busy = true
+        viewModelScope.launch {
+            try {
+                val repo = AppGraph.repository
+                val ids = if (delete) repo.allNotificationIds(false) + repo.allNotificationIds(true) else repo.allNotificationIds(false)
+                var ok = true
+                ids.chunked(50).forEach { chunk ->
+                    ok = (if (delete) repo.deleteNotifications(chunk) else repo.markNotificationsRead(chunk)) && ok
+                }
+                message = when {
+                    !ok -> "Сервер не принял действие"
+                    delete -> "Все уведомления удалены"
+                    else -> "Все уведомления скрыты"
+                }
+                if (ok) { items = emptyList(); hasMore = false; AppGraph.refreshUnread() }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                message = e.message?.takeIf { it.isNotBlank() } ?: "Ошибка сети"
+            } finally {
+                busy = false
             }
         }
     }
@@ -109,9 +176,10 @@ class NotificationsViewModel : ViewModel() {
 
     private fun fetch() {
         loading = true
+        val types = NAMESPACES.first { it.first == namespace }.third
         job = viewModelScope.launch {
             try {
-                val page = AppGraph.repository.notifications(read, cursor)
+                val page = AppGraph.repository.notifications(read, cursor, types)
                 items = (items + page.items).distinctBy { it.id }
                 cursor = page.next
                 hasMore = page.next != null
@@ -126,102 +194,241 @@ class NotificationsViewModel : ViewModel() {
     }
 }
 
-/** Уведомления аккаунта: вкладки «Новые» и «Прочитанные», подгрузка страниц, нажатие открывает тайтл. */
-@OptIn(ExperimentalMaterial3Api::class)
+private enum class Confirm { HIDE_ALL, DELETE_ALL }
+
+/** Уведомления как на сайте: «Скрыть все», меню, фильтр по типу, вкладки «Новые / Скрытые», карточки с кнопкой «К главе N». */
 @Composable
-fun NotificationsScreen(onBack: () -> Unit, onManga: (MangaItem) -> Unit, vm: NotificationsViewModel = viewModel()) {
+fun NotificationsScreen(
+    onBack: () -> Unit,
+    onManga: (MangaItem) -> Unit,
+    onChapter: (MangaItem, String) -> Unit = { m, _ -> onManga(m) },
+    vm: NotificationsViewModel = viewModel(),
+) {
     LaunchedEffect(Unit) {
         vm.reload()
         AppGraph.refreshUnread()
     }
-    Column(
-        Modifier
-            .fillMaxSize()
-            .statusBarsPadding(),
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+    var confirm by remember { mutableStateOf<Confirm?>(null) }
+    var menu by remember { mutableStateOf(false) }
+    var filterMenu by remember { mutableStateOf(false) }
+
+    Column(Modifier.fillMaxSize().statusBarsPadding()) {
+        Row(Modifier.fillMaxWidth().padding(end = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onBack) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Назад", tint = MaterialTheme.colorScheme.onBackground)
             }
-            Text("Уведомления", style = HeadingStyle, color = MaterialTheme.colorScheme.onBackground)
+            Text("Уведомления", style = HeadingStyle, color = MaterialTheme.colorScheme.onBackground, modifier = Modifier.weight(1f))
+            OutlinedButton(onClick = { confirm = Confirm.HIDE_ALL }, enabled = !vm.busy) { Text("Скрыть все") }
+            Box {
+                IconButton(onClick = { menu = true }) {
+                    Icon(Icons.Filled.MoreVert, contentDescription = "Меню", tint = MaterialTheme.colorScheme.onBackground)
+                }
+                DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                    DropdownMenuItem(
+                        text = { Text("Удалить все уведомления", color = MaterialTheme.colorScheme.error) },
+                        onClick = { menu = false; confirm = Confirm.DELETE_ALL },
+                    )
+                }
+            }
         }
+
         Row(
-            Modifier.padding(horizontal = 12.dp),
+            Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            FilterChip(selected = !vm.read, onClick = { vm.select(false) }, label = { Text("Новые") })
-            FilterChip(selected = vm.read, onClick = { vm.select(true) }, label = { Text("Прочитанные") })
+            Box {
+                OutlinedButton(onClick = { filterMenu = true }) {
+                    Text(NAMESPACES.first { it.first == vm.namespace }.second + " ▾")
+                }
+                DropdownMenu(expanded = filterMenu, onDismissRequest = { filterMenu = false }) {
+                    NAMESPACES.forEach { (key, label, _) ->
+                        DropdownMenuItem(
+                            text = { Text(label, fontWeight = if (key == vm.namespace) FontWeight.SemiBold else FontWeight.Normal) },
+                            onClick = { filterMenu = false; vm.selectNamespace(key) },
+                        )
+                    }
+                }
+            }
+            Row(
+                Modifier.clip(RoundedCornerShape(10.dp)).background(MaterialTheme.colorScheme.surfaceVariant).padding(3.dp),
+                horizontalArrangement = Arrangement.spacedBy(2.dp),
+            ) {
+                NotifTab("Новые", !vm.read) { vm.select(false) }
+                NotifTab("Скрытые", vm.read) { vm.select(true) }
+            }
         }
-        Row(Modifier.padding(horizontal = 4.dp)) {
-            if (!vm.read) TextButton(onClick = { vm.act(false) }, enabled = vm.items.isNotEmpty()) { Text("Прочитать все") }
-            TextButton(onClick = { vm.act(true) }, enabled = vm.items.isNotEmpty()) { Text("Удалить все") }
-        }
+
         vm.message?.let {
-            Text(it, color = MaterialTheme.colorScheme.error, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 16.dp))
+            Text(it, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
+            LaunchedEffect(it) {
+                kotlinx.coroutines.delay(2500)
+                vm.consumeMessage()
+            }
         }
+
         Box(Modifier.fillMaxSize()) {
             val error = vm.error
             when {
                 error != null && vm.items.isEmpty() -> ErrorBox(error, vm::reload)
                 vm.items.isEmpty() && vm.loading -> LoadingBox()
-                vm.items.isEmpty() -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("Уведомлений нет", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                vm.items.isEmpty() -> Column(
+                    Modifier.fillMaxSize().padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
+                ) {
+                    Text("Нет уведомлений", color = MaterialTheme.colorScheme.onBackground, fontWeight = FontWeight.SemiBold)
+                    Spacer(Modifier.size(4.dp))
+                    Text(
+                        if (vm.namespace == "all") "У вас прочитаны все уведомления." else "Здесь нет уведомлений, но мы уверены что они ещё появятся!",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontSize = 13.sp,
+                    )
                 }
-                else -> LazyColumn(contentPadding = PaddingValues(top = 8.dp, bottom = 16.dp)) {
+                else -> LazyColumn(
+                    contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
                     item(key = "ad-notifications") { YandexAdBlock(AdPositions.NOTIFICATIONS) }
-                    itemsIndexed(vm.items) { index, item ->
+                    itemsIndexed(vm.items, key = { _, it -> it.id }) { index, item ->
                         if (index >= vm.items.size - 3) LaunchedEffect(vm.items.size) { vm.loadMore() }
-                        NotificationRow(item, onClick = { item.manga?.let(onManga) }, onDelete = { vm.act(true, listOf(item)) })
-                        HorizontalDivider(color = MaterialTheme.colorScheme.outline, thickness = 0.8.dp)
+                        NotificationCard(
+                            item = item,
+                            hidden = vm.read,
+                            onManga = onManga,
+                            onChapter = onChapter,
+                            onHide = { vm.act(false, listOf(item)) },
+                            onDelete = { vm.act(true, listOf(item)) },
+                        )
                     }
                 }
             }
         }
     }
+
+    confirm?.let { kind ->
+        val hide = kind == Confirm.HIDE_ALL
+        AlertDialog(
+            onDismissRequest = { confirm = null },
+            title = { Text(if (hide) "Скрытие всех уведомлений" else "Удаление всех уведомлений") },
+            text = {
+                Text(if (hide) "Вы действительно хотите скрыть все уведомления?" else "Вы действительно хотите удалить все уведомления, включая скрытые?")
+            },
+            confirmButton = {
+                TextButton(onClick = { confirm = null; vm.actAll(delete = !hide) }) {
+                    Text(if (hide) "Скрыть уведомления" else "Удалить уведомления", color = if (hide) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = { TextButton(onClick = { confirm = null }) { Text("Отмена") } },
+        )
+    }
 }
 
 @Composable
-private fun NotificationRow(item: NotificationItem, onClick: () -> Unit, onDelete: () -> Unit) {
-    Row(
+private fun NotifTab(label: String, selected: Boolean, onClick: () -> Unit) {
+    Text(
+        label,
+        fontSize = 13.sp,
+        fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+        color = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onBackground,
         modifier = Modifier
+            .clip(RoundedCornerShape(8.dp))
+            .background(if (selected) MaterialTheme.colorScheme.primary else Color.Transparent)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 14.dp, vertical = 6.dp),
+    )
+}
+
+/** «9 часов назад» из ISO-времени (lastEventAt). */
+private fun relativeTime(iso: String?): String? {
+    if (iso.isNullOrBlank()) return null
+    return try {
+        val fmt = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", java.util.Locale.US).apply { timeZone = java.util.TimeZone.getTimeZone("UTC") }
+        val time = fmt.parse(iso.take(19))?.time ?: return null
+        android.text.format.DateUtils.getRelativeTimeSpanString(time, System.currentTimeMillis(), android.text.format.DateUtils.MINUTE_IN_MILLIS).toString()
+    } catch (_: Exception) {
+        null
+    }
+}
+
+/** Карточка как card-notif на сайте: обложка и название, «⋯», подпись, главы со временем, кнопка «К главе N». */
+@Composable
+private fun NotificationCard(
+    item: NotificationItem,
+    hidden: Boolean,
+    onManga: (MangaItem) -> Unit,
+    onChapter: (MangaItem, String) -> Unit,
+    onHide: () -> Unit,
+    onDelete: () -> Unit,
+) {
+    var menu by remember { mutableStateOf(false) }
+    val time = relativeTime(item.at) ?: item.date
+    // Читать с самой ранней из новых глав (на сайте кнопка ведёт к «своей» главе).
+    val target: NotifChapter? = item.chapters.minByOrNull { it.number.toDoubleOrNull() ?: Double.MAX_VALUE }
+    Column(
+        Modifier
             .fillMaxWidth()
-            .clickable(enabled = item.manga != null, onClick = onClick)
-            .padding(horizontal = 12.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+            .clip(RoundedCornerShape(12.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .padding(12.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        Box(
-            Modifier
-                .size(width = 44.dp, height = 62.dp)
-                .clip(RoundedCornerShape(4.dp))
-                .let { it },
-        ) {
-            AsyncImage(
-                model = item.manga?.cover,
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize(),
-            )
-        }
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            if (item.manga != null) {
+                AsyncImage(
+                    model = item.manga.cover,
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.size(width = 36.dp, height = 51.dp).clip(RoundedCornerShape(8.dp)).background(MaterialTheme.colorScheme.surface),
+                )
+            }
             Text(
                 item.title,
                 color = MaterialTheme.colorScheme.onBackground,
+                fontWeight = FontWeight.SemiBold,
                 fontSize = 14.sp,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f).clickable(enabled = item.manga != null) { item.manga?.let(onManga) },
             )
-            Text(
-                item.subtitle,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                fontSize = 12.sp,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-            )
+            Box {
+                IconButton(onClick = { menu = true }) {
+                    Icon(Icons.Filled.MoreVert, contentDescription = "Ещё", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                    if (!hidden) DropdownMenuItem(text = { Text("Скрыть") }, onClick = { menu = false; onHide() })
+                    DropdownMenuItem(text = { Text("Удалить", color = MaterialTheme.colorScheme.error) }, onClick = { menu = false; onDelete() })
+                }
+            }
         }
-        item.date?.let { Text(it, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp) }
-        IconButton(onClick = onDelete) {
-            Icon(Icons.Filled.Close, contentDescription = "Удалить", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(item.caption, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
+        if (item.chapters.isNotEmpty()) {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                item.chapters.take(3).forEach { c ->
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(MaterialTheme.colorScheme.background)
+                            .clickable(enabled = item.manga != null) { item.manga?.let { onChapter(it, c.id) } }
+                            .padding(horizontal = 10.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text("Глава ${c.number}", color = MaterialTheme.colorScheme.onBackground, fontSize = 14.sp, modifier = Modifier.weight(1f))
+                        time?.let { Text(it, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp) }
+                    }
+                }
+                if (item.chapters.size > 3) {
+                    Text("и ещё ${item.chapters.size - 3}", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+                }
+            }
+            if (target != null && item.manga != null) {
+                Button(onClick = { onChapter(item.manga, target.id) }, modifier = Modifier.fillMaxWidth()) {
+                    Text("К главе ${target.number}")
+                }
+            }
+        } else {
+            time?.let { Text(it, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp) }
         }
     }
 }

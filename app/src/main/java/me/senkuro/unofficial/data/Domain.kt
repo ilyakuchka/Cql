@@ -91,12 +91,19 @@ data class BookmarkEntry(val manga: MangaItem, val collectionId: String?, val pa
 
 data class BookmarksPage(val items: List<BookmarkEntry>, val next: String?)
 
+data class NotifChapter(val id: String, val number: String)
+
 data class NotificationItem(
     val id: String,
     val title: String,
     val subtitle: String,
     val date: String?,
     val manga: MangaItem?,
+    /** Подпись карточки, как на сайте («Вышли новые главы»). */
+    val caption: String = subtitle,
+    /** Время события (ISO, lastEventAt) — для «9 часов назад». */
+    val at: String? = null,
+    val chapters: List<NotifChapter> = emptyList(),
 )
 
 data class NotificationsPage(val items: List<NotificationItem>, val next: String?)
