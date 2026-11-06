@@ -113,7 +113,7 @@ fun TopsSection(vm: HomeViewModel, onTasks: () -> Unit) {
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 items(count = 6, key = { "ph-$it" }) {
-                    Box(Modifier.width(128.dp).height(196.dp).clip(RoundedCornerShape(12.dp)).background(MaterialTheme.colorScheme.surfaceVariant))
+                    Box(Modifier.width(128.dp).height(152.dp).clip(RoundedCornerShape(12.dp)).background(MaterialTheme.colorScheme.surfaceVariant))
                 }
             }
         }
@@ -146,7 +146,7 @@ private fun TopCard(rank: Int, user: TopUser, experience: Boolean) {
     Box(
         Modifier
             .width(128.dp)
-            .heightIn(min = 196.dp)
+            .height(152.dp)
             .clip(RoundedCornerShape(12.dp))
             .then(
                 if (accent != null) Modifier.background(Brush.horizontalGradient(listOf(accent.copy(alpha = 0.5f), accent.copy(alpha = 0.05f), accent.copy(alpha = 0.5f))))
@@ -159,27 +159,26 @@ private fun TopCard(rank: Int, user: TopUser, experience: Boolean) {
                 .fillMaxSize()
                 .clip(RoundedCornerShape(11.dp))
                 .background(MaterialTheme.colorScheme.surfaceVariant)
-                .padding(12.dp),
+                .padding(10.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            Text(rank.toString(), color = accent ?: MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
-            Box(Modifier.size(56.dp), contentAlignment = Alignment.Center) {
+            Box(Modifier.size(48.dp), contentAlignment = Alignment.Center) {
                 AsyncImage(
                     model = user.avatar,
                     contentDescription = user.name,
                     contentScale = ContentScale.Crop,
-                    modifier = Modifier.size(42.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surface),
+                    modifier = Modifier.size(36.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surface),
                 )
                 if (user.frame != null) {
                     AsyncImage(model = user.frame, contentDescription = null, modifier = Modifier.fillMaxSize())
                 }
             }
-            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(
                         user.name,
-                        fontSize = 14.sp,
+                        fontSize = 13.sp,
                         fontWeight = FontWeight.SemiBold,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
@@ -206,6 +205,13 @@ private fun TopCard(rank: Int, user: TopUser, experience: Boolean) {
                 }
             }
         }
+        Text(
+            rank.toString(),
+            color = accent ?: MaterialTheme.colorScheme.onSurfaceVariant,
+            fontSize = 14.sp,
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.align(Alignment.TopStart).padding(start = 10.dp, top = 8.dp),
+        )
     }
 }
 
