@@ -75,7 +75,7 @@
 ## Сборка
 
 Только вручную: **Actions → Android build → Run workflow**, в поле `build_type` выберите `debug` или `release`.
-APK появится в артефактах запуска (`me.senkuro.unofficial-debug` / `me.senkuro.unofficial-release`).
+APK появится в артефактах запуска (`me.senkuro.unofficial-debug` / `me.senkuro.unofficial-release`; debug ставится как `me.senkuro.unofficial.debug` с названием «Debug», release — `me.senkuro.unofficial` «Senkuro Unofficial»).
 
 ### Отладочные инструменты (только debug)
 

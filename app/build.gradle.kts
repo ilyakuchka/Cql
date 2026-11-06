@@ -50,6 +50,8 @@ android {
 
     buildTypes {
         debug {
+            // Debug ставится рядом с release: me.senkuro.unofficial.debug, название «Debug» (src/debug/res/values/strings.xml).
+            applicationIdSuffix = ".debug"
             // Отладочные инструменты (перехват запросов) включены.
             buildConfigField("boolean", "DEBUG_TOOLS", "true")
         }
