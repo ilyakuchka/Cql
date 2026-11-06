@@ -93,6 +93,10 @@ data class BookmarksPage(val items: List<BookmarkEntry>, val next: String?)
 
 data class NotifChapter(val id: String, val number: String)
 
+data class NotifActor(val name: String, val avatar: String?)
+
+data class NotifReply(val author: NotifActor, val text: String, val at: String?)
+
 data class NotificationItem(
     val id: String,
     val title: String,
@@ -104,6 +108,16 @@ data class NotificationItem(
     /** Время события (ISO, lastEventAt) — для «9 часов назад». */
     val at: String? = null,
     val chapters: List<NotifChapter> = emptyList(),
+    val type: String? = null,
+    /** Заголовок карточек про комментарии («X ответил тебе на комментарий») — вместо названия тайтла. */
+    val headline: String? = null,
+    val actors: List<NotifActor> = emptyList(),
+    /** Текст твоего комментария, на который ответили / который оценили. */
+    val quote: String? = null,
+    val replies: List<NotifReply> = emptyList(),
+    /** Подпись объекта, под которым комментарий («Пост · …», «Глава 5»). */
+    val entityTitle: String? = null,
+    val postSlug: String? = null,
 )
 
 data class NotificationsPage(val items: List<NotificationItem>, val next: String?)

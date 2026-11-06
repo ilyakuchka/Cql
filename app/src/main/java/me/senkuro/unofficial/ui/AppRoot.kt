@@ -62,6 +62,7 @@ private object Routes {
     const val LOGIN = "login"
     const val SETTINGS = "settings"
     const val NOTIFICATIONS = "notifications"
+    const val NOTIF_SETTINGS = "notification-settings"
     const val PROFILE = "profile"
     const val CONVERSATIONS = "conversations"
     const val CHAT = "chat/{id}/{title}"
@@ -162,8 +163,13 @@ fun AppRoot() {
                                 onBack = { nav.popBackStack() },
                                 onManga = openManga,
                                 onChapter = { manga, chapterId -> nav.navigate(Routes.reader(manga.id, chapterId)) },
+                                onPost = { slug -> nav.navigate("post/" + Uri.encode(slug)) },
+                                onSettings = { nav.navigate(Routes.NOTIF_SETTINGS) },
                             )
                         }
+                    }
+                    composable(Routes.NOTIF_SETTINGS) {
+                        UnofficialTheme(dark = appDark) { NotificationSettingsScreen(onBack = { nav.popBackStack() }) }
                     }
                     composable(Routes.PROFILE) {
                         UnofficialTheme(dark = appDark) { ProfileScreen(onBack = { nav.popBackStack() }, onOpenTasks = { nav.navigate(Routes.TASKS) }, onCards = { nav.navigate(Routes.CARDS) }, onTeams = { nav.navigate(Routes.TEAMS) }, onLibrary = { nav.navigate(Routes.LIBRARY) { launchSingleTop = true } }) }

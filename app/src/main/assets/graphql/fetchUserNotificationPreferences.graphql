@@ -1,0 +1,7 @@
+query fetchUserNotificationPreferences($userId: ID!) {
+  userNotificationPreferences(userId: $userId) {
+    type
+    channel
+    frequency
+  }
+}

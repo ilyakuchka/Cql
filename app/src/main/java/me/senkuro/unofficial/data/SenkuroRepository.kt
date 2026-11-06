@@ -276,6 +276,25 @@ class SenkuroRepository(private val api: SenkuroApi) {
             buildJsonObject {}, UnreadResponse.serializer(),
         ).viewerUnreadNotifications as? JsonPrimitive)?.contentOrNull?.toIntOrNull() ?: 0
 
+    @Volatile private var extendedNotifications = true
+
+    /** Переключатели «Настройки уведомлений»: включено всё, кроме пар type+channel с frequency = NEVER. */
+    suspend fun notificationOff(userId: String): Set<String> =
+        api.execute(
+            "fetchUserNotificationPreferences", "fetchUserNotificationPreferences",
+            buildJsonObject { put("userId", userId) }, NotifPrefsResponse.serializer(),
+        ).userNotificationPreferences.filter { it.frequency == "NEVER" }.map { it.type + ":" + it.channel }.toSet()
+
+    /** Включить = удалить настройку, выключить = frequency NEVER (как на сайте). */
+    suspend fun setNotificationEnabled(userId: String, type: String, channel: String, enabled: Boolean) {
+        val input = buildJsonObject {
+            put("userId", userId); put("type", type); put("channel", channel)
+            if (!enabled) put("frequency", "NEVER")
+        }
+        val op = if (enabled) "deleteUserNotificationPreference" else "updateUserNotificationPreference"
+        api.execute(op, op, buildJsonObject { put("input", input) }, JsonElement.serializer())
+    }
+
     suspend fun notifications(read: Boolean, after: String?, types: List<String>? = null, first: Int = 10): NotificationsPage {
         val vars = buildJsonObject {
             put("first", first)
@@ -283,8 +302,16 @@ class SenkuroRepository(private val api: SenkuroApi) {
             if (after != null) put("after", after)
             if (types != null) put("types", kotlinx.serialization.json.JsonArray(types.map { JsonPrimitive(it) }))
         }
-        val conn = api.execute("fetchNotificationFeeds", "fetchNotificationFeeds", vars, NotifResponse.serializer())
-            .notificationFeeds
+        // Расширенный запрос (комментарии, оценки). Если сервер его не принял — один раз откатываемся на простой.
+        val conn = try {
+            api.execute("fetchNotificationFeeds", if (extendedNotifications) "fetchNotificationFeeds" else "fetchNotificationFeedsBasic", vars, NotifResponse.serializer())
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            if (!extendedNotifications) throw e
+            extendedNotifications = false
+            api.execute("fetchNotificationFeeds", "fetchNotificationFeedsBasic", vars, NotifResponse.serializer())
+        }.notificationFeeds
         return NotificationsPage(
             items = conn.edges.map { it.node.toItem() },
             next = conn.pageInfo.endCursor.takeIf { conn.pageInfo.hasNextPage },
@@ -538,6 +565,11 @@ class SenkuroRepository(private val api: SenkuroApi) {
 
     private fun JsonElement?.text(): String? = (this as? JsonPrimitive)?.takeIf { it !is JsonNull }?.contentOrNull
 
+    private fun plural(n: Int, one: String, few: String, many: String): String {
+        val m100 = n % 100; val m10 = n % 10
+        return if (m100 in 11..14) many else when (m10) { 1 -> one; in 2..4 -> few; else -> many }
+    }
+
     private fun NotifFeedDto.toItem(): NotificationItem {
         val nodes = listOfNotNull(notifiable, context)
         val mangaNode = nodes.firstOrNull { it.typename == "Manga" }
@@ -554,6 +586,36 @@ class SenkuroRepository(private val api: SenkuroApi) {
             NotifChapter(cid, c.number.text().orEmpty())
         }.ifEmpty {
             chapterNode?.id?.let { listOf(NotifChapter(it, chapterNode.number.text().orEmpty())) }.orEmpty()
+        }
+        fun List<TiptapBlockDto>?.plain(): String =
+            orEmpty().joinToString("\n") { b -> b.content.orEmpty().joinToString("") { it.text.orEmpty() } }.trim()
+        val commentNode = nodes.firstOrNull { it.typename == "Comment" }
+        val quote = commentNode?.content.plain().ifBlank { null }
+        val replies = payload?.recentComments.orEmpty().map { r ->
+            NotifReply(NotifActor(r.author?.name.orEmpty(), r.author?.avatar?.original?.url), r.content.plain(), r.createdAt)
+        }
+        val actors = when (type) {
+            "COMMENT_REPLIED" -> replies.map { it.author }
+            "COMMENT_UPVOTED" -> payload?.recentUsers.orEmpty().map { NotifActor(it.name, it.avatar?.original?.url) }
+            else -> emptyList()
+        }.distinctBy { it.name }
+        val count = eventCount ?: 0
+        val names = actors.map { it.name }.filter { it.isNotBlank() }.joinToString(", ")
+        val headline = when {
+            type == "COMMENT_REPLIED" && actors.isNotEmpty() ->
+                if (count > 2) "$count ${plural(count, "ответ", "ответа", "ответов")} на твой комментарий"
+                else "$names ответил${if (actors.size > 1) "и" else ""} тебе на комментарий"
+            type == "COMMENT_UPVOTED" && actors.isNotEmpty() ->
+                if (count > 3) "$count чел. оценили твой комментарий"
+                else "$names оценил${if (actors.size > 1) "и" else ""} твой комментарий"
+            else -> null
+        }
+        val postNode = nodes.firstOrNull { it.typename == "Post" }
+        val entityTitle = when {
+            postNode != null -> "Пост · " + (postNode.title ?: postNode.slug)
+            manga != null -> manga.title
+            chapterNode != null -> "Глава " + chapterNode.number.text().orEmpty()
+            else -> null
         }
         val caption = when (type) {
             "NEW_MANGA_CHAPTER", "NEW_RANOBE_CHAPTER" -> "Вышли новые главы"
@@ -581,6 +643,13 @@ class SenkuroRepository(private val api: SenkuroApi) {
             caption = caption ?: subtitle,
             at = lastEventAt,
             chapters = chapterRefs,
+            type = type,
+            headline = headline,
+            actors = actors,
+            quote = quote,
+            replies = replies,
+            entityTitle = entityTitle,
+            postSlug = postNode?.slug?.takeIf { it.isNotBlank() },
         )
     }
 

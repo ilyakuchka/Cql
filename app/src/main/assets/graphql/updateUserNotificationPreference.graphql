@@ -1,0 +1,5 @@
+mutation updateUserNotificationPreference($input: UpdateUserNotificationPreferenceInput!) {
+  updateUserNotificationPreference(input: $input) {
+    preference { type channel frequency }
+  }
+}

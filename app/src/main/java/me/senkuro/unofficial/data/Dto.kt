@@ -215,13 +215,33 @@ class NotifNodeDto(
     val cover: Cover? = null,
     val number: kotlinx.serialization.json.JsonElement? = null,
     val volume: kotlinx.serialization.json.JsonElement? = null,
+    /** Текст комментария (для notifiable типа Comment). */
+    val content: List<TiptapBlockDto>? = null,
 )
 
 @Serializable
 class NotifChapterRef(val id: String? = null, val number: kotlinx.serialization.json.JsonElement? = null)
 
 @Serializable
-class NotifPayloadDto(val chapters: List<NotifChapterRef>? = null)
+class NotifReplyDto(
+    val id: String = "",
+    val createdAt: String? = null,
+    val content: List<TiptapBlockDto>? = null,
+    val author: CommentAuthorDto? = null,
+)
+
+@Serializable
+class NotifPayloadDto(
+    val chapters: List<NotifChapterRef>? = null,
+    val recentComments: List<NotifReplyDto>? = null,
+    val recentUsers: List<CommentAuthorDto>? = null,
+)
+
+@Serializable
+class NotifPrefDto(val type: String = "", val channel: String = "", val frequency: String? = null)
+
+@Serializable
+class NotifPrefsResponse(val userNotificationPreferences: List<NotifPrefDto> = emptyList())
 
 @Serializable
 class NotifFeedDto(

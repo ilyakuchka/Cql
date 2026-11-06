@@ -19,6 +19,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -202,6 +203,8 @@ fun NotificationsScreen(
     onBack: () -> Unit,
     onManga: (MangaItem) -> Unit,
     onChapter: (MangaItem, String) -> Unit = { m, _ -> onManga(m) },
+    onPost: (String) -> Unit = {},
+    onSettings: () -> Unit = {},
     vm: NotificationsViewModel = viewModel(),
 ) {
     LaunchedEffect(Unit) {
@@ -219,6 +222,9 @@ fun NotificationsScreen(
             }
             Text("Уведомления", style = HeadingStyle, color = MaterialTheme.colorScheme.onBackground, modifier = Modifier.weight(1f))
             OutlinedButton(onClick = { confirm = Confirm.HIDE_ALL }, enabled = !vm.busy) { Text("Скрыть все") }
+            IconButton(onClick = onSettings) {
+                Icon(Icons.Filled.Settings, contentDescription = "Настройки уведомлений", tint = MaterialTheme.colorScheme.onBackground)
+            }
             Box {
                 IconButton(onClick = { menu = true }) {
                     Icon(Icons.Filled.MoreVert, contentDescription = "Меню", tint = MaterialTheme.colorScheme.onBackground)
@@ -297,6 +303,7 @@ fun NotificationsScreen(
                             hidden = vm.read,
                             onManga = onManga,
                             onChapter = onChapter,
+                            onPost = onPost,
                             onHide = { vm.act(false, listOf(item)) },
                             onDelete = { vm.act(true, listOf(item)) },
                         )
@@ -358,6 +365,7 @@ private fun NotificationCard(
     hidden: Boolean,
     onManga: (MangaItem) -> Unit,
     onChapter: (MangaItem, String) -> Unit,
+    onPost: (String) -> Unit,
     onHide: () -> Unit,
     onDelete: () -> Unit,
 ) {
@@ -374,7 +382,17 @@ private fun NotificationCard(
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            if (item.manga != null) {
+            if (item.actors.isNotEmpty()) {
+                Row(horizontalArrangement = Arrangement.spacedBy((-10).dp)) {
+                    item.actors.take(3).forEach { a ->
+                        AsyncImage(
+                            model = a.avatar, contentDescription = a.name, contentScale = ContentScale.Crop,
+                            modifier = Modifier.size(36.dp).clip(androidx.compose.foundation.shape.CircleShape)
+                                .background(MaterialTheme.colorScheme.surface),
+                        )
+                    }
+                }
+            } else if (item.manga != null) {
                 AsyncImage(
                     model = item.manga.cover,
                     contentDescription = null,
@@ -383,11 +401,11 @@ private fun NotificationCard(
                 )
             }
             Text(
-                item.title,
+                item.headline ?: item.title,
                 color = MaterialTheme.colorScheme.onBackground,
                 fontWeight = FontWeight.SemiBold,
                 fontSize = 14.sp,
-                maxLines = 2,
+                maxLines = 3,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f).clickable(enabled = item.manga != null) { item.manga?.let(onManga) },
             )
@@ -401,7 +419,39 @@ private fun NotificationCard(
                 }
             }
         }
-        Text(item.caption, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
+        if (item.headline == null) Text(item.caption, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
+        item.quote?.let { q ->
+            Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).background(MaterialTheme.colorScheme.background).padding(10.dp)) {
+                Box(Modifier.size(width = 3.dp, height = 18.dp).background(MaterialTheme.colorScheme.primary))
+                Spacer(Modifier.size(8.dp))
+                Text(q, color = MaterialTheme.colorScheme.onBackground, fontSize = 13.sp, maxLines = 4, overflow = TextOverflow.Ellipsis)
+            }
+        }
+        item.replies.take(3).forEach { r ->
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                AsyncImage(
+                    model = r.author.avatar, contentDescription = null, contentScale = ContentScale.Crop,
+                    modifier = Modifier.size(28.dp).clip(androidx.compose.foundation.shape.CircleShape).background(MaterialTheme.colorScheme.surface),
+                )
+                Column(Modifier.weight(1f)) {
+                    Row {
+                        Text(r.author.name, color = MaterialTheme.colorScheme.onBackground, fontWeight = FontWeight.SemiBold, fontSize = 13.sp, modifier = Modifier.weight(1f))
+                        relativeTime(r.at)?.let { Text(it, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp) }
+                    }
+                    if (r.text.isNotBlank()) Text(r.text, color = MaterialTheme.colorScheme.onBackground, fontSize = 13.sp, maxLines = 4, overflow = TextOverflow.Ellipsis)
+                }
+            }
+        }
+        if (item.headline != null) {
+            item.entityTitle?.let { Text(it, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+            val open: (() -> Unit)? = when {
+                item.postSlug != null -> ({ onPost(item.postSlug) })
+                item.manga != null -> ({ onManga(item.manga) })
+                else -> null
+            }
+            if (open != null) OutlinedButton(onClick = open, modifier = Modifier.fillMaxWidth()) { Text("Открыть страницу") }
+            time?.let { Text(it, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp) }
+        }
         if (item.chapters.isNotEmpty()) {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 item.chapters.take(3).forEach { c ->
