@@ -1,0 +1,11 @@
+query HomePopularPeriod($period: MangaPopularPeriod!) {
+  mangaPopularByPeriod(period: $period) {
+    id
+    slug
+    originalName { lang content }
+    titles { lang content }
+    status
+    rating
+    cover { original { url } }
+  }
+}

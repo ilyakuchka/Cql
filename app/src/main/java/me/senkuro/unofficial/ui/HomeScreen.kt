@@ -88,7 +88,12 @@ fun HomeScreen(
                     val data = state.data
                     item(key = "tops") { TopsRibbon() }
                     cardsSection("Продолжить чтение", resume, onManga, onMore, showMore = false)
-                    trendingSection("Популярное за день", data.popular, onManga)
+                    trendingSection(
+                        "Самое читаемое",
+                        if (vm.popularPeriod == "DAY") data.popular else vm.popularOther.orEmpty(),
+                        onManga,
+                        header = { PeriodTabs(vm.popularPeriod, vm.popularLoading, vm::selectPopularPeriod) },
+                    )
                     item(key = "ad") { AdStrip() }
                     cardsSection("Новые тайтлы", data.newTitles, onManga, onMore)
                     newChaptersSection("Новые главы", data.latest.take(10), onManga, onMore)
@@ -185,12 +190,43 @@ private fun SectionHeader(title: String, onMore: (() -> Unit)?) {
     }
 }
 
+/** Вкладки периода «Самого читаемого»: За день / За неделю / За месяц (как на сайте). */
+@Composable
+private fun PeriodTabs(selected: String, loading: Boolean, onSelect: (String) -> Unit) {
+    Row(
+        Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        listOf("DAY" to "За день", "WEEK" to "За неделю", "MONTH" to "За месяц").forEach { (key, label) ->
+            val on = key == selected
+            Text(
+                text = label,
+                fontSize = 13.sp,
+                color = if (on) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onBackground,
+                modifier = Modifier
+                    .clip(RoundedCornerShape(50))
+                    .background(if (on) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant)
+                    .clickable { onSelect(key) }
+                    .padding(horizontal = 12.dp, vertical = 6.dp),
+            )
+        }
+        if (loading) androidx.compose.material3.CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
+    }
+}
+
 /** «Trending Series»: пронумерованные строки по три в колонке, колонки листаются вбок. */
-private fun LazyListScope.trendingSection(title: String, list: List<MangaItem>, onManga: (MangaItem) -> Unit) {
-    if (list.isEmpty()) return
+private fun LazyListScope.trendingSection(
+    title: String,
+    list: List<MangaItem>,
+    onManga: (MangaItem) -> Unit,
+    header: (@Composable () -> Unit)? = null,
+) {
+    if (list.isEmpty() && header == null) return
     item(key = "trending-$title") {
         Column {
             SectionHeader(title, onMore = null)
+            header?.invoke()
             LazyRow(
                 contentPadding = PaddingValues(horizontal = 12.dp),
                 horizontalArrangement = Arrangement.spacedBy(17.dp),

@@ -61,6 +61,13 @@ class SenkuroRepository(private val api: SenkuroApi) {
 
     // ----------------------------------------------------------------- Главная
 
+    /** «Самое читаемое»: period = DAY | WEEK | MONTH (MangaPopularPeriod, как на сайте). */
+    suspend fun popular(period: String): List<MangaItem> =
+        api.execute(
+            "HomePopularPeriod", "homePopularPeriod",
+            buildJsonObject { put("period", period) }, PopularResponse.serializer(),
+        ).mangaPopularByPeriod.mapNotNull { it.toItem() }
+
     suspend fun home(): HomeData = coroutineScope {
         val none = JsonObject(emptyMap())
         val latest = async {

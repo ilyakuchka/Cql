@@ -33,6 +33,36 @@ class HomeViewModel : ViewModel() {
     var state by mutableStateOf<UiState<HomeData>>(UiState.Loading)
         private set
 
+    /** Период «Самого читаемого»: DAY (приходит вместе с главной), WEEK, MONTH (грузятся по выбору и кэшируются). */
+    var popularPeriod by mutableStateOf("DAY")
+        private set
+    var popularOther by mutableStateOf<List<MangaItem>?>(null)
+        private set
+    var popularLoading by mutableStateOf(false)
+        private set
+    private val popularCache = HashMap<String, List<MangaItem>>()
+
+    fun selectPopularPeriod(period: String) {
+        if (period == popularPeriod && !popularLoading) return
+        popularPeriod = period
+        if (period == "DAY") { popularOther = null; popularLoading = false; return }
+        popularCache[period]?.let { popularOther = it; popularLoading = false; return }
+        popularLoading = true
+        viewModelScope.launch {
+            val list = try {
+                AppGraph.repository.popular(period)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                null
+            }
+            if (popularPeriod != period) return@launch
+            if (list != null) { popularCache[period] = list; popularOther = list }
+            else { popularPeriod = "DAY"; popularOther = null }
+            popularLoading = false
+        }
+    }
+
     init {
         load()
         // Смена домена: загружаем главную заново.
@@ -43,6 +73,7 @@ class HomeViewModel : ViewModel() {
 
     fun load() {
         state = UiState.Loading
+        popularPeriod = "DAY"; popularOther = null; popularLoading = false; popularCache.clear()
         viewModelScope.launch {
             state = try {
                 UiState.Ready(AppGraph.repository.home())
