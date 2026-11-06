@@ -12,4 +12,9 @@ object DebugTools {
     fun Screen(onBack: () -> Unit) {
         LaunchedEffect(Unit) { onBack() }
     }
+
+    fun installCrashHandler(context: android.content.Context) {}
+
+    @Composable
+    fun CrashDialog() {}
 }

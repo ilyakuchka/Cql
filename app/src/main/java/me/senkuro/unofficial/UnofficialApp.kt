@@ -11,6 +11,7 @@ class UnofficialApp : Application(), SingletonImageLoader.Factory {
 
     override fun onCreate() {
         super.onCreate()
+        me.senkuro.unofficial.debugtools.DebugTools.installCrashHandler(this)
         AppGraph.init(this)
     }
 
