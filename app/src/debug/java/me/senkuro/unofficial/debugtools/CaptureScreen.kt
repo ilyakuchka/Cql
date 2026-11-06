@@ -147,6 +147,37 @@ fun CaptureScreen(onBack: () -> Unit) {
         if (tab == 0 && canGoBack) holder.view.goBack() else onBack()
     }
 
+    // HTML страницы «как её видит пользователь»: текущий DOM после работы скриптов (SPA), а не исходник ответа сервера.
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    var htmlToSave by remember { mutableStateOf<String?>(null) }
+    val saveHtml = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/html")) { uri ->
+        val html = htmlToSave
+        htmlToSave = null
+        if (uri != null && html != null) scope.launch(Dispatchers.IO) {
+            val message = try {
+                context.contentResolver.openOutputStream(uri)?.use { it.write(html.toByteArray()) }
+                "Сохранено: ${html.length / 1024} КБ"
+            } catch (e: Exception) {
+                "Не удалось сохранить: ${e.message}"
+            }
+            withContext(Dispatchers.Main) { Toast.makeText(context, message, Toast.LENGTH_LONG).show() }
+        }
+    }
+    fun withPageHtml(block: (String) -> Unit) {
+        holder.view.evaluateJavascript("'<!DOCTYPE html>\\n' + document.documentElement.outerHTML") { raw ->
+            val html = try {
+                org.json.JSONTokener(raw).nextValue() as? String
+            } catch (e: Exception) {
+                null
+            }
+            if (html == null) Toast.makeText(context, "Не удалось получить HTML страницы", Toast.LENGTH_LONG).show() else block(html)
+        }
+    }
+    fun pageFileName(): String {
+        val host = runCatching { android.net.Uri.parse(holder.view.url).host }.getOrNull().orEmpty().ifBlank { "page" }
+        return "$host.html"
+    }
+
     Column(
         Modifier
             .fillMaxSize()
@@ -174,6 +205,25 @@ fun CaptureScreen(onBack: () -> Unit) {
                 onClick = { CaptureLog.showImplemented = !CaptureLog.showImplemented },
                 label = { Text(if (CaptureLog.showImplemented) "Реализованные: показаны" else "Реализованные скрыты: ${CaptureLog.hiddenCount()}") },
             )
+            if (tab == 0) {
+                OutlinedButton(onClick = {
+                    withPageHtml { html ->
+                        try {
+                            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                            clipboard.setPrimaryClip(ClipData.newPlainText("page-html", html))
+                            Toast.makeText(context, "HTML скопирован: ${html.length / 1024} КБ", Toast.LENGTH_SHORT).show()
+                        } catch (e: Exception) {
+                            Toast.makeText(context, "Не удалось скопировать (слишком большой?) — используйте «Сохранить HTML»", Toast.LENGTH_LONG).show()
+                        }
+                    }
+                }) { Text("Копировать HTML") }
+                OutlinedButton(onClick = {
+                    withPageHtml { html ->
+                        htmlToSave = html
+                        saveHtml.launch(pageFileName())
+                    }
+                }) { Text("Сохранить HTML") }
+            }
             OutlinedButton(onClick = { copyReport(context) }) { Text("Копировать") }
             OutlinedButton(onClick = { shareReport(context) }) { Text("Поделиться") }
             OutlinedButton(onClick = { if (tab == 2) FileCapture.clear() else CaptureLog.clear() }) { Text("Очистить") }
