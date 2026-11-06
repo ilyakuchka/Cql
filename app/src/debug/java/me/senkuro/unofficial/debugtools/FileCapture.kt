@@ -48,6 +48,8 @@ object FileCapture {
         "js", "mjs", "cjs", "css", "json", "map", "webmanifest", "txt", "xml", "svg",
         "wasm", "woff", "woff2", "ttf", "otf", "ico",
     )
+    /** Дополнительно для «Подгрузить все файлы»: картинки, видео, звук. */
+    private val mediaExt = setOf("png", "jpg", "jpeg", "webp", "avif", "gif", "webm", "mp4", "mp3", "ogg")
     private val secretQuery = Regex("(^|[?&])(code|state|token|access_token|sig|signature|key|jwt|sid|ticket)=", RegexOption.IGNORE_CASE)
 
     private const val MAX_FILE = 10 * 1024 * 1024
@@ -56,13 +58,13 @@ object FileCapture {
     private fun ext(url: String): String =
         runCatching { URI(url).path.orEmpty().substringAfterLast('/').substringAfterLast('.', "").lowercase() }.getOrDefault("")
 
-    private fun ownStatic(url: String): Boolean = runCatching {
+    private fun ownStatic(url: String, media: Boolean = false): Boolean = runCatching {
         val uri = URI(url)
         val host = uri.host.orEmpty()
         uri.scheme == "https" &&
             Regex("senkuro|shiruho|senkognito", RegexOption.IGNORE_CASE).containsMatchIn(host) &&
             !host.startsWith("api.") && !uri.path.orEmpty().contains("/graphql") &&
-            ext(url) in allowedExt && !secretQuery.containsMatchIn(uri.rawQuery?.let { "?$it" }.orEmpty())
+            (ext(url) in allowedExt || (media && ext(url) in mediaExt)) && !secretQuery.containsMatchIn(uri.rawQuery?.let { "?$it" }.orEmpty())
     }.getOrDefault(false)
 
     /** Вызывается из shouldInterceptRequest (фоновый поток). null — пусть WebView грузит сам. */
@@ -102,8 +104,8 @@ object FileCapture {
     }
 
     /** Скачивает файл без участия WebView (для загрузки по манифесту). true — файл сохранён. */
-    fun fetchDirect(url: String): Boolean {
-        if (seen.contains(url) || !ownStatic(url)) return seen.contains(url)
+    fun fetchDirect(url: String, media: Boolean = false): Boolean {
+        if (seen.contains(url) || !ownStatic(url, media)) return seen.contains(url)
         if (total >= MAX_TOTAL) return false
         return try {
             val request = Request.Builder().url(url).header("User-Agent", "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/124 Mobile Safari/537.36").build()
@@ -131,6 +133,78 @@ object FileCapture {
         val priority = Regex("graphql|api|query|queries|gql|manga|user|bookmark|comment|chapter|guild|conversation|card|collection|modal|_slug_|_namespace_", RegexOption.IGNORE_CASE)
         return all.sortedBy { if (priority.containsMatchIn(it)) 0 else 1 }
             .mapNotNull { runCatching { base.resolve(it).toString() }.getOrNull() }
+    }
+
+    private val refRegex = Regex("""["'`(]((?:\.{1,2}/|/|assets/)?[A-Za-z0-9_@.\-/]+\.(?:js|mjs|css|json|webmanifest|svg|wasm|woff2?|ttf|otf|ico|png|jpe?g|webp|avif|gif|webm|mp4|mp3|ogg))(?:\?[^"'`)\s]*)?["'`)]""")
+
+    /** Адреса всех файлов, упомянутых в тексте файла [fileUrl] (js, css, json, html): import("./x.js"), mapDeps, url(...), "/assets/x.webp". */
+    fun referencedUrls(text: String, fileUrl: String): List<String> {
+        val base = runCatching { URI(fileUrl) }.getOrNull() ?: return emptyList()
+        val root = URI(base.scheme + "://" + base.authority + "/")
+        return refRegex.findAll(text).mapNotNull { m ->
+            val ref = m.groupValues[1]
+            // /src/... — исходники, на сайте не раздаются; node_modules — тоже.
+            if (ref.startsWith("/src/") || ref.contains("node_modules") || ref.startsWith("//")) return@mapNotNull null
+            val resolved = when {
+                ref.startsWith("./") || ref.startsWith("../") -> base.resolve(ref)
+                ref.startsWith("/") -> root.resolve(ref.removePrefix("/"))
+                ref.startsWith("assets/") -> root.resolve(ref)
+                else -> return@mapNotNull null
+            }
+            resolved.toString().substringBefore('#')
+        }.distinct().toList()
+    }
+
+    /** Файлы, по которым имеет смысл искать ссылки. */
+    private fun scannable(f: CapturedFile) = ext(f.url) in setOf("js", "mjs", "css", "json", "webmanifest")
+
+    /**
+     * Полный обход: precache-манифест sw.js (все типы файлов), затем ссылки внутри уже скачанных файлов,
+     * пока появляются новые. [onProgress] — «сделано / всего»; возвращает число скачанных новых файлов.
+     */
+    fun crawlAll(onProgress: (Int, Int) -> Unit): Int {
+        val tried = HashSet<String>()
+        val scanned = HashSet<String>()
+        var fetched = 0
+        var round = 0
+        val gate = java.util.concurrent.Semaphore(6)
+        val pool = java.util.concurrent.Executors.newFixedThreadPool(6)
+        try {
+            // sw.js: все url:"..." (не только js)
+            val swUrl = swFile()?.url ?: (me.senkuro.unofficial.data.SenkuroConfig.BASE_URL.trimEnd('/') + "/sw.js")
+            if (swFile() == null) fetchDirect(swUrl)
+            val queue = LinkedHashSet<String>()
+            swFile()?.let { textOf(it) }?.let { sw ->
+                val b = URI(swUrl)
+                Regex("""url:"([^"]+)"""").findAll(sw).forEach { m ->
+                    runCatching { b.resolve(m.groupValues[1]).toString() }.getOrNull()?.let { queue.add(it) }
+                }
+            }
+            while (round++ < 8) {
+                // ссылки из ещё не просмотренных файлов
+                files.toList().filter { scannable(it) && scanned.add(it.url) }.forEach { f ->
+                    textOf(f)?.let { referencedUrls(it, f.url).forEach { u -> queue.add(u) } }
+                }
+                val todo = queue.filter { it !in tried && it !in seen }
+                tried.addAll(todo)
+                if (todo.isEmpty()) break
+                var done = 0
+                val total = tried.size
+                val futures = todo.map { u ->
+                    pool.submit<Boolean> {
+                        gate.acquire()
+                        try { fetchDirect(u, media = true) } finally {
+                            gate.release()
+                            synchronized(this) { done++; onProgress(tried.size - todo.size + done, total) }
+                        }
+                    }
+                }
+                futures.forEach { if (runCatching { it.get() }.getOrDefault(false)) fetched++ }
+            }
+        } finally {
+            pool.shutdown()
+        }
+        return fetched
     }
 
     private const val INTROSPECTION = "query IntrospectionQuery { __schema { queryType { name } mutationType { name } subscriptionType { name } " +

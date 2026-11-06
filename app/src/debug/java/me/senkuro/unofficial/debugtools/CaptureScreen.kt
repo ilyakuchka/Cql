@@ -432,6 +432,21 @@ private fun FilesTab() {
         }
     }
 
+    fun downloadEverything() {
+        scope.launch(Dispatchers.IO) {
+            try {
+                var last = 0L
+                val n = FileCapture.crawlAll { done, total ->
+                    val now = System.currentTimeMillis()
+                    if (now - last > 300) { last = now; scope.launch(Dispatchers.Main) { progress = "$done / $total" } }
+                }
+                withContext(Dispatchers.Main) { progress = null; toast("Готово: загружено новых файлов $n") }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) { progress = null; toast("Ошибка: ${e.message}") }
+            }
+        }
+    }
+
     val files = FileCapture.files.toList()
     LazyColumn(Modifier.fillMaxSize()) {
         item {
@@ -450,6 +465,9 @@ private fun FilesTab() {
                 ) {
                     OutlinedButton(enabled = progress == null, onClick = { downloadManifest() }) {
                         Text(progress?.let { "Загрузка $it" } ?: "Загрузить js по манифесту sw.js")
+                    }
+                    OutlinedButton(enabled = progress == null, onClick = { downloadEverything() }) {
+                        Text("Подгрузить все файлы")
                     }
                     OutlinedButton(enabled = files.isNotEmpty(), onClick = {
                         found = GqlScanner.scan(files)
