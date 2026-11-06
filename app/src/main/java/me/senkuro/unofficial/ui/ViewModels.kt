@@ -19,6 +19,7 @@ import me.senkuro.unofficial.data.HomeData
 import me.senkuro.unofficial.data.LabelItem
 import me.senkuro.unofficial.data.MangaDetails
 import me.senkuro.unofficial.data.MangaItem
+import me.senkuro.unofficial.data.TopsTab
 import me.senkuro.unofficial.data.SenkuroConfig
 
 sealed interface UiState<out T> {
@@ -41,6 +42,38 @@ class HomeViewModel : ViewModel() {
     var popularLoading by mutableStateOf(false)
         private set
     private val popularCache = HashMap<String, List<MangaItem>>()
+
+    /** «Топ пользователей»: вкладки credits | experience. Первая грузится вместе с главной, вторая — при выборе; результаты кэшируются. */
+    var topsTab by mutableStateOf("credits")
+        private set
+    var topsData by mutableStateOf<Map<String, TopsTab>>(emptyMap())
+        private set
+    var topsFailed by mutableStateOf<Set<String>>(emptySet())
+        private set
+    private var topsLoading = HashSet<String>()
+
+    fun selectTopsTab(tab: String) {
+        topsTab = tab
+        loadTops(tab)
+    }
+
+    fun loadTops(tab: String, force: Boolean = false) {
+        if (!force && (topsData.containsKey(tab) || tab in topsLoading)) return
+        topsLoading.add(tab)
+        topsFailed = topsFailed - tab
+        viewModelScope.launch {
+            try {
+                val result = AppGraph.offers.tops(tab == "experience")
+                topsData = topsData + (tab to result)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                topsFailed = topsFailed + tab
+            } finally {
+                topsLoading.remove(tab)
+            }
+        }
+    }
 
     fun selectPopularPeriod(period: String) {
         if (period == popularPeriod && !popularLoading) return
@@ -74,6 +107,8 @@ class HomeViewModel : ViewModel() {
     fun load() {
         state = UiState.Loading
         popularPeriod = "DAY"; popularOther = null; popularLoading = false; popularCache.clear()
+        topsData = emptyMap(); topsFailed = emptySet(); topsLoading.clear()
+        loadTops(topsTab) // параллельно с главной, не после неё
         viewModelScope.launch {
             state = try {
                 UiState.Ready(AppGraph.repository.home())

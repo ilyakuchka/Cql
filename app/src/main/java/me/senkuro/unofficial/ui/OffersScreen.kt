@@ -42,7 +42,6 @@ import me.senkuro.unofficial.data.OfferItem
 import me.senkuro.unofficial.data.mainAd
 import me.senkuro.unofficial.data.viewAd
 import me.senkuro.unofficial.data.PreviewItem
-import me.senkuro.unofficial.data.TopUser
 
 @Composable
 private fun PreviewCard(p: PreviewItem?, caption: String, onCard: (String) -> Unit) {
@@ -114,47 +113,6 @@ fun OffersScreen(onBack: () -> Unit, onCard: (String) -> Unit) {
                 item { LaunchedEffect(pager.items.size) { pager.more() } }
             }
         }
-    }
-}
-
-/** Топы дня одной небольшой лентой (опыт и кредиты). Если запрос не удался — лента не показывается. */
-@Composable
-fun TopsRibbon() {
-    var tops by remember { mutableStateOf<List<TopUser>>(emptyList()) }
-    LaunchedEffect(Unit) {
-        tops = try {
-            AppGraph.offers.tops()
-        } catch (e: kotlinx.coroutines.CancellationException) {
-            throw e
-        } catch (_: Exception) {
-            emptyList()
-        }
-    }
-    if (tops.isEmpty()) return
-    var filter by remember { mutableStateOf("все") }
-    val shown = when (filter) { "опыт" -> tops.filter { it.hasExp }; "кредиты" -> tops.filter { it.hasCredits }; else -> tops }
-    Column(Modifier.fillMaxWidth()) {
-        Text("Топ пользователей", style = HeadingStyle, color = MaterialTheme.colorScheme.onBackground, modifier = Modifier.padding(horizontal = 16.dp))
-        Row(Modifier.padding(horizontal = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            listOf("все" to "Все", "опыт" to "Опыт", "кредиты" to "Кредиты").forEach { (key, label) ->
-                androidx.compose.material3.FilterChip(selected = filter == key, onClick = { filter = key }, label = { Text(label) })
-            }
-        }
-    LazyRow(
-        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 16.dp),
-        horizontalArrangement = Arrangement.spacedBy(14.dp),
-        modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
-    ) {
-        items(shown) { t ->
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Avatar(t.avatar, 32)
-                Column(Modifier.padding(start = 6.dp)) {
-                    Text(t.name, fontSize = 12.sp, maxLines = 1, color = MaterialTheme.colorScheme.onBackground, modifier = Modifier.width(80.dp), overflow = TextOverflow.Ellipsis)
-                    Text(listOfNotNull(if (t.hasExp) "опыт" else null, if (t.hasCredits) "кредиты" else null).joinToString(" + ") + (t.level?.let { " · ур. $it" } ?: ""), fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            }
-        }
-    }
     }
 }
 

@@ -215,12 +215,38 @@ class OOffersConn(val edges: List<OOfferEdge> = emptyList(), val pageInfo: PageI
 class OOffersResponse(val cardOffers: OOffersConn = OOffersConn())
 
 @Serializable
-class OTopEntry(val experience: Int? = null, val user: OUser? = null)
+class OTopUrl(val url: String? = null)
+
+@Serializable
+class OTopImage(val original: OTopUrl? = null)
+
+@Serializable
+class OTopGuild(val name: String? = null, val color: String? = null)
+
+@Serializable
+class OTopMainGuild(val guild: OTopGuild? = null)
+
+@Serializable
+class OTopUserDto(
+    val id: String = "",
+    val slug: String? = null,
+    val name: String = "",
+    val level: Int? = null,
+    val avatar: OTopImage? = null,
+    val frame: OTopImage? = null,
+    val status: OTopImage? = null,
+    val mainGuild: OTopMainGuild? = null,
+)
+
+@Serializable
+class OTopEntry(val experience: Long? = null, val user: OTopUserDto? = null)
 
 @Serializable
 class OTopsResponse(
     val experimentalSpotlightExperiences: List<OTopEntry>? = null,
     val experimentalSpotlightCredits: List<OTopEntry>? = null,
+    val viewerTodayExperience: JsonElement? = null,
+    val viewerTotalCredits: JsonElement? = null,
 )
 
 data class PreviewItem(val title: String, val image: String?, val slug: String, val note: String)
@@ -230,7 +256,13 @@ data class OfferItem(
     val offer: PreviewItem?, val request: PreviewItem?, val canAccept: Boolean, val canClose: Boolean, val mine: Boolean,
 )
 
-data class TopUser(val id: String, val name: String, val avatar: String?, val level: Int?, val experience: Int?, val hasExp: Boolean, val hasCredits: Boolean)
+data class TopUser(
+    val id: String, val name: String, val avatar: String?, val frame: String?, val status: String?,
+    val level: Int?, val experience: Long?, val guild: String?, val guildColor: String?,
+)
+
+/** Одна вкладка топа: список пользователей и число «ты набрал / пополнил» (0, если не вошёл). */
+data class TopsTab(val users: List<TopUser>, val viewerValue: Long)
 
 class OffersRepository(private val api: SenkuroApi) {
     internal val adApi get() = api
@@ -274,29 +306,25 @@ class OffersRepository(private val api: SenkuroApi) {
     suspend fun accept(offerId: String) = act("acceptCardOffer", offerId)
     suspend fun close(offerId: String) = act("closeCardOffer", offerId)
 
-    /** Как на сайте: опыт и кредиты запрашиваются отдельными запросами (includeExperiences/includeCredits по одному). Сбой одного не прячет второй. */
-    suspend fun tops(): List<TopUser> {
-        suspend fun load(exp: Boolean): OTopsResponse? = try {
-            api.execute("fetchMainUserTops", "fetchMainUserTops", buildJsonObject { put("includeExperiences", exp); put("includeCredits", !exp) }, OTopsResponse.serializer())
-        } catch (e: kotlinx.coroutines.CancellationException) {
-            throw e
-        } catch (_: Exception) {
-            null
+    /** Одна вкладка топа, как на сайте: includeExperiences / includeCredits включается только для выбранной вкладки. */
+    suspend fun tops(experience: Boolean): TopsTab {
+        val r = api.execute(
+            "fetchMainUserTops", "fetchMainUserTops",
+            buildJsonObject { put("includeExperiences", experience); put("includeCredits", !experience) },
+            OTopsResponse.serializer(),
+        )
+        val entries = (if (experience) r.experimentalSpotlightExperiences else r.experimentalSpotlightCredits).orEmpty()
+        val users = entries.mapNotNull { e ->
+            val u = e.user ?: return@mapNotNull null
+            TopUser(
+                id = u.id, name = u.name, avatar = u.avatar?.original?.url, frame = u.frame?.original?.url,
+                status = u.status?.original?.url, level = u.level, experience = e.experience,
+                guild = u.mainGuild?.guild?.name, guildColor = u.mainGuild?.guild?.color,
+            )
         }
-        val expResp = load(true)
-        val credResp = load(false)
-        if (expResp == null && credResp == null) throw ApiException("Топ пользователей недоступен")
-        val byId = LinkedHashMap<String, TopUser>()
-        expResp?.experimentalSpotlightExperiences.orEmpty().forEach { e ->
-            val u = e.user ?: return@forEach
-            byId[u.id] = TopUser(u.id, u.name, u.avatar?.original?.url, u.level, e.experience, hasExp = true, hasCredits = false)
-        }
-        credResp?.experimentalSpotlightCredits.orEmpty().forEach { e ->
-            val u = e.user ?: return@forEach
-            val old = byId[u.id]
-            byId[u.id] = old?.copy(hasCredits = true) ?: TopUser(u.id, u.name, u.avatar?.original?.url, u.level, null, hasExp = false, hasCredits = true)
-        }
-        return byId.values.toList()
+        val viewer = (if (experience) r.viewerTodayExperience else r.viewerTotalCredits)
+            ?.let { (it as? kotlinx.serialization.json.JsonPrimitive)?.content?.toDoubleOrNull()?.toLong() } ?: 0L
+        return TopsTab(users, viewer)
     }
 }
 

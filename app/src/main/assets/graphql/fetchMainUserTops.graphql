@@ -1,10 +1,13 @@
 query fetchMainUserTops($includeExperiences: Boolean!, $includeCredits: Boolean!) {
   experimentalSpotlightExperiences @include(if: $includeExperiences) {
-    id experience
-    user { id slug name level avatar { original { url } } }
+    id
+    experience
+    user { id slug name level avatar { original { url } } frame { original { url } } status { original { url } } }
   }
+  viewerTodayExperience @include(if: $includeExperiences)
   experimentalSpotlightCredits @include(if: $includeCredits) {
     id
-    user { id slug name level avatar { original { url } } }
+    user { id slug name level avatar { original { url } } frame { original { url } } status { original { url } } mainGuild { guild { name color } } }
   }
+  viewerTotalCredits @include(if: $includeCredits)
 }

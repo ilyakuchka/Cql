@@ -141,6 +141,7 @@ fun AppRoot() {
                                 onLogin = { nav.navigate(Routes.LOGIN) },
                                 onProfile = { nav.navigate(Routes.PROFILE) },
                                 onNotifications = { navigateTop(Routes.NOTIFICATIONS) },
+                                onTasks = { nav.navigate(Routes.TASKS) },
                             )
                         }
                     }
