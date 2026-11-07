@@ -406,11 +406,32 @@ class SenkuroRepository(private val api: SenkuroApi) {
 
     suspend fun profileAppearance(slug: String): ProfileAppearance? = try {
         api.execute("fetchUserAppearance", "fetchUserAppearance", buildJsonObject { put("slug", slug) }, AppearanceResponse.serializer())
-            .user?.let { ProfileAppearance(it.frame?.original?.url, it.wallpaper?.original?.url, it.status?.original?.url, it.banner?.original?.url, it.avatar?.original?.url) }
+            .user?.let {
+                ProfileAppearance(
+                    it.frame?.original?.url, it.wallpaper?.original?.url, it.status?.original?.url, it.banner?.original?.url, it.avatar?.original?.url,
+                    bannerVideo = videoVariant(it.banner, maxWidth = true),
+                    wallpaperVideo = videoVariant(it.wallpaper, maxWidth = true),
+                    avatarVideo = videoVariant(it.avatar, maxWidth = false),
+                )
+            }
     } catch (e: kotlinx.coroutines.CancellationException) {
         throw e
     } catch (_: Exception) {
         null
+    }
+
+    /** Видео-вариант анимированной картинки: mp4 (аппаратный декодер) или webm; ширина — как на сайте (для баннера максимальная, но не больше 1280). */
+    private fun videoVariant(img: AppearanceImageDto?, maxWidth: Boolean): String? {
+        if (img?.animation != true) return null
+        val videos = img.variants.filter { v ->
+            val f = v.format.orEmpty().lowercase()
+            v.url.isNotBlank() && (f.contains("mp4") || f.contains("webm"))
+        }
+        if (videos.isEmpty()) return null
+        val wanted = if (maxWidth) videos.filter { (it.width ?: 0) <= 1280 }.maxOfOrNull { it.width ?: 0 } ?: videos.minOf { it.width ?: 0 }
+        else videos.filter { (it.width ?: 0) >= 200 }.minOfOrNull { it.width ?: 0 } ?: videos.maxOf { it.width ?: 0 }
+        val sameWidth = videos.filter { (it.width ?: 0) == wanted }
+        return (sameWidth.firstOrNull { it.format.orEmpty().lowercase().contains("mp4") } ?: sameWidth.first()).url
     }
 
     suspend fun achievements(userId: String): List<AchievementItem> =

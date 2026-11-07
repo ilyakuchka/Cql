@@ -1,10 +1,10 @@
 query fetchUserAppearance($slug: String!) {
   user(slug: $slug) {
     id
-    avatar { id animation original { url } }
+    avatar { id animation original { url } variants { url format width height } }
     frame { id animation original { url } }
-    banner { id animation original { url } }
-    wallpaper { id animation original { url } }
+    banner { id animation original { url } variants { url format width height } }
+    wallpaper { id animation original { url } variants { url format width height } }
     status { id animation original { url } }
   }
 }

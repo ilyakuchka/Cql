@@ -18,13 +18,12 @@ import coil3.compose.AsyncImage
  * (размеры на сайте 42→50, 80→94, 130→155, то есть ×1.19). gif/анимированный webp играют сами (Coil + coil-gif).
  */
 @Composable
-fun AvatarWithFrame(avatar: String?, frame: String?, size: Dp, modifier: Modifier = Modifier) {
+fun AvatarWithFrame(avatar: String?, frame: String?, size: Dp, modifier: Modifier = Modifier, avatarVideo: String? = null) {
     val box = if (frame != null) size * 1.19f else size
     Box(modifier.size(box), contentAlignment = Alignment.Center) {
-        AsyncImage(
-            avatar, null, contentScale = ContentScale.Crop,
-            modifier = Modifier.size(size).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceVariant),
-        )
+        val avatarModifier = Modifier.size(size).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceVariant)
+        val still: @Composable () -> Unit = { AsyncImage(avatar, null, contentScale = ContentScale.Crop, modifier = avatarModifier) }
+        if (avatarVideo != null) LoopVideo(avatarVideo, avatarModifier, fallback = still) else still()
         if (frame != null) AsyncImage(frame, null, contentScale = ContentScale.Fit, modifier = Modifier.size(box))
     }
 }

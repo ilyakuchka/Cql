@@ -472,7 +472,13 @@ class ProfileExtraUserDto(
 class ProfileExtraResponse(val user: ProfileExtraUserDto? = null)
 
 @Serializable
-class AppearanceImageDto(val id: String? = null, val animation: Boolean? = null, val original: ImageSize? = null)
+class VariantDto(val url: String = "", val format: String? = null, val width: Int? = null, val height: Int? = null)
+
+@Serializable
+class AppearanceImageDto(
+    val id: String? = null, val animation: Boolean? = null, val original: ImageSize? = null,
+    val variants: List<VariantDto> = emptyList(),
+)
 
 @Serializable
 class AppearanceUserDto(

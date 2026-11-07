@@ -179,4 +179,8 @@ data class ProfileExtra(
 )
 
 /** Оформление профиля: рамка аватара, обои страницы, статус; анимированные картинки (gif/webp) показываются как есть. */
-data class ProfileAppearance(val frame: String?, val wallpaper: String?, val status: String?, val banner: String?, val avatar: String?)
+data class ProfileAppearance(
+    val frame: String?, val wallpaper: String?, val status: String?, val banner: String?, val avatar: String?,
+    /** mp4/webm-варианты анимированных картинок: играются видеоплеером, а не как GIF (как на сайте). */
+    val bannerVideo: String? = null, val wallpaperVideo: String? = null, val avatarVideo: String? = null,
+)

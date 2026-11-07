@@ -68,6 +68,7 @@ fun ProfileScreen(
     var achievements by remember { mutableStateOf<List<AchievementItem>>(emptyList()) }
     var extra by remember { mutableStateOf<me.senkuro.unofficial.data.ProfileExtra?>(null) }
     var look by remember { mutableStateOf<me.senkuro.unofficial.data.ProfileAppearance?>(null) }
+    var lookDone by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     var loading by remember { mutableStateOf(true) }
     var attempt by remember { mutableStateOf(0) }
@@ -78,12 +79,13 @@ fun ProfileScreen(
         val target = targetSlug ?: return@LaunchedEffect
         loading = true
         error = null
-        if (profile?.slug != target) { profile = null; achievements = emptyList(); extra = null; look = null }
+        if (profile?.slug != target) { profile = null; achievements = emptyList(); extra = null; look = null; lookDone = false }
         try {
             val loaded = AppGraph.repository.profile(target)
             profile = loaded
             if (loaded != null) {
                 look = AppGraph.repository.profileAppearance(target)
+                lookDone = true
                 achievements = AppGraph.repository.achievements(loaded.id)
                 extra = AppGraph.repository.profileExtra(target)
             }
@@ -101,7 +103,8 @@ fun ProfileScreen(
     Box(Modifier.fillMaxSize()) {
     // Обои профиля — фон всей страницы (gif/webp анимируются)
     if (wallpaper != null) {
-        AsyncImage(wallpaper, null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+        val still: @Composable () -> Unit = { AsyncImage(wallpaper, null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize()) }
+        look?.wallpaperVideo?.let { LoopVideo(it, Modifier.fillMaxSize(), fallback = still) } ?: still()
         Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background.copy(alpha = 0.25f)))
     }
     Column(Modifier.fillMaxSize().statusBarsPadding()) {
@@ -128,7 +131,7 @@ fun ProfileScreen(
                 contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 24.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                item { Header(p, look) }
+                item { Header(p, look, lookDone) }
                 item {
                     val done = achievements.count { it.done }
                     ProfileHub(
@@ -177,7 +180,7 @@ private fun cardColor(): androidx.compose.ui.graphics.Color =
     LocalCardColor.current.takeIf { it != androidx.compose.ui.graphics.Color.Unspecified } ?: MaterialTheme.colorScheme.surfaceVariant
 
 @Composable
-private fun Header(p: Profile, look: me.senkuro.unofficial.data.ProfileAppearance?) {
+private fun Header(p: Profile, look: me.senkuro.unofficial.data.ProfileAppearance?, lookDone: Boolean) {
     val accent = MaterialTheme.colorScheme.primary
     val card = cardColor()
     Box(
@@ -185,14 +188,15 @@ private fun Header(p: Profile, look: me.senkuro.unofficial.data.ProfileAppearanc
             androidx.compose.ui.graphics.Brush.linearGradient(listOf(accent, accent.copy(alpha = 0.45f))),
         ),
     ) {
-        AsyncImage(look?.banner ?: p.banner, null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+        val still: @Composable () -> Unit = { if (lookDone) AsyncImage(look?.banner ?: p.banner, null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize()) }
+        look?.bannerVideo?.let { LoopVideo(it, Modifier.fillMaxSize(), fallback = still) } ?: still()
     }
     Row(
         Modifier.fillMaxWidth().background(card).padding(start = 14.dp, end = 14.dp, bottom = 14.dp),
         verticalAlignment = Alignment.Top,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        AvatarWithFrame(look?.avatar ?: p.avatar, look?.frame, 84.dp, Modifier.offset(y = (-34).dp))
+        AvatarWithFrame(if (lookDone) (look?.avatar ?: p.avatar) else null, look?.frame, 84.dp, Modifier.offset(y = (-34).dp), avatarVideo = look?.avatarVideo)
         Column(Modifier.padding(top = 10.dp).weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
