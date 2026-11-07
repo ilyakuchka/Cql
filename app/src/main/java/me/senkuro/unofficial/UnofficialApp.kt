@@ -54,6 +54,7 @@ class UnofficialApp : Application(), SingletonImageLoader.Factory {
             .readTimeout(45, TimeUnit.SECONDS)
             .retryOnConnectionFailure(true)
             .addInterceptor(RetryInterceptor())
+            .addInterceptor(me.senkuro.unofficial.data.ImageShrinkInterceptor())
             .build()
     }
 
