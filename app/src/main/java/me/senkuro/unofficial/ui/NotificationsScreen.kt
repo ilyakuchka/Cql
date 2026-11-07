@@ -385,11 +385,7 @@ private fun NotificationCard(
             if (item.actors.isNotEmpty()) {
                 Row(horizontalArrangement = Arrangement.spacedBy((-10).dp)) {
                     item.actors.take(3).forEach { a ->
-                        AsyncImage(
-                            model = a.avatar, contentDescription = a.name, contentScale = ContentScale.Crop,
-                            modifier = Modifier.size(36.dp).clip(androidx.compose.foundation.shape.CircleShape)
-                                .background(MaterialTheme.colorScheme.surface),
-                        )
+                        AvatarWithFrame(a.avatar, a.frame, 36.dp)
                     }
                 }
             } else if (item.manga != null) {
@@ -429,10 +425,7 @@ private fun NotificationCard(
         }
         item.replies.take(3).forEach { r ->
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                AsyncImage(
-                    model = r.author.avatar, contentDescription = null, contentScale = ContentScale.Crop,
-                    modifier = Modifier.size(28.dp).clip(androidx.compose.foundation.shape.CircleShape).background(MaterialTheme.colorScheme.surface),
-                )
+                AvatarWithFrame(r.author.avatar, r.author.frame, 28.dp)
                 Column(Modifier.weight(1f)) {
                     Row {
                         Text(r.author.name, color = MaterialTheme.colorScheme.onBackground, fontWeight = FontWeight.SemiBold, fontSize = 13.sp, modifier = Modifier.weight(1f))

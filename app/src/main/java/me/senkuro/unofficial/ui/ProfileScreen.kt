@@ -416,8 +416,7 @@ private fun PeopleGrid(list: List<me.senkuro.unofficial.data.PeopleItem>, onUser
             Row(Modifier.fillMaxWidth()) {
                 row.forEach { u ->
                     Column(Modifier.weight(1f).clickable { onUser(u.slug) }, horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        AsyncImage(u.avatar, null, contentScale = ContentScale.Crop,
-                            modifier = Modifier.size(56.dp).clip(CircleShape).background(MaterialTheme.colorScheme.background))
+                        AvatarWithFrame(u.avatar, u.frame, 56.dp)
                         Text(u.name, fontSize = 11.sp, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, color = MaterialTheme.colorScheme.primary)
                     }
                 }

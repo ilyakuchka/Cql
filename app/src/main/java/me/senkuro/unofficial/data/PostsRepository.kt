@@ -38,7 +38,7 @@ class PFeedConn(val edges: List<PFeedEdge> = emptyList(), val pageInfo: PageInfo
 @Serializable
 class PFeedResponse(val newMangaChapters: PFeedConn = PFeedConn())
 
-data class PostItem(val id: String, val slug: String, val title: String, val author: String, val avatar: String?, val team: String?, val date: String?, val views: Int?, val comments: Int?)
+data class PostItem(val id: String, val slug: String, val title: String, val author: String, val avatar: String?, val team: String?, val date: String?, val views: Int?, val comments: Int?, val frame: String? = null)
 
 data class PostFull(val item: PostItem, val text: String)
 
@@ -46,7 +46,7 @@ data class FeedItem(val manga: MangaItem, val chapter: String, val date: String?
 
 /** Посты сайта и лента новых глав. */
 class PostsRepository(private val api: SenkuroApi) {
-    private fun PPost.item() = PostItem(id, slug, title, author?.name.orEmpty(), author?.avatar?.original?.url, team?.name, createdAt?.take(10), views, comments)
+    private fun PPost.item() = PostItem(id, slug, title, author?.name.orEmpty(), author?.avatar?.original?.url, team?.name, createdAt?.take(10), views, comments, author?.frame?.original?.url)
 
     private fun kotlinx.serialization.json.JsonElement?.str(): String? = (this as? kotlinx.serialization.json.JsonPrimitive)?.content
 

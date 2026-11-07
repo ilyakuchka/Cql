@@ -131,7 +131,11 @@ private fun HomeHeader(onSearch: () -> Unit, onRefresh: () -> Unit, onLogin: () 
             .padding(horizontal = 12.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Box(
+        val headerAvatar = account?.avatar
+        val headerFrame = account?.frame
+        if (headerAvatar != null && headerFrame != null) {
+            AvatarWithFrame(headerAvatar, headerFrame, 40.dp, Modifier.clickable { if (token == null) onLogin() else onProfile() })
+        } else Box(
             modifier = Modifier
                 .size(40.dp)
                 .clip(CircleShape)

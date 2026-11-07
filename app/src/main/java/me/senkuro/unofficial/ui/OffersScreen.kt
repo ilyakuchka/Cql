@@ -83,7 +83,7 @@ fun OffersScreen(onBack: () -> Unit, onCard: (String) -> Unit) {
                 items(pager.items, key = { it.id }) { o: OfferItem ->
                     Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Avatar(o.avatar, 28)
+                            Avatar(o.avatar, 28, o.frame)
                             Text(o.user, Modifier.weight(1f).padding(start = 8.dp), fontSize = 14.sp, color = MaterialTheme.colorScheme.onBackground)
                             Text(listOfNotNull(o.status, o.date).joinToString(" · "), fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }

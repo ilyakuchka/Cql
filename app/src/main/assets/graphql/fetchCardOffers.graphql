@@ -3,7 +3,7 @@ query fetchCardOffers($after: String, $userId: ID, $status: CardOfferStatus) {
     edges {
       node {
         id status noTrade createdAt
-        user { id name avatar { original { url } } }
+        user { id name avatar { original { url } } frame { original { url } } }
         offer { modifier quantity shard card { slug titles { lang content } rank image { original { url } } } }
         request { modifier quantity shard card { slug titles { lang content } rank image { original { url } } } }
         viewerDidAuthor viewerCanAccept viewerCanClose

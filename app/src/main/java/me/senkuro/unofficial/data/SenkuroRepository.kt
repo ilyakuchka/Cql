@@ -214,6 +214,7 @@ class SenkuroRepository(private val api: SenkuroApi) {
             slug = user.slug,
             name = user.name.ifBlank { user.slug },
             avatar = user.avatar?.original?.url,
+            frame = user.frame?.original?.url,
             adsDisabled = viewer.permissions?.canDisableAdvertisement == true,
             collections = viewer.userBookmarkCollections
                 .filter { it.entityType?.equals("MANGA", true) != false }
@@ -371,7 +372,7 @@ class SenkuroRepository(private val api: SenkuroApi) {
 
     private fun toProfileExtra(u: ProfileExtraUserDto): ProfileExtra {
         val st = u.statistics
-        fun List<PUserShortDto>.people() = map { PeopleItem(it.slug, it.name.ifBlank { it.slug }, it.avatar?.original?.url) }
+        fun List<PUserShortDto>.people() = map { PeopleItem(it.slug, it.name.ifBlank { it.slug }, it.avatar?.original?.url, it.frame?.original?.url) }
         val manga = u.bookmarkEntityStatusDistributions.filter { it.entityType.equals("MANGA", true) }
         val numbers = { m: PActivityMetaDto? -> m?.numbers.orEmpty().mapNotNull { it.text() }.take(3).joinToString(", ") }
         return ProfileExtra(
@@ -654,11 +655,11 @@ class SenkuroRepository(private val api: SenkuroApi) {
         val commentNode = nodes.firstOrNull { it.typename == "Comment" }
         val quote = commentNode?.content.plain().ifBlank { null }
         val replies = payload?.recentComments.orEmpty().map { r ->
-            NotifReply(NotifActor(r.author?.name.orEmpty(), r.author?.avatar?.original?.url), r.content.plain(), r.createdAt)
+            NotifReply(NotifActor(r.author?.name.orEmpty(), r.author?.avatar?.original?.url, r.author?.frame?.original?.url), r.content.plain(), r.createdAt)
         }
         val actors = when (type) {
             "COMMENT_REPLIED" -> replies.map { it.author }
-            "COMMENT_UPVOTED" -> payload?.recentUsers.orEmpty().map { NotifActor(it.name, it.avatar?.original?.url) }
+            "COMMENT_UPVOTED" -> payload?.recentUsers.orEmpty().map { NotifActor(it.name, it.avatar?.original?.url, it.frame?.original?.url) }
             else -> emptyList()
         }.distinctBy { it.name }
         val count = eventCount ?: 0

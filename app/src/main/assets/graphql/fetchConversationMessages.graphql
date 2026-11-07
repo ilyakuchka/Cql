@@ -17,7 +17,7 @@ query fetchConversationMessages($conversationId: ID!, $first: Int, $after: Strin
         createdAt
         viewerDidAuthor
         viewerCanDelete
-        user { id name avatar { original { url } } }
+        user { id name avatar { original { url } } frame { original { url } } }
       }
     }
     pageInfo { hasNextPage hasPreviousPage }

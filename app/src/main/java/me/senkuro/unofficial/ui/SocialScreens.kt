@@ -68,7 +68,8 @@ internal fun Top(title: String, onBack: () -> Unit) {
 }
 
 @Composable
-internal fun Avatar(url: String?, size: Int = 40) {
+internal fun Avatar(url: String?, size: Int = 40, frame: String? = null) {
+    if (frame != null) { AvatarWithFrame(url, frame, size.dp); return }
     AsyncImage(
         model = url, contentDescription = null, contentScale = ContentScale.Crop,
         modifier = Modifier.size(size.dp).clip(CircleShape),
@@ -180,7 +181,7 @@ fun GuildScreen(slug: String, onBack: () -> Unit) {
                 }
                 items(pager.items) { m ->
                     Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Avatar(m.avatar, 36)
+                        Avatar(m.avatar, 36, m.frame)
                         Text(m.name, Modifier.weight(1f).padding(start = 12.dp), fontSize = 14.sp, color = MaterialTheme.colorScheme.onBackground)
                         Text(listOfNotNull(m.role, m.level?.let { "ур. $it" }).joinToString(" · "), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }

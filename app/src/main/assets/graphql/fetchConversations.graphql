@@ -7,7 +7,7 @@ query fetchConversations($after: String, $unread: Boolean, $search: String) {
         name
         type
         avatar { original { url } }
-        participantUser { id name avatar { original { url } } }
+        participantUser { id name avatar { original { url } } frame { original { url } } }
         lastMessage {
           id
           createdAt

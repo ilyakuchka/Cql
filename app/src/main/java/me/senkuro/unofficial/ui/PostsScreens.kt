@@ -45,7 +45,7 @@ fun PostsScreen(onBack: () -> Unit, onOpen: (String) -> Unit) {
                     Column(Modifier.fillMaxWidth().clickable { onOpen(p.slug) }.padding(horizontal = 16.dp, vertical = 12.dp)) {
                         Text(p.title, fontSize = 16.sp, color = MaterialTheme.colorScheme.onBackground, maxLines = 3, overflow = TextOverflow.Ellipsis)
                         Row(Modifier.padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Avatar(p.avatar, 20)
+                            Avatar(p.avatar, 20, p.frame)
                             Text(
                                 listOfNotNull(p.author.ifBlank { null }, p.team, p.date, p.views?.let { "👁 $it" }, p.comments?.let { "💬 $it" }).joinToString(" · "),
                                 Modifier.padding(start = 8.dp), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -85,7 +85,7 @@ fun PostScreen(slug: String, onBack: () -> Unit) {
             else -> Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp)) {
                 Text(p.item.title, style = HeadingStyle, color = MaterialTheme.colorScheme.onBackground)
                 Row(Modifier.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Avatar(p.item.avatar, 24)
+                    Avatar(p.item.avatar, 24, p.item.frame)
                     Text(
                         listOfNotNull(p.item.author.ifBlank { null }, p.item.team, p.item.date, p.item.views?.let { "👁 $it" }, p.item.comments?.let { "💬 $it" }).joinToString(" · "),
                         Modifier.padding(start = 8.dp), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant,

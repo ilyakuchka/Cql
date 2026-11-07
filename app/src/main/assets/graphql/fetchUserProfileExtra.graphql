@@ -16,8 +16,8 @@ query fetchUserProfileExtra($slug: String!) {
       betterPercentile
       rateProjects
     }
-    lastFriends { id slug name avatar { original { url } } }
-    lastFollows { id slug name avatar { original { url } } }
+    lastFriends { id slug name avatar { original { url } } frame { original { url } } }
+    lastFollows { id slug name avatar { original { url } } frame { original { url } } }
     waifus {
       id
       relation

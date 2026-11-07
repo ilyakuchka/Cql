@@ -123,7 +123,7 @@ fun TeamScreen(slug: String, onBack: () -> Unit) {
                 }
                 items(pager.items) { m ->
                     Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Avatar(m.avatar, 36)
+                        Avatar(m.avatar, 36, m.frame)
                         Text(m.name, Modifier.weight(1f).padding(start = 12.dp), fontSize = 14.sp, color = MaterialTheme.colorScheme.onBackground)
                         Text(m.role.orEmpty(), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }

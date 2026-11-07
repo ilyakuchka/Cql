@@ -143,7 +143,7 @@ class ReaderResponse(val mangaChapter: ReaderChapterDto? = null)
 // ---------------------------------------------------------------- Аккаунт и закладки
 
 @Serializable
-class UserDto(val id: String = "", val slug: String = "", val name: String = "", val avatar: Cover? = null)
+class UserDto(val id: String = "", val slug: String = "", val name: String = "", val avatar: Cover? = null, val frame: Cover? = null)
 
 @Serializable
 class CollectionPreferenceDto(val name: String? = null)
@@ -315,7 +315,7 @@ class TiptapChildDto(val text: String? = null)
 class TiptapBlockDto(val content: List<TiptapChildDto>? = null)
 
 @Serializable
-class CommentAuthorDto(val id: String = "", val name: String = "", val avatar: Cover? = null)
+class CommentAuthorDto(val id: String = "", val name: String = "", val avatar: Cover? = null, val frame: Cover? = null)
 
 @Serializable
 class CommentDto(
@@ -409,7 +409,7 @@ class SiteChaptersConn(val edges: List<SiteChapterEdge> = emptyList(), val pageI
 class SiteChaptersResponse(val mangaChapters: SiteChaptersConn = SiteChaptersConn())
 
 @Serializable
-class PUserShortDto(val id: String = "", val slug: String = "", val name: String = "", val avatar: Cover? = null)
+class PUserShortDto(val id: String = "", val slug: String = "", val name: String = "", val avatar: Cover? = null, val frame: Cover? = null)
 
 @Serializable
 class PStatsDto(

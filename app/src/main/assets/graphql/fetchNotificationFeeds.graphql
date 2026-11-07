@@ -18,11 +18,11 @@ query fetchNotificationFeeds($first: Int!, $after: String, $isRead: Boolean!, $t
               id
               createdAt
               content { __typename ... on TiptapNodeNestedBlock { content { __typename ... on TiptapNodeText { text } } } }
-              author { id name avatar { original { url } } }
+              author { id name avatar { original { url } } frame { original { url } } }
             }
           }
           ... on NotificationFeedCommentUpvotesPayload {
-            recentUsers { id name avatar { original { url } } }
+            recentUsers { id name avatar { original { url } } frame { original { url } } }
           }
         }
       }

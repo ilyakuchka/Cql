@@ -7,7 +7,7 @@ query fetchGuildMembers($first: Int!, $after: String, $guildId: ID!, $orderBy: G
         level
         points
         role
-        user { id name avatar { original { url } } }
+        user { id name avatar { original { url } } frame { original { url } } }
       }
     }
     pageInfo { hasNextPage endCursor }

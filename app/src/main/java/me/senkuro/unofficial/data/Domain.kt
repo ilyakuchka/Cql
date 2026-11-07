@@ -83,6 +83,7 @@ data class Account(
     val name: String,
     val avatar: String?,
     val collections: List<BookmarkCollection>,
+    val frame: String? = null,
     /** Премиум на сайте (viewer.permissions.canDisableAdvertisement) — реклама не показывается. */
     val adsDisabled: Boolean = false,
 )
@@ -93,7 +94,7 @@ data class BookmarksPage(val items: List<BookmarkEntry>, val next: String?)
 
 data class NotifChapter(val id: String, val number: String)
 
-data class NotifActor(val name: String, val avatar: String?)
+data class NotifActor(val name: String, val avatar: String?, val frame: String? = null)
 
 data class NotifReply(val author: NotifActor, val text: String, val at: String?)
 
@@ -158,7 +159,7 @@ data class RelatedManga(val manga: MangaItem, val relation: String?)
 
 data class CharacterItem(val name: String, val role: String?, val cover: String?, val slug: String = "")
 
-data class PeopleItem(val slug: String, val name: String, val avatar: String?)
+data class PeopleItem(val slug: String, val name: String, val avatar: String?, val frame: String? = null)
 
 data class WaifuItem(val slug: String, val name: String, val relation: String, val cover: String?)
 

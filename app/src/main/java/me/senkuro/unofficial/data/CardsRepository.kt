@@ -189,7 +189,7 @@ class CardsRepository(private val api: SenkuroApi) {
 class OPreview(val modifier: JsonElement? = null, val quantity: Int? = null, val shard: JsonElement? = null, val card: CCardNode? = null)
 
 @Serializable
-class OUser(val id: String = "", val name: String = "", val avatar: Cover? = null, val level: Int? = null)
+class OUser(val id: String = "", val name: String = "", val avatar: Cover? = null, val level: Int? = null, val frame: Cover? = null)
 
 @Serializable
 class OOffer(
@@ -254,6 +254,7 @@ data class PreviewItem(val title: String, val image: String?, val slug: String, 
 data class OfferItem(
     val id: String, val status: String?, val user: String, val avatar: String?, val date: String?,
     val offer: PreviewItem?, val request: PreviewItem?, val canAccept: Boolean, val canClose: Boolean, val mine: Boolean,
+    val frame: String? = null,
 )
 
 data class TopUser(
@@ -295,7 +296,7 @@ class OffersRepository(private val api: SenkuroApi) {
         return c.edges.map { e ->
             val n = e.node
             OfferItem(n.id, n.status.s(), n.user?.name.orEmpty(), n.user?.avatar?.original?.url, n.createdAt?.take(10),
-                n.offer.item(), n.request.item().takeIf { !n.noTrade }, n.viewerCanAccept, n.viewerCanClose, n.viewerDidAuthor)
+                n.offer.item(), n.request.item().takeIf { !n.noTrade }, n.viewerCanAccept, n.viewerCanClose, n.viewerDidAuthor, n.user?.frame?.original?.url)
         } to c.pageInfo.endCursor.takeIf { c.pageInfo.hasNextPage }
     }
 

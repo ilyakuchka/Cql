@@ -1,7 +1,7 @@
 query fetchPost($slug: String!) {
   post(slug: $slug) {
     id slug title views comments createdAt
-    author { id name avatar { original { url } } }
+    author { id name avatar { original { url } } frame { original { url } } }
     team { id slug name }
     content {
       __typename

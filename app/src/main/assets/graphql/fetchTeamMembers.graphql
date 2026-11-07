@@ -1,6 +1,6 @@
 query fetchTeamMembers($first: Int!, $after: String, $teamId: ID!) {
   teamMembers(first: $first, after: $after, teamId: $teamId) {
-    edges { node { id roles user { id slug name avatar { original { url } } } } }
+    edges { node { id roles user { id slug name avatar { original { url } } frame { original { url } } } } }
     pageInfo { hasNextPage endCursor }
   }
 }

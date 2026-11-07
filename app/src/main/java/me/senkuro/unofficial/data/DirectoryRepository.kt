@@ -147,7 +147,7 @@ class DirectoryRepository(private val api: SenkuroApi) {
     suspend fun teamMembers(teamId: String, after: String?): Pair<List<GuildMemberItem>, String?> {
         val vars = buildJsonObject { put("first", 30); put("teamId", teamId); if (after != null) put("after", after) }
         val c = api.execute("fetchTeamMembers", "fetchTeamMembers", vars, DMembersResponse.serializer()).teamMembers
-        return c.edges.map { e -> GuildMemberItem(e.node.user?.name.orEmpty(), e.node.user?.avatar?.original?.url, null, e.node.roles?.joinToString(", ")) } to
+        return c.edges.map { e -> GuildMemberItem(e.node.user?.name.orEmpty(), e.node.user?.avatar?.original?.url, null, e.node.roles?.joinToString(", "), e.node.user?.frame?.original?.url) } to
             c.pageInfo.endCursor.takeIf { c.pageInfo.hasNextPage }
     }
 

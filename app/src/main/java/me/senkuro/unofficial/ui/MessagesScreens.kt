@@ -97,7 +97,7 @@ fun ConversationsScreen(onBack: () -> Unit, onOpen: (String, String) -> Unit) {
             Modifier.fillMaxWidth().background(c.header).statusBarsPadding().padding(horizontal = 16.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Avatar(account?.avatar, 40)
+            Avatar(account?.avatar, 40, account?.frame)
             Text("Сообщения", Modifier.padding(start = 12.dp), fontSize = 20.sp, color = c.text)
         }
         // Поиск (пилюля)
@@ -126,7 +126,7 @@ fun ConversationsScreen(onBack: () -> Unit, onOpen: (String, String) -> Unit) {
                         Modifier.fillMaxWidth().clickable { onOpen(conv.id, conv.title) }.padding(horizontal = 16.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Avatar(conv.avatar, 52)
+                        Avatar(conv.avatar, 52, conv.frame)
                         Column(Modifier.weight(1f).padding(start = 14.dp)) {
                             Column(Modifier.padding(vertical = 12.dp)) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -188,7 +188,7 @@ fun ChatScreen(conversationId: String, title: String, onBack: () -> Unit) {
         // Шапка диалога
         Row(Modifier.fillMaxWidth().background(c.header).statusBarsPadding().padding(horizontal = 4.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             androidx.compose.material3.IconButton(onClick = onBack) { Icon(Icons.Filled.ArrowBack, "Назад", tint = c.text) }
-            Avatar(messages.firstOrNull { !it.mine }?.avatar, 40)
+            messages.firstOrNull { !it.mine }.let { Avatar(it?.avatar, 40, it?.frame) }
             Text(title, Modifier.padding(start = 12.dp), fontSize = 18.sp, color = c.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         Box(Modifier.weight(1f).fillMaxWidth()) {

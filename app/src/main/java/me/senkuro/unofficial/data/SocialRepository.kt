@@ -11,7 +11,7 @@ import kotlinx.serialization.json.put
 // ---- DTO
 
 @Serializable
-class SUser(val id: String = "", val name: String = "", val avatar: Cover? = null)
+class SUser(val id: String = "", val name: String = "", val avatar: Cover? = null, val frame: Cover? = null)
 
 @Serializable
 class SMessageDto(
@@ -119,9 +119,9 @@ class SUserCardsResponse(val userCards: SUserCardsConn = SUserCardsConn())
 
 // ---- Domain
 
-data class ConversationItem(val id: String, val title: String, val avatar: String?, val last: String, val date: String?, val unread: Int)
+data class ConversationItem(val id: String, val title: String, val avatar: String?, val last: String, val date: String?, val unread: Int, val frame: String? = null)
 
-data class MessageItem(val id: String, val cursor: String?, val author: String, val avatar: String?, val text: String, val date: String?, val mine: Boolean, val canDelete: Boolean)
+data class MessageItem(val id: String, val cursor: String?, val author: String, val avatar: String?, val text: String, val date: String?, val mine: Boolean, val canDelete: Boolean, val frame: String? = null)
 
 data class GuildItem(val id: String, val slug: String, val name: String, val level: Int?, val avatar: String?, val rank: Int?, val score: String?)
 
@@ -137,7 +137,7 @@ data class GuildProfile(
     val viewerIsMember: Boolean,
 )
 
-data class GuildMemberItem(val name: String, val avatar: String?, val level: Int?, val role: String?)
+data class GuildMemberItem(val name: String, val avatar: String?, val level: Int?, val role: String?, val frame: String? = null)
 
 data class UserCardItem(val title: String, val rank: String?, val image: String?, val quantity: Int, val modifier: String?, val locked: Boolean, val slug: String = "")
 
@@ -174,6 +174,7 @@ class SocialRepository(private val api: SenkuroApi) {
                 last = n.lastMessage?.let { m -> (m.user?.name?.let { "$it: " }.orEmpty()) + m.content.plain() }.orEmpty(),
                 date = n.lastMessage?.createdAt?.take(10),
                 unread = n.viewerParticipant?.unreadCount ?: 0,
+                frame = n.participantUser?.frame?.original?.url.takeIf { n.avatar?.original?.url == null },
             )
         }
         return items to c.pageInfo.endCursor.takeIf { c.pageInfo.hasNextPage }
@@ -190,7 +191,7 @@ class SocialRepository(private val api: SenkuroApi) {
         val list = c.edges.map { e ->
             val m = e.node
             MessageItem(m.id, e.cursor, m.user?.name.orEmpty(), m.user?.avatar?.original?.url, m.content.plain(),
-                m.createdAt?.replace('T', ' ')?.take(16), m.viewerDidAuthor, m.viewerCanDelete)
+                m.createdAt?.replace('T', ' ')?.take(16), m.viewerDidAuthor, m.viewerCanDelete, m.user?.frame?.original?.url)
         }
         // Сайт получает сообщения от новых к старым; отдаём по возрастанию времени.
         val chronological = if (list.size > 1 && (list.first().date.orEmpty() > list.last().date.orEmpty())) list.reversed() else list
@@ -264,7 +265,7 @@ class SocialRepository(private val api: SenkuroApi) {
         }
         val c = api.execute("fetchGuildMembers", "fetchGuildMembers", vars, SGuildMembersResponse.serializer()).guildMembers
         return c.edges.map { e ->
-            GuildMemberItem(e.node.user?.name.orEmpty(), e.node.user?.avatar?.original?.url, e.node.level, e.node.role)
+            GuildMemberItem(e.node.user?.name.orEmpty(), e.node.user?.avatar?.original?.url, e.node.level, e.node.role, e.node.user?.frame?.original?.url)
         } to c.pageInfo.endCursor.takeIf { c.pageInfo.hasNextPage }
     }
 
