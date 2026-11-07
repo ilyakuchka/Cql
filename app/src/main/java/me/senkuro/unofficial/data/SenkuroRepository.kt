@@ -350,6 +350,59 @@ class SenkuroRepository(private val api: SenkuroApi) {
                 it.lastOnlineAt?.take(10), it.avatar?.original?.url, it.banner?.original?.url)
         }
 
+    /** Статистика, библиотека, друзья, отношения, история. Любая ошибка — null (экран остаётся с базовым профилем). */
+    suspend fun profileExtra(slug: String): ProfileExtra? = try {
+        val u = api.execute("fetchUserProfileExtra", "fetchUserProfileExtra", buildJsonObject { put("slug", slug) }, ProfileExtraResponse.serializer()).user
+        u?.let { toProfileExtra(it) }
+    } catch (e: kotlinx.coroutines.CancellationException) {
+        throw e
+    } catch (_: Exception) {
+        null
+    }
+
+    private fun statusLabel(s: String) = when (s.uppercase()) {
+        "READING", "WATCHING" -> "Читаю"
+        "PLANNED", "PLAN_TO_READ", "PLAN_TO_WATCH" -> "В планах"
+        "COMPLETED", "FINISHED" -> "Прочитано"
+        "DROPPED" -> "Брошено"
+        "ON_HOLD", "POSTPONED", "DEFERRED", "PAUSED" -> "Отложено"
+        else -> s.lowercase().replace('_', ' ').replaceFirstChar { it.uppercase() }
+    }
+
+    private fun toProfileExtra(u: ProfileExtraUserDto): ProfileExtra {
+        val st = u.statistics
+        fun List<PUserShortDto>.people() = map { PeopleItem(it.slug, it.name.ifBlank { it.slug }, it.avatar?.original?.url) }
+        val manga = u.bookmarkEntityStatusDistributions.filter { it.entityType.equals("MANGA", true) }
+        val numbers = { m: PActivityMetaDto? -> m?.numbers.orEmpty().mapNotNull { it.text() }.take(3).joinToString(", ") }
+        return ProfileExtra(
+            readChapters = st?.readChapters, watchEpisodes = st?.watchEpisodes, rated = st?.rateProjects, comments = st?.comments,
+            friends = st?.friends, subscribers = st?.subscribers, follows = st?.follows,
+            rank = st?.rank, betterPercentile = st?.betterPercentile,
+            gender = when (u.gender?.uppercase()) { "MALE" -> "Мужской"; "FEMALE" -> "Женский"; null, "" -> null; else -> u.gender },
+            birthday = u.birthdayOn,
+            friendsList = u.lastFriends.people(), followsList = u.lastFollows.people(),
+            waifus = u.waifus.mapNotNull { w ->
+                val c = w.character ?: return@mapNotNull null
+                WaifuItem(c.slug, c.name, when (w.relation?.uppercase()) { "WAIFU" -> "Вайфу"; "HUSBANDO" -> "Муж"; "LAIFU" -> "Лайфу"; null -> ""; else -> w.relation.orEmpty().lowercase().replaceFirstChar { it.uppercase() } }, c.cover?.original?.url)
+            },
+            libraryTotal = manga.sumOf { it.count },
+            libraryByStatus = manga.sortedByDescending { it.count }.map { statusLabel(it.status) to it.count },
+            libraryPreview = u.bookmarkMangaPreview.map { MangaItem(it.id, it.slug, pickTitle(it.titles, it.originalName, it.slug), it.cover?.original?.url) },
+            activities = u.lastActivities.map { a ->
+                val m = a.meta
+                val subject = a.entity?.titles?.localized() ?: a.entity?.originalName?.content
+                val text = when (m?.typename) {
+                    "ActivityMetaBookmarkStatus" -> "Обновление закладки: " + statusLabel(m?.status.orEmpty())
+                    "ActivityMetaChapters" -> "Прочитаны главы " + numbers(m)
+                    "ActivityMetaEpisodes" -> "Просмотрены серии " + numbers(m)
+                    "ActivityMetaBookmark" -> "Добавлено в закладки"
+                    else -> if (a.entity?.typename == "AchievementLevel") "Новое достижение" else a.type.orEmpty().lowercase().replace('_', ' ').replaceFirstChar { it.uppercase() }
+                }
+                ProfileActivity(text.trim(), subject, a.createdAt)
+            },
+        )
+    }
+
     suspend fun achievements(userId: String): List<AchievementItem> =
         api.execute("fetchUserAchievements", "fetchUserAchievements", buildJsonObject { put("userId", userId) },
             AchievementsResponse.serializer()).userAchievements.map {

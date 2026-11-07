@@ -1,0 +1,53 @@
+query fetchUserProfileExtra($slug: String!) {
+  user(slug: $slug) {
+    id
+    experience
+    gender
+    birthdayOn
+    statistics {
+      readChapters
+      watchEpisodes
+      comments
+      friends
+      subscribers
+      follows
+      achievements
+      rank
+      betterPercentile
+      rateProjects
+    }
+    lastFriends { id slug name avatar { original { url } } }
+    lastFollows { id slug name avatar { original { url } } }
+    waifus {
+      id
+      relation
+      character { id slug name cover { original { url } } }
+    }
+    bookmarkEntityStatusDistributions { entityType status count }
+    bookmarkMangaPreview {
+      id
+      slug
+      type
+      originalName { lang content }
+      titles { lang content }
+      cover { original { url } }
+    }
+    lastActivities {
+      id
+      type
+      createdAt
+      meta {
+        __typename
+        ... on ActivityMetaBookmarkStatus { status }
+        ... on ActivityMetaChapters { numbers }
+        ... on ActivityMetaBookmark { numbers }
+      }
+      entity {
+        __typename
+        ... on Manga { id slug titles { lang content } originalName { lang content } }
+        ... on Anime { id slug titles { lang content } originalName { lang content } }
+        ... on AchievementLevel { id titles { lang content } }
+      }
+    }
+  }
+}

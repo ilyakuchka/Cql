@@ -157,3 +157,22 @@ data class CommentsPage(val items: List<CommentItem>, val next: String?)
 data class RelatedManga(val manga: MangaItem, val relation: String?)
 
 data class CharacterItem(val name: String, val role: String?, val cover: String?, val slug: String = "")
+
+data class PeopleItem(val slug: String, val name: String, val avatar: String?)
+
+data class WaifuItem(val slug: String, val name: String, val relation: String, val cover: String?)
+
+data class ProfileActivity(val text: String, val subject: String?, val at: String?)
+
+/** Дополнительные блоки профиля (как на странице пользователя senkuro.me). */
+data class ProfileExtra(
+    val readChapters: Long?, val watchEpisodes: Long?, val rated: Long?, val comments: Long?,
+    val friends: Long?, val subscribers: Long?, val follows: Long?,
+    val rank: Long?, val betterPercentile: Double?,
+    val gender: String?, val birthday: String?,
+    val friendsList: List<PeopleItem>, val followsList: List<PeopleItem>,
+    val waifus: List<WaifuItem>,
+    val libraryTotal: Long, val libraryByStatus: List<Pair<String, Long>>,
+    val libraryPreview: List<MangaItem>,
+    val activities: List<ProfileActivity>,
+)

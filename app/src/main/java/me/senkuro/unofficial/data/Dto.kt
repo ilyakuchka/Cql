@@ -407,3 +407,66 @@ class SiteChaptersConn(val edges: List<SiteChapterEdge> = emptyList(), val pageI
 
 @Serializable
 class SiteChaptersResponse(val mangaChapters: SiteChaptersConn = SiteChaptersConn())
+
+@Serializable
+class PUserShortDto(val id: String = "", val slug: String = "", val name: String = "", val avatar: Cover? = null)
+
+@Serializable
+class PStatsDto(
+    val readChapters: Long? = null, val watchEpisodes: Long? = null, val comments: Long? = null,
+    val friends: Long? = null, val subscribers: Long? = null, val follows: Long? = null,
+    val achievements: Long? = null, val rank: Long? = null,
+    val betterPercentile: Double? = null, val rateProjects: Long? = null,
+)
+
+@Serializable
+class PCharacterDto(val id: String = "", val slug: String = "", val name: String = "", val cover: Cover? = null)
+
+@Serializable
+class PWaifuDto(val id: String = "", val relation: String? = null, val character: PCharacterDto? = null)
+
+@Serializable
+class PStatusCountDto(val entityType: String = "", val status: String = "", val count: Long = 0)
+
+@Serializable
+class PMangaPreviewDto(
+    val id: String = "", val slug: String = "", val type: String? = null,
+    val originalName: Title? = null, val titles: List<Title> = emptyList(), val cover: Cover? = null,
+)
+
+@Serializable
+class PActivityMetaDto(
+    @kotlinx.serialization.SerialName("__typename") val typename: String? = null,
+    val status: String? = null,
+    val numbers: List<kotlinx.serialization.json.JsonElement>? = null,
+)
+
+@Serializable
+class PActivityEntityDto(
+    @kotlinx.serialization.SerialName("__typename") val typename: String? = null,
+    val id: String? = null, val slug: String? = null,
+    val titles: List<Title> = emptyList(), val originalName: Title? = null,
+)
+
+@Serializable
+class PActivityDto(
+    val id: String = "", val type: String? = null, val createdAt: String? = null,
+    val meta: PActivityMetaDto? = null, val entity: PActivityEntityDto? = null,
+)
+
+@Serializable
+class ProfileExtraUserDto(
+    val experience: Long? = null,
+    val gender: String? = null,
+    val birthdayOn: String? = null,
+    val statistics: PStatsDto? = null,
+    val lastFriends: List<PUserShortDto> = emptyList(),
+    val lastFollows: List<PUserShortDto> = emptyList(),
+    val waifus: List<PWaifuDto> = emptyList(),
+    val bookmarkEntityStatusDistributions: List<PStatusCountDto> = emptyList(),
+    val bookmarkMangaPreview: List<PMangaPreviewDto> = emptyList(),
+    val lastActivities: List<PActivityDto> = emptyList(),
+)
+
+@Serializable
+class ProfileExtraResponse(val user: ProfileExtraUserDto? = null)
