@@ -60,6 +60,8 @@ fun ProfileScreen(
     onTeams: () -> Unit = {},
     onLibrary: () -> Unit = {},
     onUser: (String) -> Unit = {},
+    onRanks: () -> Unit = {},
+    onHistory: (String) -> Unit = {},
 ) {
     val account by AppGraph.account.collectAsState()
     val targetSlug = slug ?: account?.slug
@@ -144,6 +146,8 @@ fun ProfileScreen(
                             "Подписки" to fmt(extra?.follows),
                         ),
                         links = buildList {
+                            add(HubLink("История действий", "Недавняя активность") { onHistory(p.id) })
+                            add(HubLink("Топ пользователей", "Рейтинг по активности", onRanks))
                             if (achievements.isNotEmpty()) add(HubLink("Достижения", "$done из ${achievements.size}") { showAll = true })
                             extra?.takeIf { it.libraryTotal > 0 }?.let { add(HubLink("Библиотека манги", fmt(it.libraryTotal), if (isOwn) onLibrary else null)) }
                             if (isOwn) {
@@ -429,6 +433,8 @@ private fun PeopleGrid(list: List<me.senkuro.unofficial.data.PeopleItem>, onUser
         }
     }
 }
+
+internal fun profileRelativeTime(iso: String?): String? = profileRelative(iso)
 
 private fun profileRelative(iso: String?): String? {
     if (iso.isNullOrBlank()) return null

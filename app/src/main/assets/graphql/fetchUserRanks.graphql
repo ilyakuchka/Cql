@@ -1,0 +1,19 @@
+query fetchUserRanks {
+  viewer {
+    user {
+      id
+      statistics { watchEpisodes readChapters betterPercentile rank }
+    }
+  }
+  userRanksInsight {
+    watchEpisodes
+    readChapters
+    betterPercentile
+    rank
+    user {
+      id slug name verified level
+      avatar { original { url } }
+      frame { original { url } }
+    }
+  }
+}

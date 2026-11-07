@@ -491,3 +491,36 @@ class AppearanceUserDto(
 
 @Serializable
 class AppearanceResponse(val user: AppearanceUserDto? = null)
+
+@Serializable
+class RankUserDto(
+    val id: String = "", val slug: String = "", val name: String = "", val level: Int? = null,
+    val avatar: Cover? = null, val frame: Cover? = null,
+)
+
+@Serializable
+class RankEntryDto(
+    val watchEpisodes: Long? = null, val readChapters: Long? = null,
+    val betterPercentile: Double? = null, val rank: Long? = null, val user: RankUserDto? = null,
+)
+
+@Serializable
+class RankViewerStatsDto(val rank: Long? = null)
+
+@Serializable
+class RankViewerUserDto(val statistics: RankViewerStatsDto? = null)
+
+@Serializable
+class RankViewerDto(val user: RankViewerUserDto? = null)
+
+@Serializable
+class RanksResponse(val viewer: RankViewerDto? = null, val userRanksInsight: List<RankEntryDto> = emptyList())
+
+@Serializable
+class ActivityEdgeDto(val node: PActivityDto)
+
+@Serializable
+class ActivityConnDto(val edges: List<ActivityEdgeDto> = emptyList(), val pageInfo: PageInfoDto = PageInfoDto())
+
+@Serializable
+class ActivitiesResponse(val activities: ActivityConnDto = ActivityConnDto())

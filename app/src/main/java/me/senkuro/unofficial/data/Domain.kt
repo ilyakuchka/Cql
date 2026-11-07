@@ -184,3 +184,10 @@ data class ProfileAppearance(
     /** mp4/webm-варианты анимированных картинок: играются видеоплеером, а не как GIF (как на сайте). */
     val bannerVideo: String? = null, val wallpaperVideo: String? = null, val avatarVideo: String? = null,
 )
+
+data class RankEntry(
+    val rank: Long, val slug: String, val name: String, val avatar: String?, val frame: String?, val level: Int?,
+    val better: Double?, val chapters: Long?, val episodes: Long?,
+)
+
+data class RanksPage(val myRank: Long?, val entries: List<RankEntry>)

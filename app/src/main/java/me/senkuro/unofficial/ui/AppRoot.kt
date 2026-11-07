@@ -65,6 +65,8 @@ private object Routes {
     const val NOTIF_SETTINGS = "notification-settings"
     const val PROFILE = "profile"
     const val USER = "user/{slug}"
+    const val RANKS = "ranks"
+    const val HISTORY = "history/{userId}"
     const val CONVERSATIONS = "conversations"
     const val CHAT = "chat/{id}/{title}"
     const val GUILDS = "guilds"
@@ -180,16 +182,24 @@ fun AppRoot() {
                         UnofficialTheme(dark = appDark) { NotificationSettingsScreen(onBack = { nav.popBackStack() }) }
                     }
                     composable(Routes.PROFILE) {
-                        UnofficialTheme(dark = appDark) { ProfileScreen(onUser = { nav.navigate("user/" + Uri.encode(it)) }, onBack = { nav.popBackStack() }, onOpenTasks = { nav.navigate(Routes.TASKS) }, onCards = { nav.navigate(Routes.CARDS) }, onTeams = { nav.navigate(Routes.TEAMS) }, onLibrary = { nav.navigate(Routes.LIBRARY) { launchSingleTop = true } }) }
+                        UnofficialTheme(dark = appDark) { ProfileScreen(onUser = { nav.navigate("user/" + Uri.encode(it)) }, onRanks = { nav.navigate(Routes.RANKS) }, onHistory = { nav.navigate("history/" + Uri.encode(it)) }, onBack = { nav.popBackStack() }, onOpenTasks = { nav.navigate(Routes.TASKS) }, onCards = { nav.navigate(Routes.CARDS) }, onTeams = { nav.navigate(Routes.TEAMS) }, onLibrary = { nav.navigate(Routes.LIBRARY) { launchSingleTop = true } }) }
                     }
                     composable(Routes.USER, arguments = listOf(navArgument("slug") { type = NavType.StringType })) { b ->
                         UnofficialTheme(dark = appDark) {
                             ProfileScreen(
                                 slug = b.arguments?.getString("slug"),
                                 onUser = { nav.navigate("user/" + Uri.encode(it)) },
+                                onRanks = { nav.navigate(Routes.RANKS) },
+                                onHistory = { nav.navigate("history/" + Uri.encode(it)) },
                                 onBack = { nav.popBackStack() },
                             )
                         }
+                    }
+                    composable(Routes.RANKS) {
+                        UnofficialTheme(dark = appDark) { RanksScreen(onBack = { nav.popBackStack() }, onUser = { nav.navigate("user/" + Uri.encode(it)) }) }
+                    }
+                    composable(Routes.HISTORY, arguments = listOf(navArgument("userId") { type = NavType.StringType })) { b ->
+                        UnofficialTheme(dark = appDark) { HistoryScreen(userId = b.arguments?.getString("userId").orEmpty(), onBack = { nav.popBackStack() }) }
                     }
                     composable(Routes.SETTINGS) {
                         UnofficialTheme(dark = appDark) {

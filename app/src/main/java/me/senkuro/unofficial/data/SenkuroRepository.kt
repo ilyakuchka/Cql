@@ -389,18 +389,7 @@ class SenkuroRepository(private val api: SenkuroApi) {
             libraryTotal = manga.sumOf { it.count },
             libraryByStatus = manga.sortedByDescending { it.count }.map { statusLabel(it.status) to it.count },
             libraryPreview = u.bookmarkMangaPreview.map { MangaItem(it.id, it.slug, pickTitle(it.titles, it.originalName, it.slug), it.cover?.original?.url) },
-            activities = u.lastActivities.map { a ->
-                val m = a.meta
-                val subject = a.entity?.titles?.localized() ?: a.entity?.originalName?.content
-                val text = when (m?.typename) {
-                    "ActivityMetaBookmarkStatus" -> "Обновление закладки: " + statusLabel(m?.status.orEmpty())
-                    "ActivityMetaChapters" -> "Прочитаны главы " + numbers(m)
-                    "ActivityMetaEpisodes" -> "Просмотрены серии " + numbers(m)
-                    "ActivityMetaBookmark" -> "Добавлено в закладки"
-                    else -> if (a.entity?.typename == "AchievementLevel") "Новое достижение" else a.type.orEmpty().lowercase().replace('_', ' ').replaceFirstChar { it.uppercase() }
-                }
-                ProfileActivity(text.trim(), subject, a.createdAt)
-            },
+            activities = u.lastActivities.map { mapActivity(it) },
         )
     }
 
@@ -432,6 +421,39 @@ class SenkuroRepository(private val api: SenkuroApi) {
         else videos.filter { (it.width ?: 0) >= 200 }.minOfOrNull { it.width ?: 0 } ?: videos.maxOf { it.width ?: 0 }
         val sameWidth = videos.filter { (it.width ?: 0) == wanted }
         return (sameWidth.firstOrNull { it.format.orEmpty().lowercase().contains("mp4") } ?: sameWidth.first()).url
+    }
+
+    private fun mapActivity(a: PActivityDto): ProfileActivity {
+        val m = a.meta
+        val numbers = m?.numbers.orEmpty().mapNotNull { it.text() }.take(3).joinToString(", ")
+        val subject = a.entity?.titles?.localized() ?: a.entity?.originalName?.content
+        val text = when (m?.typename) {
+            "ActivityMetaBookmarkStatus" -> "Обновление закладки: " + statusLabel(m.status.orEmpty())
+            "ActivityMetaChapters" -> "Прочитаны главы $numbers"
+            "ActivityMetaEpisodes" -> "Просмотрены серии $numbers"
+            "ActivityMetaBookmark" -> "Добавлено в закладки"
+            else -> if (a.entity?.typename == "AchievementLevel") "Новое достижение" else a.type.orEmpty().lowercase().replace('_', ' ').replaceFirstChar { it.uppercase() }
+        }
+        return ProfileActivity(text.trim(), subject, a.createdAt)
+    }
+
+    /** Полная история действий пользователя, по 10 записей (как на сайте). */
+    suspend fun activities(userId: String, after: String?): Pair<List<ProfileActivity>, String?> {
+        val vars = buildJsonObject { put("userId", userId); if (after != null) put("after", after) }
+        val c = api.execute("fetchActivities", "fetchActivities", vars, ActivitiesResponse.serializer()).activities
+        return c.edges.map { mapActivity(it.node) } to c.pageInfo.endCursor.takeIf { c.pageInfo.hasNextPage }
+    }
+
+    /** «Топ пользователей»: рейтинг по активности (userRanksInsight). */
+    suspend fun ranks(): RanksPage {
+        val r = api.execute("fetchUserRanks", "fetchUserRanks", buildJsonObject {}, RanksResponse.serializer())
+        return RanksPage(
+            myRank = r.viewer?.user?.statistics?.rank,
+            entries = r.userRanksInsight.mapNotNull { e ->
+                val u = e.user ?: return@mapNotNull null
+                RankEntry(e.rank ?: 0, u.slug, u.name.ifBlank { u.slug }, u.avatar?.original?.url, u.frame?.original?.url, u.level, e.betterPercentile, e.readChapters, e.watchEpisodes)
+            }.sortedBy { it.rank },
+        )
     }
 
     suspend fun achievements(userId: String): List<AchievementItem> =
