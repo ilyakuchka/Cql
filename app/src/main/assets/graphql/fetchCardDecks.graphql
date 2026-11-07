@@ -1,0 +1,6 @@
+query fetchCardDecks($after: String) {
+  cardDecks(first: 20, after: $after) {
+    edges { node { id slug titles { lang content } quantity upvotes downvotes views author { name } previewCards { card { id slug rank image { original { url } } } } } }
+    pageInfo { hasNextPage endCursor }
+  }
+}

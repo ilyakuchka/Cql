@@ -1,0 +1,7 @@
+query fetchCardPack($slug: String!) {
+  cardPack(slug: $slug) {
+    id slug titles { lang content } cover { original { url } } credits points quantity pickCount viewerFreeOpens viewerOpens maxRolls showRates endAt
+    dropRates { rank chance }
+    coverCards { id slug rank image { original { url } } }
+  }
+}

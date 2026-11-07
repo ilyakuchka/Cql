@@ -1,0 +1,3 @@
+mutation createCollectibleOrder($input: CreateCollectibleOrderInput!) {
+  createCollectibleOrder(input: $input) { success }
+}

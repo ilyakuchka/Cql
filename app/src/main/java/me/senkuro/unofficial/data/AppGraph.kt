@@ -27,6 +27,8 @@ object AppGraph {
         private set
     lateinit var offers: OffersRepository
         private set
+    lateinit var eco: EcosystemRepository
+        private set
     lateinit var directory: DirectoryRepository
         private set
     lateinit var posts: PostsRepository
@@ -114,6 +116,7 @@ object AppGraph {
         social = SocialRepository(api)
         cards = CardsRepository(api)
         offers = OffersRepository(api)
+        eco = EcosystemRepository(api)
         directory = DirectoryRepository(api)
         posts = PostsRepository(api)
         library = LibraryStore(app)

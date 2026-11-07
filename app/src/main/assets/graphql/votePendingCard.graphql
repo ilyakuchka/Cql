@@ -1,0 +1,3 @@
+mutation votePendingCard($input: VotePendingCardInput!) {
+  votePendingCard(input: $input) { __typename }
+}

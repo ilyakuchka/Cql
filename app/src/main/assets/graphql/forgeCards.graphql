@@ -1,0 +1,5 @@
+mutation forgeCards($input: ForgeCardInput!) {
+  forgeCards(input: $input) {
+    newCards { quantity modifier card { id slug titles { lang content } rank image { original { url } } } }
+  }
+}

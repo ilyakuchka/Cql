@@ -1,0 +1,3 @@
+mutation deleteCardDeckVote($input: DeleteCardDeckVoteInput!) {
+  deleteCardDeckVote(input: $input) { __typename }
+}

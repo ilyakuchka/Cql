@@ -1,0 +1,3 @@
+mutation createCardDeck($input: CreateCardDeckInput!) {
+  createCardDeck(input: $input) { deck { id slug } }
+}

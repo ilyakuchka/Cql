@@ -1,0 +1,6 @@
+query fetchCollectibles($after: String, $type: CollectibleType!) {
+  collectibles(first: 24, after: $after, type: $type, visible: true) {
+    edges { node { id slug type titles { lang content } price basePrice rating image { original { url } } viewerCollectible { id active } } }
+    pageInfo { hasNextPage endCursor }
+  }
+}

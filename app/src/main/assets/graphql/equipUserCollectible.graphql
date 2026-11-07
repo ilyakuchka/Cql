@@ -1,0 +1,3 @@
+mutation equipUserCollectible($input: EquipUserCollectibleInput!) {
+  equipUserCollectible(input: $input) { collectible { id } }
+}

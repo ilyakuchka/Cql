@@ -1,0 +1,7 @@
+query fetchCardDeck($slug: String!) {
+  cardDeck(slug: $slug) {
+    id slug titles { lang content } quantity upvotes downvotes views createdAt viewerDidAuthor viewerCanDelete viewerVoteDirection
+    author { name }
+    cards { modifier quantity card { id slug titles { lang content } rank image { original { url } } } }
+  }
+}

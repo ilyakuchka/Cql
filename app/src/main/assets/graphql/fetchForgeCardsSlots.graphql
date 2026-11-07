@@ -1,0 +1,3 @@
+query fetchForgeCardsSlots($mode: ForgeCardMode!) {
+  forgeCardsSlots(mode: $mode) { baseSlots subscriptionSlots used available resetAt }
+}

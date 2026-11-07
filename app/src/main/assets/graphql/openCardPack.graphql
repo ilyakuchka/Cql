@@ -1,0 +1,5 @@
+mutation openCardPack($input: OpenCardPackInput!) {
+  openCardPack(input: $input) {
+    opens { id completedAt resultCards { id slug titles { lang content } rank image { original { url } } } }
+  }
+}

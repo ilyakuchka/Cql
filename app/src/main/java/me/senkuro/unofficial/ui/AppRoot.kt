@@ -67,6 +67,15 @@ private object Routes {
     const val USER = "user/{slug}"
     const val RANKS = "ranks"
     const val SHORTS = "shorts"
+    const val CARD_HUB = "cardhub"
+    const val DECKS = "decks"
+    const val DECK_NEW = "decknew"
+    const val DECK = "deck/{slug}"
+    const val PACKS = "packs"
+    const val PACK = "pack/{slug}"
+    const val FORGE = "forge"
+    const val CONTEST = "contest"
+    const val SHOP = "shop"
     const val HISTORY = "history/{userId}"
     const val CONVERSATIONS = "conversations"
     const val CHAT = "chat/{id}/{title}"
@@ -196,6 +205,39 @@ fun AppRoot() {
                             )
                         }
                     }
+                    composable(Routes.CARD_HUB) {
+                        UnofficialTheme(dark = appDark) {
+                            CardsHubScreen(
+                                onBack = { nav.popBackStack() },
+                                onShorts = { nav.navigate(Routes.SHORTS) },
+                                onDecks = { nav.navigate(Routes.DECKS) },
+                                onPacks = { nav.navigate(Routes.PACKS) },
+                                onForge = { nav.navigate(Routes.FORGE) },
+                                onContest = { nav.navigate(Routes.CONTEST) },
+                                onShop = { nav.navigate(Routes.SHOP) },
+                            )
+                        }
+                    }
+                    composable(Routes.DECKS) {
+                        UnofficialTheme(dark = appDark) { DecksScreen(onBack = { nav.popBackStack() }, onDeck = { nav.navigate("deck/" + Uri.encode(it)) }, onCreate = { nav.navigate(Routes.DECK_NEW) }) }
+                    }
+                    composable(Routes.DECK_NEW) {
+                        UnofficialTheme(dark = appDark) {
+                            DeckCreateScreen(onBack = { nav.popBackStack() }, onCreated = { slug -> nav.popBackStack(); nav.navigate("deck/" + Uri.encode(slug)) })
+                        }
+                    }
+                    composable(Routes.DECK, arguments = listOf(navArgument("slug") { type = NavType.StringType })) { b ->
+                        UnofficialTheme(dark = appDark) { DeckScreen(slug = b.arguments?.getString("slug").orEmpty(), onBack = { nav.popBackStack() }, onCard = { nav.navigate("card/" + Uri.encode(it)) }) }
+                    }
+                    composable(Routes.PACKS) {
+                        UnofficialTheme(dark = appDark) { PacksScreen(onBack = { nav.popBackStack() }, onPack = { nav.navigate("pack/" + Uri.encode(it)) }) }
+                    }
+                    composable(Routes.PACK, arguments = listOf(navArgument("slug") { type = NavType.StringType })) { b ->
+                        UnofficialTheme(dark = appDark) { PackScreen(slug = b.arguments?.getString("slug").orEmpty(), onBack = { nav.popBackStack() }) }
+                    }
+                    composable(Routes.FORGE) { UnofficialTheme(dark = appDark) { ForgeScreen(onBack = { nav.popBackStack() }) } }
+                    composable(Routes.CONTEST) { UnofficialTheme(dark = appDark) { ContestScreen(onBack = { nav.popBackStack() }) } }
+                    composable(Routes.SHOP) { UnofficialTheme(dark = appDark) { ShopScreen(onBack = { nav.popBackStack() }) } }
                     composable(Routes.SHORTS) {
                         UnofficialTheme(dark = appDark) { ShortsScreen(onBack = { nav.popBackStack() }, onManga = openManga) }
                     }
@@ -213,6 +255,7 @@ fun AppRoot() {
                                 onOffers = { nav.navigate(Routes.OFFERS) },
                                 onPosts = { nav.navigate(Routes.POSTS) },
                                 onFeed = { nav.navigate(Routes.FEED) },
+                                onCardHub = { nav.navigate(Routes.CARD_HUB) },
                             )
                         }
                     }

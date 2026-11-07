@@ -1,0 +1,3 @@
+mutation voteCardDeck($input: VoteCardDeckInput!) {
+  voteCardDeck(input: $input) { __typename }
+}
