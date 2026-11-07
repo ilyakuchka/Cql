@@ -18,6 +18,10 @@ class UnofficialApp : Application(), SingletonImageLoader.Factory {
     // Картинки грузим тем же OkHttp-клиентом (Referer / User-Agent из SenkuroConfig).
     override fun newImageLoader(context: PlatformContext): ImageLoader =
         ImageLoader.Builder(context)
-            .components { add(OkHttpNetworkFetcherFactory(callFactory = { AppGraph.httpClient })) }
+            .components {
+                add(OkHttpNetworkFetcherFactory(callFactory = { AppGraph.httpClient }))
+                // GIF и анимированный WebP: ImageDecoder на API 28+, на старых — GifDecoder (только GIF).
+                if (android.os.Build.VERSION.SDK_INT >= 28) add(coil3.gif.AnimatedImageDecoder.Factory()) else add(coil3.gif.GifDecoder.Factory())
+            }
             .build()
 }

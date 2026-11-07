@@ -470,3 +470,18 @@ class ProfileExtraUserDto(
 
 @Serializable
 class ProfileExtraResponse(val user: ProfileExtraUserDto? = null)
+
+@Serializable
+class AppearanceImageDto(val id: String? = null, val animation: Boolean? = null, val original: ImageSize? = null)
+
+@Serializable
+class AppearanceUserDto(
+    val avatar: AppearanceImageDto? = null,
+    val frame: AppearanceImageDto? = null,
+    val banner: AppearanceImageDto? = null,
+    val wallpaper: AppearanceImageDto? = null,
+    val status: AppearanceImageDto? = null,
+)
+
+@Serializable
+class AppearanceResponse(val user: AppearanceUserDto? = null)

@@ -403,6 +403,15 @@ class SenkuroRepository(private val api: SenkuroApi) {
         )
     }
 
+    suspend fun profileAppearance(slug: String): ProfileAppearance? = try {
+        api.execute("fetchUserAppearance", "fetchUserAppearance", buildJsonObject { put("slug", slug) }, AppearanceResponse.serializer())
+            .user?.let { ProfileAppearance(it.frame?.original?.url, it.wallpaper?.original?.url, it.status?.original?.url, it.banner?.original?.url, it.avatar?.original?.url) }
+    } catch (e: kotlinx.coroutines.CancellationException) {
+        throw e
+    } catch (_: Exception) {
+        null
+    }
+
     suspend fun achievements(userId: String): List<AchievementItem> =
         api.execute("fetchUserAchievements", "fetchUserAchievements", buildJsonObject { put("userId", userId) },
             AchievementsResponse.serializer()).userAchievements.map {

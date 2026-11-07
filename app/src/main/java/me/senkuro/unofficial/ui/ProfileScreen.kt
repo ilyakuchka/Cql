@@ -67,6 +67,7 @@ fun ProfileScreen(
     var profile by remember { mutableStateOf<Profile?>(null) }
     var achievements by remember { mutableStateOf<List<AchievementItem>>(emptyList()) }
     var extra by remember { mutableStateOf<me.senkuro.unofficial.data.ProfileExtra?>(null) }
+    var look by remember { mutableStateOf<me.senkuro.unofficial.data.ProfileAppearance?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
     var loading by remember { mutableStateOf(true) }
     var attempt by remember { mutableStateOf(0) }
@@ -77,11 +78,12 @@ fun ProfileScreen(
         val target = targetSlug ?: return@LaunchedEffect
         loading = true
         error = null
-        if (profile?.slug != target) { profile = null; achievements = emptyList(); extra = null }
+        if (profile?.slug != target) { profile = null; achievements = emptyList(); extra = null; look = null }
         try {
             val loaded = AppGraph.repository.profile(target)
             profile = loaded
             if (loaded != null) {
+                look = AppGraph.repository.profileAppearance(target)
                 achievements = AppGraph.repository.achievements(loaded.id)
                 extra = AppGraph.repository.profileExtra(target)
             }
@@ -93,8 +95,17 @@ fun ProfileScreen(
         loading = false
     }
 
+    val wallpaper = look?.wallpaper
+    val cardColor = if (wallpaper != null) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.86f) else MaterialTheme.colorScheme.surfaceVariant
+    androidx.compose.runtime.CompositionLocalProvider(LocalCardColor provides cardColor) {
+    Box(Modifier.fillMaxSize()) {
+    // Обои профиля — фон всей страницы (gif/webp анимируются)
+    if (wallpaper != null) {
+        AsyncImage(wallpaper, null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+        Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background.copy(alpha = 0.25f)))
+    }
     Column(Modifier.fillMaxSize().statusBarsPadding()) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.fillMaxWidth().then(if (wallpaper != null) Modifier.background(cardColor) else Modifier), verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = { if (showAll) showAll = false else onBack() }) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Назад", tint = MaterialTheme.colorScheme.onBackground)
             }
@@ -117,7 +128,7 @@ fun ProfileScreen(
                 contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 24.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                item { Header(p) }
+                item { Header(p, look) }
                 item {
                     val done = achievements.count { it.done }
                     ProfileHub(
@@ -154,31 +165,34 @@ fun ProfileScreen(
             }
         }
     }
+    }
+    }
 }
 
+/** Цвет карточек профиля: с обоями — полупрозрачный, чтобы фон был виден. */
+val LocalCardColor = androidx.compose.runtime.compositionLocalOf<androidx.compose.ui.graphics.Color> { androidx.compose.ui.graphics.Color.Unspecified }
+
 @Composable
-private fun Header(p: Profile) {
+private fun cardColor(): androidx.compose.ui.graphics.Color =
+    LocalCardColor.current.takeIf { it != androidx.compose.ui.graphics.Color.Unspecified } ?: MaterialTheme.colorScheme.surfaceVariant
+
+@Composable
+private fun Header(p: Profile, look: me.senkuro.unofficial.data.ProfileAppearance?) {
     val accent = MaterialTheme.colorScheme.primary
+    val card = cardColor()
     Box(
-        Modifier.fillMaxWidth().height(150.dp).background(
+        Modifier.fillMaxWidth().height(176.dp).background(
             androidx.compose.ui.graphics.Brush.linearGradient(listOf(accent, accent.copy(alpha = 0.45f))),
         ),
     ) {
-        AsyncImage(p.banner, null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+        AsyncImage(look?.banner ?: p.banner, null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
     }
     Row(
-        Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surfaceVariant)
-            .padding(start = 14.dp, end = 14.dp, bottom = 14.dp),
+        Modifier.fillMaxWidth().background(card).padding(start = 14.dp, end = 14.dp, bottom = 14.dp),
         verticalAlignment = Alignment.Top,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        AsyncImage(
-            p.avatar, null,
-            contentScale = ContentScale.Crop,
-            modifier = Modifier.offset(y = (-24).dp).size(76.dp)
-                .border(3.dp, MaterialTheme.colorScheme.surfaceVariant, CircleShape)
-                .clip(CircleShape).background(MaterialTheme.colorScheme.background),
-        )
+        AvatarWithFrame(look?.avatar ?: p.avatar, look?.frame, 84.dp, Modifier.offset(y = (-34).dp))
         Column(Modifier.padding(top = 10.dp).weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
@@ -186,6 +200,7 @@ private fun Header(p: Profile) {
                     color = MaterialTheme.colorScheme.onBackground, fontSize = 20.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
                     maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false),
                 )
+                look?.status?.let { AsyncImage(it, null, contentScale = ContentScale.Fit, modifier = Modifier.size(22.dp)) }
                 p.level?.let {
                     Text(
                         "Ур. $it", color = MaterialTheme.colorScheme.onPrimary, fontSize = 11.sp,
@@ -366,7 +381,7 @@ private fun ProfileExtraBlocks(p: Profile, e: me.senkuro.unofficial.data.Profile
 @Composable
 private fun Block(title: String, count: String? = null, more: String? = null, onMore: () -> Unit = {}, content: @Composable () -> Unit) {
     Column(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(MaterialTheme.colorScheme.surfaceVariant).padding(14.dp),
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(cardColor()).padding(14.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -430,7 +445,7 @@ private fun ProfileHub(stats: List<Pair<String, String>>, links: List<HubLink>) 
     val divider = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.15f)
     Column(
         Modifier.padding(horizontal = 10.dp)
-            .fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(MaterialTheme.colorScheme.surfaceVariant),
+            .fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(cardColor()),
     ) {
         stats.chunked(3).forEachIndexed { r, row ->
             if (r > 0) Box(Modifier.fillMaxWidth().height(1.dp).background(divider))

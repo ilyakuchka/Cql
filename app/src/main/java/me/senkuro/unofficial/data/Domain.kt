@@ -176,3 +176,6 @@ data class ProfileExtra(
     val libraryPreview: List<MangaItem>,
     val activities: List<ProfileActivity>,
 )
+
+/** Оформление профиля: рамка аватара, обои страницы, статус; анимированные картинки (gif/webp) показываются как есть. */
+data class ProfileAppearance(val frame: String?, val wallpaper: String?, val status: String?, val banner: String?, val avatar: String?)
