@@ -112,10 +112,16 @@ fun AppRoot() {
 
     val openManga: (MangaItem) -> Unit = { nav.navigate(Routes.manga(it.id)) }
     val navigateTop: (String) -> Unit = { target ->
-        nav.navigate(target) {
-            popUpTo(nav.graph.findStartDestination().id) { saveState = true }
-            launchSingleTop = true
-            restoreState = true
+        // Главная — начальный экран и всегда лежит внизу стека: к ней просто возвращаемся.
+        // Через navigate(HOME) + restoreState система поднимала сохранённое состояние другой вкладки (закладки).
+        if (target == Routes.HOME && nav.popBackStack(Routes.HOME, inclusive = false)) {
+            // готово
+        } else {
+            nav.navigate(target) {
+                popUpTo(nav.graph.findStartDestination().id) { saveState = true }
+                launchSingleTop = true
+                restoreState = true
+            }
         }
     }
 
