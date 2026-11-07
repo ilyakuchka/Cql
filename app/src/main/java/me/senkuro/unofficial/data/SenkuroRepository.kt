@@ -423,6 +423,15 @@ class SenkuroRepository(private val api: SenkuroApi) {
         return (sameWidth.firstOrNull { it.format.orEmpty().lowercase().contains("mp4") } ?: sameWidth.first()).url
     }
 
+    suspend fun shorts(after: String?): Pair<List<ShortItem>, String?> {
+        val vars = buildJsonObject { if (after != null) put("after", after) }
+        val c = api.execute("fetchShortsMangaChapters", "fetchShortsMangaChapters", vars, ShortsResponse.serializer()).shortsMangaChapters
+        return c.edges.map { e ->
+            val n = e.node
+            ShortItem(n.id, n.slug, n.manga?.toItem(), n.number.text().orEmpty(), n.pages.mapNotNull { it.image?.original?.url })
+        }.filter { it.pages.isNotEmpty() } to c.pageInfo.endCursor.takeIf { c.pageInfo.hasNextPage }
+    }
+
     private fun mapActivity(a: PActivityDto): ProfileActivity {
         val m = a.meta
         val numbers = m?.numbers.orEmpty().mapNotNull { it.text() }.take(3).joinToString(", ")

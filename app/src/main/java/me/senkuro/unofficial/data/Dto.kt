@@ -524,3 +524,21 @@ class ActivityConnDto(val edges: List<ActivityEdgeDto> = emptyList(), val pageIn
 
 @Serializable
 class ActivitiesResponse(val activities: ActivityConnDto = ActivityConnDto())
+
+@Serializable
+class ShortChapterDto(
+    val id: String = "", val slug: String = "",
+    val number: kotlinx.serialization.json.JsonElement? = null,
+    val name: String? = null,
+    val pages: List<ReaderPageDto> = emptyList(),
+    val manga: MangaCardDto? = null,
+)
+
+@Serializable
+class ShortEdgeDto(val node: ShortChapterDto)
+
+@Serializable
+class ShortConnDto(val edges: List<ShortEdgeDto> = emptyList(), val pageInfo: PageInfoDto = PageInfoDto())
+
+@Serializable
+class ShortsResponse(val shortsMangaChapters: ShortConnDto = ShortConnDto())

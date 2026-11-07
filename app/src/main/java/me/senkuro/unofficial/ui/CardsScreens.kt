@@ -1,5 +1,7 @@
 package me.senkuro.unofficial.ui
 
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.material3.FilterChip
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -77,14 +79,15 @@ private fun CardGrid(pager: Pager<CardEntry>, onCard: (String) -> Unit, header: 
 
 @Composable
 fun CardCatalogScreen(onBack: () -> Unit, onCard: (String) -> Unit) {
-    val pager = remember { Pager { AppGraph.cards.catalog(it) } }
-    LaunchedEffect(Unit) { pager.reload() }
+    var filters by remember { mutableStateOf(me.senkuro.unofficial.data.CardFilters()) }
+    val pager = remember { Pager { AppGraph.cards.catalog(it, null, filters) } }
+    LaunchedEffect(filters) { pager.reload() }
     Column(Modifier.fillMaxSize()) {
         Top("Каталог карточек", onBack)
         when {
-            pager.items.isEmpty() && pager.loading -> LoadingBox()
+            pager.items.isEmpty() && pager.loading -> Column { CardFilterBar(filters) { filters = it }; LoadingBox() }
             pager.items.isEmpty() && pager.error != null -> PagerError(pager)
-            else -> CardGrid(pager, onCard)
+            else -> CardGrid(pager, onCard, header = { CardFilterBar(filters) { filters = it } })
         }
     }
 }
@@ -312,6 +315,29 @@ internal fun TaskCard(t: TaskItem, modifier: Modifier = Modifier.fillMaxWidth())
                 if (t.done) "выполнено" else listOfNotNull(total.takeIf { it > 0 }?.let { "из $it" }, t.period.takeIf { it.isNotBlank() }).joinToString(" "),
                 fontSize = 13.sp, color = if (t.done) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
             )
+        }
+    }
+}
+
+
+/** Панель фильтров каталога: сортировка, ранги, флаги «анимированные / со звуком / ивентовые / 18+». */
+@Composable
+private fun CardFilterBar(f: me.senkuro.unofficial.data.CardFilters, onChange: (me.senkuro.unofficial.data.CardFilters) -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            FilterChip(f.order == "RANK", { onChange(f.copy(order = "RANK")) }, { Text("По рангу") })
+            FilterChip(f.order == "POPULARITY_SCORE", { onChange(f.copy(order = "POPULARITY_SCORE")) }, { Text("По популярности") })
+        }
+        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            listOf("X", "R", "S", "A", "B", "C", "D", "F").forEach { r ->
+                FilterChip(r in f.ranks, { onChange(f.copy(ranks = if (r in f.ranks) f.ranks - r else f.ranks + r)) }, { Text(r) })
+            }
+        }
+        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            FilterChip(f.animated, { onChange(f.copy(animated = !f.animated)) }, { Text("Анимированные") })
+            FilterChip(f.audio, { onChange(f.copy(audio = !f.audio)) }, { Text("Со звуком") })
+            FilterChip(f.featured, { onChange(f.copy(featured = !f.featured)) }, { Text("Ивентовые") })
+            FilterChip(f.explicit, { onChange(f.copy(explicit = !f.explicit)) }, { Text("18+") })
         }
     }
 }

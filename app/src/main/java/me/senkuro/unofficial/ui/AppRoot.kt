@@ -66,6 +66,7 @@ private object Routes {
     const val PROFILE = "profile"
     const val USER = "user/{slug}"
     const val RANKS = "ranks"
+    const val SHORTS = "shorts"
     const val HISTORY = "history/{userId}"
     const val CONVERSATIONS = "conversations"
     const val CHAT = "chat/{id}/{title}"
@@ -194,6 +195,9 @@ fun AppRoot() {
                                 onBack = { nav.popBackStack() },
                             )
                         }
+                    }
+                    composable(Routes.SHORTS) {
+                        UnofficialTheme(dark = appDark) { ShortsScreen(onBack = { nav.popBackStack() }, onManga = openManga) }
                     }
                     composable(Routes.RANKS) {
                         UnofficialTheme(dark = appDark) { RanksScreen(onBack = { nav.popBackStack() }, onUser = { nav.navigate("user/" + Uri.encode(it)) }) }

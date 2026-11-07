@@ -1,0 +1,29 @@
+query fetchShortsMangaChapters($after: String) {
+  shortsMangaChapters(first: 5, orderBy: { field: CREATED_AT, direction: DESC }, after: $after) {
+    edges {
+      node {
+        id
+        slug
+        number
+        volume
+        name
+        createdAt
+        pages {
+          id
+          number
+          image { original { url } }
+        }
+        manga {
+          id
+          slug
+          originalName { lang content }
+          titles { lang content }
+          status
+          rating
+          cover { original { url } }
+        }
+      }
+    }
+    pageInfo { hasNextPage endCursor }
+  }
+}

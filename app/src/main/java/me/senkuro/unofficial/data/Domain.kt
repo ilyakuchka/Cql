@@ -191,3 +191,6 @@ data class RankEntry(
 )
 
 data class RanksPage(val myRank: Long?, val entries: List<RankEntry>)
+
+/** Short — глава-комикс для быстрого просмотра: страницы листаются, главы сменяют друг друга. */
+data class ShortItem(val id: String, val chapterSlug: String, val manga: MangaItem?, val number: String, val pages: List<String>)

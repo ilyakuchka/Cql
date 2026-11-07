@@ -107,10 +107,16 @@ class CardsRepository(private val api: SenkuroApi) {
     private fun List<TiptapBlockDto>?.plain() =
         orEmpty().joinToString("\n") { b -> b.content.orEmpty().joinToString("") { it.text.orEmpty() } }.trim()
 
-    suspend fun catalog(after: String?, characterId: String? = null): Pair<List<CardEntry>, String?> {
+    suspend fun catalog(after: String?, characterId: String? = null, f: CardFilters = CardFilters()): Pair<List<CardEntry>, String?> {
         val vars = buildJsonObject {
             if (after != null) put("after", after)
-            put("orderField", "RANK")
+            put("orderField", f.order)
+            if (f.ranks.isNotEmpty()) put("rank", buildJsonObject { put("include", JsonArray(f.ranks.map { JsonPrimitive(it) })) })
+            // как на сайте: флаг передаётся только когда включён, иначе null
+            if (f.animated) put("animated", true)
+            if (f.audio) put("audio", true)
+            if (f.featured) put("featured", true)
+            if (f.explicit) put("explicit", true)
             put("orderDirection", "DESC")
             if (characterId != null) put("character", buildJsonObject { put("include", JsonArray(listOf(JsonPrimitive(characterId)))) })
         }
@@ -351,3 +357,13 @@ suspend fun OffersRepository.mainAd(): AdBanner? {
 suspend fun OffersRepository.viewAd(id: String) {
     adApi.execute("viewAd", "viewAd", buildJsonObject { put("input", buildJsonObject { put("adId", id) }) }, JsonElement.serializer())
 }
+
+/** Фильтры каталога карточек (как на сайте: сортировка, ранги, флаги). */
+data class CardFilters(
+    val order: String = "RANK",
+    val ranks: Set<String> = emptySet(),
+    val animated: Boolean = false,
+    val audio: Boolean = false,
+    val featured: Boolean = false,
+    val explicit: Boolean = false,
+)
