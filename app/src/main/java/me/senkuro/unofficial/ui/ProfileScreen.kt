@@ -22,6 +22,11 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -108,7 +113,10 @@ fun ProfileScreen(
             showAll -> LazyColumn(contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 8.dp)) {
                 items(achievements) { AchievementRow(it) }
             }
-            else -> LazyColumn(contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 24.dp)) {
+            else -> LazyColumn(
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 24.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
                 item { Header(p) }
                 item {
                     val done = achievements.count { it.done }
@@ -136,7 +144,7 @@ fun ProfileScreen(
                 if (isOwn) item { TasksCarousel(onOpenTasks) }
                 extra?.let { e -> item { ProfileExtraBlocks(p, e, onUser) } }
                 if (achievements.isNotEmpty()) item {
-                    ProfileSection("Достижения", "Все ${achievements.size} ›", onMore = { showAll = true }) {
+                    ProfileSection("Достижения · ${achievements.count { it.done }}", "Все ›", onMore = { showAll = true }) {
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                             achievements.take(4).forEach { a -> AchievementTile(a, Modifier.weight(1f)) }
                             repeat(4 - achievements.take(4).size) { Box(Modifier.weight(1f)) }
@@ -152,47 +160,48 @@ fun ProfileScreen(
 private fun Header(p: Profile) {
     val accent = MaterialTheme.colorScheme.primary
     Box(
-        Modifier.fillMaxWidth().height(132.dp).background(
+        Modifier.fillMaxWidth().height(150.dp).background(
             androidx.compose.ui.graphics.Brush.linearGradient(listOf(accent, accent.copy(alpha = 0.45f))),
         ),
     ) {
         AsyncImage(p.banner, null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
     }
-    Column(Modifier.padding(horizontal = 16.dp).offset(y = (-46).dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+    Row(
+        Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surfaceVariant)
+            .padding(start = 14.dp, end = 14.dp, bottom = 14.dp),
+        verticalAlignment = Alignment.Top,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
         AsyncImage(
             p.avatar, null,
             contentScale = ContentScale.Crop,
-            modifier = Modifier.size(92.dp)
-                .border(4.dp, MaterialTheme.colorScheme.background, CircleShape)
-                .clip(CircleShape).background(MaterialTheme.colorScheme.surfaceVariant),
+            modifier = Modifier.offset(y = (-24).dp).size(76.dp)
+                .border(3.dp, MaterialTheme.colorScheme.surfaceVariant, CircleShape)
+                .clip(CircleShape).background(MaterialTheme.colorScheme.background),
         )
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(
-                p.name + if (p.verified) " ✓" else "",
-                color = MaterialTheme.colorScheme.onBackground, fontSize = 22.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
-            )
-            p.level?.let {
+        Column(Modifier.padding(top = 10.dp).weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
-                    "LVL $it", color = MaterialTheme.colorScheme.onPrimary, fontSize = 11.sp,
-                    fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
-                    modifier = Modifier.clip(RoundedCornerShape(10.dp)).background(accent).padding(horizontal = 8.dp, vertical = 3.dp),
+                    p.name + if (p.verified) " ✓" else "",
+                    color = MaterialTheme.colorScheme.onBackground, fontSize = 20.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                    maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false),
                 )
+                p.level?.let {
+                    Text(
+                        "Ур. $it", color = MaterialTheme.colorScheme.onPrimary, fontSize = 11.sp,
+                        fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
+                        modifier = Modifier.clip(RoundedCornerShape(10.dp)).background(accent).padding(horizontal = 8.dp, vertical = 2.dp),
+                    )
+                }
             }
+            p.lastOnlineAt?.let { Text("Был(а) онлайн: $it", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp) }
         }
-        val meta = listOfNotNull(p.createdAt?.let { "На сайте с $it" }, p.lastOnlineAt?.let { "Был(а) онлайн: $it" }).joinToString(" · ")
-        if (meta.isNotBlank()) Text(meta, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
     }
 }
 
 @Composable
 private fun ProfileSection(title: String, more: String?, onMore: () -> Unit, content: @Composable () -> Unit) {
-    Column(Modifier.offset(y = (-30).dp).padding(horizontal = 16.dp, vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text(title, style = HeadingStyle, color = MaterialTheme.colorScheme.onBackground, modifier = Modifier.weight(1f))
-            if (more != null) Text(more, color = MaterialTheme.colorScheme.primary, fontSize = 13.sp, modifier = Modifier.clickable(onClick = onMore))
-        }
-        content()
-    }
+    Box(Modifier.padding(horizontal = 10.dp)) { Block(title, more = more, onMore = onMore, content = content) }
 }
 
 @Composable
@@ -281,37 +290,57 @@ private fun yearsWith(createdAt: String?): String? {
 /** Блоки профиля как на сайте: статистика, библиотека манги, отношения, друзья, история действий, «Обо мне». */
 @Composable
 private fun ProfileExtraBlocks(p: Profile, e: me.senkuro.unofficial.data.ProfileExtra, onUser: (String) -> Unit) {
-    Column(Modifier.offset(y = (-30).dp).padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-        Block("Статистика") {
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                KeyValue("Глав прочитано", fmt(e.readChapters))
-                KeyValue("Серий просмотрено", fmt(e.watchEpisodes))
-                KeyValue("Тайтлов оценено", fmt(e.rated))
-                e.betterPercentile?.let { KeyValue("Лучше, чем", "%.1f%% пользователей".format(java.util.Locale.US, it)) }
-                e.rank?.let { KeyValue("Ранг", "#" + fmt(it)) }
+    Column(Modifier.padding(horizontal = 10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        // «Информация» — строки со значками, как блок информации сообщества
+        val info = buildList<Triple<androidx.compose.ui.graphics.vector.ImageVector, String, String?>> {
+            e.readChapters?.let { add(Triple(Icons.Filled.Info, "${fmt(it)} глав прочитано", null)) }
+            e.watchEpisodes?.takeIf { it > 0 }?.let { add(Triple(Icons.Filled.Info, "${fmt(it)} серий просмотрено", null)) }
+            e.rated?.let { add(Triple(Icons.Filled.Star, "${fmt(it)} тайтлов оценено", null)) }
+            e.betterPercentile?.let { b ->
+                add(Triple(Icons.Filled.Favorite, "Лучше, чем %.1f%% пользователей".format(java.util.Locale.US, b), e.rank?.let { "Ранг #" + fmt(it) }))
+            }
+            e.birthday?.let { add(Triple(Icons.Filled.DateRange, "День рождения: $it", null)) }
+            e.gender?.let { add(Triple(Icons.Filled.Person, "Пол: $it", null)) }
+            p.createdAt?.let { add(Triple(Icons.Filled.DateRange, "На сайте с $it" + (yearsWith(p.createdAt)?.let { y -> " · $y" } ?: ""), null)) }
+        }
+        if (info.isNotEmpty()) Block("Информация") {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                info.forEach { (icon, text, extraText) ->
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Icon(icon, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
+                        Text(text, fontSize = 13.sp, color = MaterialTheme.colorScheme.onBackground, modifier = Modifier.weight(1f))
+                        extraText?.let { Text(it, fontSize = 12.sp, color = MaterialTheme.colorScheme.primary) }
+                    }
+                }
             }
         }
-        if (e.libraryTotal > 0) Block("Библиотека манги · ${fmt(e.libraryTotal)}") {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        if (e.libraryTotal > 0) Block("Библиотека манги", count = fmt(e.libraryTotal)) {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Row(Modifier.horizontalScroll(androidx.compose.foundation.rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     e.libraryByStatus.forEach { (name, n) -> Chip("$name $n") }
                 }
                 if (e.libraryPreview.isNotEmpty()) androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     items(e.libraryPreview) { m ->
-                        Column(Modifier.width(84.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        // карточка как в «Похожих сообществах»: обложка и подпись в рамке
+                        Column(
+                            Modifier.width(104.dp).clip(RoundedCornerShape(10.dp)).background(MaterialTheme.colorScheme.background).padding(6.dp),
+                            verticalArrangement = Arrangement.spacedBy(6.dp),
+                        ) {
                             AsyncImage(m.cover, null, contentScale = ContentScale.Crop,
-                                modifier = Modifier.size(width = 84.dp, height = 118.dp).clip(RoundedCornerShape(8.dp)).background(MaterialTheme.colorScheme.surfaceVariant))
+                                modifier = Modifier.fillMaxWidth().height(128.dp).clip(RoundedCornerShape(8.dp)).background(MaterialTheme.colorScheme.surfaceVariant))
                             Text(m.title, fontSize = 11.sp, maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, color = MaterialTheme.colorScheme.onBackground)
                         }
                     }
                 }
             }
         }
-        if (e.waifus.isNotEmpty()) Block("Отношения · ${e.waifus.size}") {
+        if (e.friendsList.isNotEmpty()) Block("Друзья", count = fmt(e.friends)) { PeopleGrid(e.friendsList, onUser) }
+        if (e.followsList.isNotEmpty()) Block("Подписки", count = fmt(e.follows)) { PeopleGrid(e.followsList, onUser) }
+        if (e.waifus.isNotEmpty()) Block("Отношения", count = e.waifus.size.toString()) {
             e.waifus.forEach { w ->
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     AsyncImage(w.cover, null, contentScale = ContentScale.Crop,
-                        modifier = Modifier.size(40.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceVariant))
+                        modifier = Modifier.size(40.dp).clip(CircleShape).background(MaterialTheme.colorScheme.background))
                     Column {
                         Text(w.name, fontSize = 14.sp, color = MaterialTheme.colorScheme.onBackground)
                         if (w.relation.isNotBlank()) Text(w.relation, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -319,42 +348,31 @@ private fun ProfileExtraBlocks(p: Profile, e: me.senkuro.unofficial.data.Profile
                 }
             }
         }
+        // «История действий» — записи как посты: заголовок, время
         if (e.activities.isNotEmpty()) Block("История действий") {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 e.activities.take(6).forEach { a ->
-                    Column {
-                        Text(listOfNotNull(a.text.takeIf { it.isNotBlank() }, a.subject).joinToString(" · "), fontSize = 13.sp, color = MaterialTheme.colorScheme.onBackground)
+                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text(a.text, fontSize = 13.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Medium, color = MaterialTheme.colorScheme.onBackground)
+                        a.subject?.let { Text(it, fontSize = 13.sp, color = MaterialTheme.colorScheme.primary) }
                         profileRelative(a.at)?.let { Text(it, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant) }
                     }
                 }
             }
         }
-        if (e.friendsList.isNotEmpty() || e.followsList.isNotEmpty()) Block("Друзья и подписчики") {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                if (e.friendsList.isNotEmpty()) PeopleRow("Друзья · ${fmt(e.friends)}", e.friendsList, onUser)
-                if (e.followsList.isNotEmpty()) PeopleRow("Подписки · ${fmt(e.follows)}", e.followsList, onUser)
-            }
-        }
-        if (e.gender != null || e.birthday != null) Block("Обо мне") {
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                e.birthday?.let { KeyValue("День рождения", it) }
-                e.gender?.let { KeyValue("Пол", it) }
-            }
-        }
-        yearsWith(p.createdAt)?.let {
-            Text("Вместе с нами уже $it", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
     }
 }
 
 @Composable
-private fun Block(title: String, more: String? = null, onMore: () -> Unit = {}, content: @Composable () -> Unit) {
+private fun Block(title: String, count: String? = null, more: String? = null, onMore: () -> Unit = {}, content: @Composable () -> Unit) {
     Column(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(MaterialTheme.colorScheme.surfaceVariant).padding(14.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(MaterialTheme.colorScheme.surfaceVariant).padding(14.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(title, style = HeadingStyle, color = MaterialTheme.colorScheme.onBackground, modifier = Modifier.weight(1f))
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text(title, style = HeadingStyle, color = MaterialTheme.colorScheme.onBackground)
+            count?.let { Text(it, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+            Box(Modifier.weight(1f))
             if (more != null) Text(more, color = MaterialTheme.colorScheme.primary, fontSize = 13.sp, modifier = Modifier.clickable(onClick = onMore))
         }
         content()
@@ -376,16 +394,19 @@ private fun Chip(text: String) {
 }
 
 @Composable
-private fun PeopleRow(title: String, list: List<me.senkuro.unofficial.data.PeopleItem>, onUser: (String) -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text(title, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            items(list) { u ->
-                Column(Modifier.width(56.dp).clickable { onUser(u.slug) }, horizontalAlignment = Alignment.CenterHorizontally) {
-                    AsyncImage(u.avatar, null, contentScale = ContentScale.Crop,
-                        modifier = Modifier.size(44.dp).clip(CircleShape).background(MaterialTheme.colorScheme.background))
-                    Text(u.name, fontSize = 10.sp, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, color = MaterialTheme.colorScheme.onBackground)
+private fun PeopleGrid(list: List<me.senkuro.unofficial.data.PeopleItem>, onUser: (String) -> Unit) {
+    // Сетка 4 в ряд, подпись под аватаром (как «Подписчики» в сообществе)
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        list.chunked(4).forEach { row ->
+            Row(Modifier.fillMaxWidth()) {
+                row.forEach { u ->
+                    Column(Modifier.weight(1f).clickable { onUser(u.slug) }, horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        AsyncImage(u.avatar, null, contentScale = ContentScale.Crop,
+                            modifier = Modifier.size(56.dp).clip(CircleShape).background(MaterialTheme.colorScheme.background))
+                        Text(u.name, fontSize = 11.sp, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, color = MaterialTheme.colorScheme.primary)
+                    }
                 }
+                repeat(4 - row.size) { Box(Modifier.weight(1f)) }
             }
         }
     }
@@ -408,8 +429,8 @@ class HubLink(val title: String, val value: String? = null, val onClick: (() -> 
 private fun ProfileHub(stats: List<Pair<String, String>>, links: List<HubLink>) {
     val divider = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.15f)
     Column(
-        Modifier.offset(y = (-30).dp).padding(horizontal = 16.dp).padding(bottom = 4.dp)
-            .fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(MaterialTheme.colorScheme.surfaceVariant),
+        Modifier.padding(horizontal = 10.dp)
+            .fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(MaterialTheme.colorScheme.surfaceVariant),
     ) {
         stats.chunked(3).forEachIndexed { r, row ->
             if (r > 0) Box(Modifier.fillMaxWidth().height(1.dp).background(divider))
