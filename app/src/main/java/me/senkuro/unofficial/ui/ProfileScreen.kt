@@ -47,13 +47,18 @@ import me.senkuro.unofficial.data.Profile
 /** Профиль текущего пользователя и его достижения (fetchUser + fetchUserAchievements). */
 @Composable
 fun ProfileScreen(
+    /** null — свой профиль; иначе slug чужого пользователя. */
+    slug: String? = null,
     onBack: () -> Unit,
     onOpenTasks: () -> Unit = {},
     onCards: () -> Unit = {},
     onTeams: () -> Unit = {},
     onLibrary: () -> Unit = {},
+    onUser: (String) -> Unit = {},
 ) {
     val account by AppGraph.account.collectAsState()
+    val targetSlug = slug ?: account?.slug
+    val isOwn = slug == null || slug == account?.slug
     var profile by remember { mutableStateOf<Profile?>(null) }
     var achievements by remember { mutableStateOf<List<AchievementItem>>(emptyList()) }
     var extra by remember { mutableStateOf<me.senkuro.unofficial.data.ProfileExtra?>(null) }
@@ -63,14 +68,18 @@ fun ProfileScreen(
     var showAll by remember { mutableStateOf(false) }
     androidx.activity.compose.BackHandler(enabled = showAll) { showAll = false }
 
-    LaunchedEffect(account?.slug, attempt) {
-        val acc = account ?: return@LaunchedEffect
+    LaunchedEffect(targetSlug, attempt) {
+        val target = targetSlug ?: return@LaunchedEffect
         loading = true
         error = null
+        if (profile?.slug != target) { profile = null; achievements = emptyList(); extra = null }
         try {
-            profile = AppGraph.repository.profile(acc.slug)
-            achievements = AppGraph.repository.achievements(acc.userId)
-            extra = AppGraph.repository.profileExtra(acc.slug)
+            val loaded = AppGraph.repository.profile(target)
+            profile = loaded
+            if (loaded != null) {
+                achievements = AppGraph.repository.achievements(loaded.id)
+                extra = AppGraph.repository.profileExtra(target)
+            }
         } catch (e: kotlinx.coroutines.CancellationException) {
             throw e
         } catch (e: Exception) {
@@ -84,11 +93,11 @@ fun ProfileScreen(
             IconButton(onClick = { if (showAll) showAll = false else onBack() }) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Назад", tint = MaterialTheme.colorScheme.onBackground)
             }
-            Text(if (showAll) "Достижения" else "Профиль", style = HeadingStyle, color = MaterialTheme.colorScheme.onBackground)
+            Text(if (showAll) "Достижения" else if (isOwn) "Профиль" else (profile?.name ?: "Профиль"), style = HeadingStyle, color = MaterialTheme.colorScheme.onBackground)
         }
         val p = profile
         when {
-            account == null -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            targetSlug == null -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Text("Войдите в аккаунт", color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             error != null && p == null -> ErrorBox(error!!, onRetry = { attempt++ })
@@ -101,23 +110,36 @@ fun ProfileScreen(
             }
             else -> LazyColumn(contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 24.dp)) {
                 item { Header(p) }
-                item { StatsRow(p, achievements) }
-                extra?.let { e -> item { ProfileExtraBlocks(p, e, onLibrary) } }
-                item { TasksCarousel(onOpenTasks) }
+                item {
+                    val done = achievements.count { it.done }
+                    ProfileHub(
+                        stats = listOf(
+                            "Уровень" to (p.level?.toString() ?: "—"),
+                            "Достижения" to done.toString(),
+                            "Комментарии" to fmt(extra?.comments),
+                            "Друзья" to fmt(extra?.friends),
+                            "Подписчики" to fmt(extra?.subscribers),
+                            "Подписки" to fmt(extra?.follows),
+                        ),
+                        links = buildList {
+                            if (achievements.isNotEmpty()) add(HubLink("Достижения", "$done из ${achievements.size}") { showAll = true })
+                            extra?.takeIf { it.libraryTotal > 0 }?.let { add(HubLink("Библиотека манги", fmt(it.libraryTotal), if (isOwn) onLibrary else null)) }
+                            if (isOwn) {
+                                add(HubLink("Карточки и обмены", "Коллекция и торговля", onCards))
+                                add(HubLink("Команды переводчиков", "Каталог команд", onTeams))
+                                add(HubLink("Задания", "Ежедневные и недельные", onOpenTasks))
+                            }
+                            // Новые разделы профиля добавляются сюда: add(HubLink("Название", "значение") { ... })
+                        },
+                    )
+                }
+                if (isOwn) item { TasksCarousel(onOpenTasks) }
+                extra?.let { e -> item { ProfileExtraBlocks(p, e, onUser) } }
                 if (achievements.isNotEmpty()) item {
                     ProfileSection("Достижения", "Все ${achievements.size} ›", onMore = { showAll = true }) {
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                             achievements.take(4).forEach { a -> AchievementTile(a, Modifier.weight(1f)) }
                             repeat(4 - achievements.take(4).size) { Box(Modifier.weight(1f)) }
-                        }
-                    }
-                }
-                item {
-                    ProfileSection("Быстрые разделы", null, onMore = {}) {
-                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            NavRow("Закладки", "Моя библиотека", onLibrary)
-                            NavRow("Карточки и обмены", "Коллекция и торговля", onCards)
-                            NavRow("Команды переводчиков", "Каталог команд", onTeams)
                         }
                     }
                 }
@@ -163,30 +185,6 @@ private fun Header(p: Profile) {
 }
 
 @Composable
-private fun StatsRow(p: Profile, achievements: List<AchievementItem>) {
-    Row(
-        Modifier.fillMaxWidth().offset(y = (-30).dp).padding(horizontal = 16.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        StatTile("Уровень", p.level?.toString() ?: "—", Modifier.weight(1f))
-        StatTile("Достижения", achievements.size.toString(), Modifier.weight(1f))
-        StatTile("Выполнено", achievements.count { it.done }.toString(), Modifier.weight(1f))
-    }
-}
-
-@Composable
-private fun StatTile(label: String, value: String, modifier: Modifier) {
-    Column(
-        modifier.clip(RoundedCornerShape(14.dp)).background(MaterialTheme.colorScheme.surfaceVariant).padding(vertical = 12.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(2.dp),
-    ) {
-        Text(value, color = MaterialTheme.colorScheme.onBackground, fontSize = 16.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
-        Text(label, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 10.sp)
-    }
-}
-
-@Composable
 private fun ProfileSection(title: String, more: String?, onMore: () -> Unit, content: @Composable () -> Unit) {
     Column(Modifier.offset(y = (-30).dp).padding(horizontal = 16.dp, vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -209,21 +207,6 @@ private fun AchievementTile(a: AchievementItem, modifier: Modifier) {
             modifier = Modifier.size(48.dp).clip(CircleShape).background(MaterialTheme.colorScheme.background),
         )
         Text(a.title, color = MaterialTheme.colorScheme.onBackground, fontSize = 11.sp, maxLines = 2, textAlign = androidx.compose.ui.text.style.TextAlign.Center, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
-    }
-}
-
-@Composable
-private fun NavRow(title: String, sub: String, onClick: () -> Unit) {
-    Row(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(MaterialTheme.colorScheme.surfaceVariant)
-            .clickable(onClick = onClick).padding(14.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(title, color = MaterialTheme.colorScheme.onBackground, fontSize = 14.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)
-            Text(sub, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
-        }
-        Text("›", fontSize = 20.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
@@ -297,14 +280,8 @@ private fun yearsWith(createdAt: String?): String? {
 
 /** Блоки профиля как на сайте: статистика, библиотека манги, отношения, друзья, история действий, «Обо мне». */
 @Composable
-private fun ProfileExtraBlocks(p: Profile, e: me.senkuro.unofficial.data.ProfileExtra, onLibrary: () -> Unit) {
+private fun ProfileExtraBlocks(p: Profile, e: me.senkuro.unofficial.data.ProfileExtra, onUser: (String) -> Unit) {
     Column(Modifier.offset(y = (-30).dp).padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-            StatTile("Друзей", fmt(e.friends), Modifier.weight(1f))
-            StatTile("Подписчиков", fmt(e.subscribers), Modifier.weight(1f))
-            StatTile("Подписок", fmt(e.follows), Modifier.weight(1f))
-            StatTile("Комментариев", fmt(e.comments), Modifier.weight(1f))
-        }
         Block("Статистика") {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 KeyValue("Глав прочитано", fmt(e.readChapters))
@@ -314,7 +291,7 @@ private fun ProfileExtraBlocks(p: Profile, e: me.senkuro.unofficial.data.Profile
                 e.rank?.let { KeyValue("Ранг", "#" + fmt(it)) }
             }
         }
-        if (e.libraryTotal > 0) Block("Библиотека манги · ${fmt(e.libraryTotal)}", "Вся манга ›", onLibrary) {
+        if (e.libraryTotal > 0) Block("Библиотека манги · ${fmt(e.libraryTotal)}") {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Row(Modifier.horizontalScroll(androidx.compose.foundation.rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     e.libraryByStatus.forEach { (name, n) -> Chip("$name $n") }
@@ -354,8 +331,8 @@ private fun ProfileExtraBlocks(p: Profile, e: me.senkuro.unofficial.data.Profile
         }
         if (e.friendsList.isNotEmpty() || e.followsList.isNotEmpty()) Block("Друзья и подписчики") {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                if (e.friendsList.isNotEmpty()) PeopleRow("Друзья · ${fmt(e.friends)}", e.friendsList)
-                if (e.followsList.isNotEmpty()) PeopleRow("Подписки · ${fmt(e.follows)}", e.followsList)
+                if (e.friendsList.isNotEmpty()) PeopleRow("Друзья · ${fmt(e.friends)}", e.friendsList, onUser)
+                if (e.followsList.isNotEmpty()) PeopleRow("Подписки · ${fmt(e.follows)}", e.followsList, onUser)
             }
         }
         if (e.gender != null || e.birthday != null) Block("Обо мне") {
@@ -399,12 +376,12 @@ private fun Chip(text: String) {
 }
 
 @Composable
-private fun PeopleRow(title: String, list: List<me.senkuro.unofficial.data.PeopleItem>) {
+private fun PeopleRow(title: String, list: List<me.senkuro.unofficial.data.PeopleItem>, onUser: (String) -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Text(title, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
         androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             items(list) { u ->
-                Column(Modifier.width(56.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                Column(Modifier.width(56.dp).clickable { onUser(u.slug) }, horizontalAlignment = Alignment.CenterHorizontally) {
                     AsyncImage(u.avatar, null, contentScale = ContentScale.Crop,
                         modifier = Modifier.size(44.dp).clip(CircleShape).background(MaterialTheme.colorScheme.background))
                     Text(u.name, fontSize = 10.sp, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, color = MaterialTheme.colorScheme.onBackground)
@@ -420,4 +397,43 @@ private fun profileRelative(iso: String?): String? {
         val f = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", java.util.Locale.US).apply { timeZone = java.util.TimeZone.getTimeZone("UTC") }
         android.text.format.DateUtils.getRelativeTimeSpanString(f.parse(iso.take(19))?.time ?: return null, System.currentTimeMillis(), android.text.format.DateUtils.MINUTE_IN_MILLIS).toString()
     } catch (_: Exception) { null }
+}
+
+
+/** Ссылка внутри виджета профиля. onClick == null — информационная строка без перехода. */
+class HubLink(val title: String, val value: String? = null, val onClick: (() -> Unit)? = null)
+
+/** Единый виджет профиля: сетка показателей и список ссылок на разделы. Новые разделы добавляются в [links]. */
+@Composable
+private fun ProfileHub(stats: List<Pair<String, String>>, links: List<HubLink>) {
+    val divider = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.15f)
+    Column(
+        Modifier.offset(y = (-30).dp).padding(horizontal = 16.dp).padding(bottom = 4.dp)
+            .fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(MaterialTheme.colorScheme.surfaceVariant),
+    ) {
+        stats.chunked(3).forEachIndexed { r, row ->
+            if (r > 0) Box(Modifier.fillMaxWidth().height(1.dp).background(divider))
+            Row(Modifier.fillMaxWidth().padding(vertical = 14.dp)) {
+                row.forEachIndexed { i, (label, value) ->
+                    if (i > 0) Box(Modifier.width(1.dp).height(32.dp).background(divider).align(Alignment.CenterVertically))
+                    Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text(value, color = MaterialTheme.colorScheme.onBackground, fontSize = 18.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, maxLines = 1)
+                        Text(label, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp, maxLines = 1, softWrap = false,
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                    }
+                }
+            }
+        }
+        links.forEach { l ->
+            Box(Modifier.fillMaxWidth().height(1.dp).background(divider))
+            Row(
+                Modifier.fillMaxWidth().then(if (l.onClick != null) Modifier.clickable(onClick = l.onClick) else Modifier).padding(horizontal = 16.dp, vertical = 14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(l.title, color = MaterialTheme.colorScheme.onBackground, fontSize = 14.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Medium, modifier = Modifier.weight(1f))
+                l.value?.let { Text(it, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp) }
+                if (l.onClick != null) Text("  ›", fontSize = 18.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+    }
 }

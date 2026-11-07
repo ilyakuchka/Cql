@@ -49,7 +49,7 @@ private val numberFormat get() = java.text.NumberFormat.getIntegerInstance(java.
  * Данные грузит HomeViewModel заранее, параллельно главной; вторая вкладка — по требованию и кэшируется.
  */
 @Composable
-fun TopsSection(vm: HomeViewModel, onTasks: () -> Unit) {
+fun TopsSection(vm: HomeViewModel, onTasks: () -> Unit, onUser: (String) -> Unit = {}) {
     val account by AppGraph.account.collectAsState()
     val tab = vm.topsTab
     val data = vm.topsData[tab]
@@ -99,7 +99,7 @@ fun TopsSection(vm: HomeViewModel, onTasks: () -> Unit) {
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 itemsIndexed(data.users, key = { _, u -> u.id }) { index, user ->
-                    TopCard(rank = index + 1, user = user, experience = experience)
+                    TopCard(rank = index + 1, user = user, experience = experience, onClick = { user.slug?.let(onUser) })
                 }
             }
             tab in vm.topsFailed -> Text(
@@ -136,7 +136,7 @@ private fun SegmentTab(label: String, selected: Boolean, onClick: () -> Unit) {
 }
 
 @Composable
-private fun TopCard(rank: Int, user: TopUser, experience: Boolean) {
+private fun TopCard(rank: Int, user: TopUser, experience: Boolean, onClick: () -> Unit = {}) {
     val accent: Color? = when (rank) {
         1 -> Color(0xFFFFD043)
         2 -> Color(0xFF5177FF)
@@ -148,6 +148,7 @@ private fun TopCard(rank: Int, user: TopUser, experience: Boolean) {
             .width(128.dp)
             .height(152.dp)
             .clip(RoundedCornerShape(12.dp))
+            .clickable(onClick = onClick)
             .then(
                 if (accent != null) Modifier.background(Brush.horizontalGradient(listOf(accent.copy(alpha = 0.5f), accent.copy(alpha = 0.05f), accent.copy(alpha = 0.5f))))
                 else Modifier,

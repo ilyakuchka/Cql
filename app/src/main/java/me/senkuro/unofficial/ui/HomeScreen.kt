@@ -62,6 +62,7 @@ fun HomeScreen(
     onProfile: () -> Unit,
     onNotifications: () -> Unit,
     onTasks: () -> Unit = {},
+    onUser: (String) -> Unit = {},
     vm: HomeViewModel = viewModel(),
 ) {
     Column(Modifier.fillMaxSize()) {
@@ -87,7 +88,7 @@ fun HomeScreen(
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     val data = state.data
-                    item(key = "tops") { TopsSection(vm, onTasks) }
+                    item(key = "tops") { TopsSection(vm, onTasks, onUser) }
                     cardsSection("Продолжить чтение", resume, onManga, onMore, showMore = false)
                     trendingSection(
                         "Самое читаемое",

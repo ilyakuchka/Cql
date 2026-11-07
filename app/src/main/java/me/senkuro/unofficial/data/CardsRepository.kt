@@ -257,7 +257,7 @@ data class OfferItem(
 )
 
 data class TopUser(
-    val id: String, val name: String, val avatar: String?, val frame: String?, val status: String?,
+    val id: String, val slug: String?, val name: String, val avatar: String?, val frame: String?, val status: String?,
     val level: Int?, val experience: Long?, val guild: String?, val guildColor: String?,
 )
 
@@ -317,7 +317,7 @@ class OffersRepository(private val api: SenkuroApi) {
         val users = entries.mapNotNull { e ->
             val u = e.user ?: return@mapNotNull null
             TopUser(
-                id = u.id, name = u.name, avatar = u.avatar?.original?.url, frame = u.frame?.original?.url,
+                id = u.id, slug = u.slug, name = u.name, avatar = u.avatar?.original?.url, frame = u.frame?.original?.url,
                 status = u.status?.original?.url, level = u.level, experience = e.experience,
                 guild = u.mainGuild?.guild?.name, guildColor = u.mainGuild?.guild?.color,
             )

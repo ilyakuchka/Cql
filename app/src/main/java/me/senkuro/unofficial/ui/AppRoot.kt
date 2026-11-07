@@ -64,6 +64,7 @@ private object Routes {
     const val NOTIFICATIONS = "notifications"
     const val NOTIF_SETTINGS = "notification-settings"
     const val PROFILE = "profile"
+    const val USER = "user/{slug}"
     const val CONVERSATIONS = "conversations"
     const val CHAT = "chat/{id}/{title}"
     const val GUILDS = "guilds"
@@ -143,6 +144,7 @@ fun AppRoot() {
                                 onProfile = { nav.navigate(Routes.PROFILE) },
                                 onNotifications = { navigateTop(Routes.NOTIFICATIONS) },
                                 onTasks = { nav.navigate(Routes.TASKS) },
+                                onUser = { nav.navigate("user/" + Uri.encode(it)) },
                             )
                         }
                     }
@@ -172,7 +174,16 @@ fun AppRoot() {
                         UnofficialTheme(dark = appDark) { NotificationSettingsScreen(onBack = { nav.popBackStack() }) }
                     }
                     composable(Routes.PROFILE) {
-                        UnofficialTheme(dark = appDark) { ProfileScreen(onBack = { nav.popBackStack() }, onOpenTasks = { nav.navigate(Routes.TASKS) }, onCards = { nav.navigate(Routes.CARDS) }, onTeams = { nav.navigate(Routes.TEAMS) }, onLibrary = { nav.navigate(Routes.LIBRARY) { launchSingleTop = true } }) }
+                        UnofficialTheme(dark = appDark) { ProfileScreen(onUser = { nav.navigate("user/" + Uri.encode(it)) }, onBack = { nav.popBackStack() }, onOpenTasks = { nav.navigate(Routes.TASKS) }, onCards = { nav.navigate(Routes.CARDS) }, onTeams = { nav.navigate(Routes.TEAMS) }, onLibrary = { nav.navigate(Routes.LIBRARY) { launchSingleTop = true } }) }
+                    }
+                    composable(Routes.USER, arguments = listOf(navArgument("slug") { type = NavType.StringType })) { b ->
+                        UnofficialTheme(dark = appDark) {
+                            ProfileScreen(
+                                slug = b.arguments?.getString("slug"),
+                                onUser = { nav.navigate("user/" + Uri.encode(it)) },
+                                onBack = { nav.popBackStack() },
+                            )
+                        }
                     }
                     composable(Routes.SETTINGS) {
                         UnofficialTheme(dark = appDark) {
