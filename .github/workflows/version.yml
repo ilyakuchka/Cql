@@ -7,15 +7,17 @@ on:
   workflow_dispatch:
     inputs:
       version_name:
-        description: "Версия приложения (versionName), например 0.2.0. Пусто — не менять"
+        description: "Версия приложения (versionName). В поле — текущая; измените её"
         type: string
         required: false
+        default: "0.1.0" # cur-name
       version_code:
-        description: "Номер сборки (versionCode), целое число. Пусто — не менять"
+        description: "Номер сборки (versionCode). В поле — текущий; измените его"
         type: string
         required: false
+        default: "1" # cur-code
       bump_code:
-        description: "Увеличить текущий номер сборки на 1 (если поле выше пустое)"
+        description: "Номер сборки +1 от текущего (если поле выше не менялось или пустое)"
         type: boolean
         default: false
 
@@ -26,8 +28,12 @@ jobs:
   set-version:
     runs-on: ubuntu-24.04
     steps:
+      # Если в секретах есть WORKFLOW_PAT (токен с правами repo и workflow), workflow сам обновляет
+      # значения по умолчанию в окне запуска. Без него пользуется обычный токен и значения в окне не меняются.
       - name: Checkout
         uses: actions/checkout@v5
+        with:
+          token: ${{ secrets.WORKFLOW_PAT || github.token }}
 
       - name: Read current version
         id: cur
@@ -48,7 +54,7 @@ jobs:
           CUR_CODE: ${{ steps.cur.outputs.code }}
         run: |
           f=app/build.gradle.kts
-          if [ -z "$CODE" ] && [ "$BUMP" = "true" ]; then CODE=$((CUR_CODE + 1)); fi
+          if [ "$BUMP" = "true" ] && { [ -z "$CODE" ] || [ "$CODE" = "$CUR_CODE" ]; }; then CODE=$((CUR_CODE + 1)); fi
           if [ -z "$NAME" ] && [ -z "$CODE" ]; then
             echo "::error::Укажите версию и/или номер сборки (или включите +1 к номеру)"; exit 1
           fi
@@ -63,6 +69,17 @@ jobs:
           grep -nE "versionName|versionCode" "$f"
           N=$(grep -m1 -oP 'versionName\s*=\s*"\K[^"]+' "$f"); C=$(grep -m1 -oP 'versionCode\s*=\s*\K[0-9]+' "$f")
           echo "### Стало: \`$N\` (сборка \`$C\`)" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Sync dialog defaults
+        env:
+          HAS_PAT: ${{ secrets.WORKFLOW_PAT != '' }}
+        run: |
+          if [ "$HAS_PAT" != "true" ]; then
+            echo "::notice::WORKFLOW_PAT не задан: значения в окне запуска не обновляются (версия в build.gradle.kts изменена)"; exit 0
+          fi
+          f=app/build.gradle.kts
+          N=$(grep -m1 -oP 'versionName\s*=\s*"\K[^"]+' "$f"); C=$(grep -m1 -oP 'versionCode\s*=\s*\K[0-9]+' "$f")
+          sed -i -E "s/default: \"[^\"]*\" # cur-name/default: \"$N\" # cur-name/; s/default: \"[^\"]*\" # cur-code/default: \"$C\" # cur-code/" .github/workflows/version.yml
 
       - name: Commit and push
         run: |
