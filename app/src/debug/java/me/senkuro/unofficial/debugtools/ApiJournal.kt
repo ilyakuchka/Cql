@@ -55,10 +55,22 @@ import java.util.Locale
 object ApiJournal {
     val calls = mutableStateListOf<ApiCall>()
 
+    /**
+     * Операции, проверенные по журналу: сервер принял запросы без ошибок и расхождений со схемой.
+     * Успешные вызовы этих операций в журнал не пишутся (чтобы не флудили); при ошибке запись всё равно появится.
+     * Новые проверенные операции добавляйте сюда.
+     */
+    val verified = setOf(
+        "fetchViewer", "fetchViewerUnreadNotifications", "fetchMainAd", "fetchMainUserTops",
+        "fetchMangaBookmarkNextChapters", "fetchUserBookmarks",
+        "HomeLatest", "HomeNew", "HomePopular", "HomeRecommendations",
+    )
+
     fun install() {
         calls.size // создаём состояние заранее, вне композиции
         ApiTrace.sink = { c ->
             runCatching {
+                if (c.operation in verified && c.error == null && schemaProblem(c) == null) return@runCatching
                 calls.add(c)
                 while (calls.size > 300) calls.removeAt(0)
             }
