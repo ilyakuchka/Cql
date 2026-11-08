@@ -49,11 +49,9 @@ import kotlinx.serialization.json.put
 @Serializable class EForgePayload(val newCards: List<EPreview>? = null)
 @Serializable class EForgeResponse(val forgeCards: EForgePayload? = null)
 
-@Serializable class EContestCards(val edges: List<EContestEdge> = emptyList())
-@Serializable class EContestEdge(val node: EPending)
 @Serializable class EPending(val id: String = "", val titles: List<Title>? = null, val rank: JsonElement? = null, val image: Cover? = null, val author: EAuthor? = null)
 @Serializable class EChar(val titles: List<Title>? = null)
-@Serializable class EContest(val id: String = "", val endAt: String? = null, val rank: JsonElement? = null, val character: EChar? = null, val pendingCards: EContestCards? = null)
+@Serializable class EContest(val id: String = "", val endAt: String? = null, val rank: JsonElement? = null, val character: EChar? = null, val pendingCards: List<EPending>? = null)
 @Serializable class EContestResponse(val pendingCardContest: EContest? = null)
 
 @Serializable class ECollectible(
@@ -149,7 +147,7 @@ class EcosystemRepository(private val api: SenkuroApi) {
 
     // ---- паки
 
-    private fun EPack.item() = PackItem(id, slug, titles.pick() ?: "Пак", cover?.original?.url, credits, points, viewerFreeOpens ?: 0)
+    private fun EPack.item() = PackItem(id, slug, titles.pick() ?: "Пак", cover?.original?.url ?: coverCards?.firstNotNullOfOrNull { it.image?.original?.url }, credits, points, viewerFreeOpens ?: 0)
 
     suspend fun packs(after: String?): Pair<List<PackItem>, String?> {
         val c = api.execute("fetchCardPacks", "fetchCardPacks", buildJsonObject { if (after != null) put("after", after) }, EPacksResponse.serializer()).cardPacks
@@ -193,8 +191,8 @@ class EcosystemRepository(private val api: SenkuroApi) {
 
     suspend fun contest(): Contest? {
         val c = api.execute("fetchPendingCardContest", "fetchPendingCardContest", buildJsonObject {}, EContestResponse.serializer()).pendingCardContest ?: return null
-        return Contest(c.id, c.character?.titles.pick(), c.rank.s(), c.pendingCards?.edges.orEmpty().map {
-            ContestCard(it.node.id, it.node.titles.pick() ?: "Карточка", it.node.rank.s(), it.node.image?.original?.url, it.node.author?.name)
+        return Contest(c.id, c.character?.titles.pick(), c.rank.s(), c.pendingCards.orEmpty().map {
+            ContestCard(it.id, it.titles.pick() ?: "Карточка", it.rank.s(), it.image?.original?.url, it.author?.name)
         })
     }
 

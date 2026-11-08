@@ -97,7 +97,16 @@ private fun DroppedDialog(title: String, cards: List<DroppedCard>, note: String?
     )
 }
 
-private fun Throwable.friendly() = if (this is CancellationException) throw this else msg()
+private fun Throwable.friendly(): String {
+    if (this is CancellationException) throw this
+    val m = msg()
+    return when {
+        m.contains("same rank", true) -> "Все карты должны быть одного ранга"
+        m.contains("enough rights", true) -> "Недостаточно прав для этого действия"
+        m.contains("Time expired", true) -> "Время на это действие истекло"
+        else -> m
+    }
+}
 
 
 // ---------------- хаб
@@ -345,7 +354,7 @@ fun ForgeScreen(onBack: () -> Unit) {
             }
         }
         Text(
-            when (mode) { "SPLIT" -> "Раскол: карта распадается на несколько других"; "MERGE" -> "Объединение: несколько карт сливаются в одну"; else -> "Переплавка: карты улучшаются в более высокий ранг" } +
+            when (mode) { "SPLIT" -> "Раскол: карта распадается на несколько других"; "MERGE" -> "Объединение: несколько карт сливаются в одну"; else -> "Переплавка: карты одного ранга улучшаются в более высокий" } +
                 (slots?.let { " · попыток осталось: ${it.available} из ${it.total}" } ?: ""),
             fontSize = 12.sp, color = muted, modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
         )

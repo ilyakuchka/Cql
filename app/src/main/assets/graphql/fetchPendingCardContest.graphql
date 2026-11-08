@@ -2,6 +2,6 @@ query fetchPendingCardContest {
   pendingCardContest {
     id endAt rank
     character { titles { lang content } }
-    pendingCards { edges { node { id titles { lang content } rank image { original { url } } author { name } } } }
+    pendingCards { id titles { lang content } rank image { original { url } } author { name } }
   }
 }
