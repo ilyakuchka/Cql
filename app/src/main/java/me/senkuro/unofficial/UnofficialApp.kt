@@ -9,6 +9,7 @@ import coil3.disk.DiskCache
 import coil3.memory.MemoryCache
 import me.senkuro.unofficial.data.AppGraph
 import okhttp3.Dispatcher
+import okio.Path.Companion.toPath
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import okhttp3.Response
@@ -67,6 +68,6 @@ class UnofficialApp : Application(), SingletonImageLoader.Factory {
                 if (android.os.Build.VERSION.SDK_INT >= 28) add(coil3.gif.AnimatedImageDecoder.Factory()) else add(coil3.gif.GifDecoder.Factory())
             }
             .memoryCache { MemoryCache.Builder().maxSizePercent(context, 0.25).build() }
-            .diskCache { DiskCache.Builder().directory(context.cacheDir.resolve("images")).maxSizeBytes(256L * 1024 * 1024).build() }
+            .diskCache { DiskCache.Builder().directory(context.cacheDir.resolve("images").absolutePath.toPath()).maxSizeBytes(256L * 1024 * 1024).build() }
             .build()
 }
