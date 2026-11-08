@@ -67,6 +67,7 @@ object ApiJournal {
         "viewAd", "fetchNotificationFeeds",
         "searchTachiyomiManga", "fetchTachiyomiSearchFilters", "fetchTachiyomiChapters", "fetchTachiyomiManga", "viewManga",
         "fetchActivities", "fetchConversationMessages", "readConversationMessage", "updateConversationMessage",
+        "fetchFeed", "fetchShortsMangaChapters",
         "fetchUserCards", "fetchUserTasks", "fetchCards", "fetchCard", "viewCard", "voteCard",
         "fetchConversations", "fetchUser", "fetchUserAppearance", "fetchUserAchievements", "fetchUserProfileExtra",
         "fetchMangaChapters", "fetchMangaRelations", "fetchMangaViewerState", "fetchMangaCharacters", "fetchMangaStaff",
