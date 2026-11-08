@@ -65,6 +65,8 @@ object ApiJournal {
         "fetchMangaBookmarkNextChapters", "fetchUserBookmarks",
         "HomeLatest", "HomeNew", "HomePopular", "HomeRecommendations",
         "viewAd", "fetchNotificationFeeds",
+        "searchTachiyomiManga", "fetchTachiyomiSearchFilters", "fetchTachiyomiChapters", "fetchTachiyomiManga", "viewManga",
+        "fetchMangaChapters", "fetchMangaRelations", "fetchMangaViewerState", "fetchMangaCharacters", "fetchMangaStaff",
     )
 
     fun install() {
