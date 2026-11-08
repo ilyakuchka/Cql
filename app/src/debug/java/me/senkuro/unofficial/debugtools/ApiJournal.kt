@@ -64,6 +64,7 @@ object ApiJournal {
         "fetchViewer", "fetchViewerUnreadNotifications", "fetchMainAd", "fetchMainUserTops",
         "fetchMangaBookmarkNextChapters", "fetchUserBookmarks",
         "HomeLatest", "HomeNew", "HomePopular", "HomeRecommendations",
+        "viewAd", "fetchNotificationFeeds",
     )
 
     fun install() {
