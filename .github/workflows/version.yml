@@ -14,6 +14,10 @@ on:
         description: "Номер сборки (versionCode), целое число. Пусто — не менять"
         type: string
         required: false
+      bump_code:
+        description: "Увеличить текущий номер сборки на 1 (если поле выше пустое)"
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -25,14 +29,28 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
 
+      - name: Read current version
+        id: cur
+        run: |
+          f=app/build.gradle.kts
+          N=$(grep -m1 -oP 'versionName\s*=\s*"\K[^"]+' "$f")
+          C=$(grep -m1 -oP 'versionCode\s*=\s*\K[0-9]+' "$f")
+          echo "name=$N" >> "$GITHUB_OUTPUT"
+          echo "code=$C" >> "$GITHUB_OUTPUT"
+          echo "Текущая версия в репозитории: $N (сборка $C)"
+          echo "### Текущая версия: \`$N\` (сборка \`$C\`)" >> "$GITHUB_STEP_SUMMARY"
+
       - name: Update version
         env:
           NAME: ${{ inputs.version_name }}
           CODE: ${{ inputs.version_code }}
+          BUMP: ${{ inputs.bump_code }}
+          CUR_CODE: ${{ steps.cur.outputs.code }}
         run: |
           f=app/build.gradle.kts
+          if [ -z "$CODE" ] && [ "$BUMP" = "true" ]; then CODE=$((CUR_CODE + 1)); fi
           if [ -z "$NAME" ] && [ -z "$CODE" ]; then
-            echo "::error::Укажите версию и/или номер сборки"; exit 1
+            echo "::error::Укажите версию и/или номер сборки (или включите +1 к номеру)"; exit 1
           fi
           if [ -n "$NAME" ]; then
             [[ "$NAME" =~ ^[0-9A-Za-z.+_-]+$ ]] || { echo "::error::Недопустимая версия: $NAME"; exit 1; }
@@ -43,6 +61,8 @@ jobs:
             sed -i -E "s/^([[:space:]]*versionCode[[:space:]]*=[[:space:]]*)[0-9]+/\1$CODE/" "$f"
           fi
           grep -nE "versionName|versionCode" "$f"
+          N=$(grep -m1 -oP 'versionName\s*=\s*"\K[^"]+' "$f"); C=$(grep -m1 -oP 'versionCode\s*=\s*\K[0-9]+' "$f")
+          echo "### Стало: \`$N\` (сборка \`$C\`)" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Commit and push
         run: |
