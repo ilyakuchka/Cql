@@ -66,6 +66,7 @@ object ApiJournal {
         "HomeLatest", "HomeNew", "HomePopular", "HomeRecommendations",
         "viewAd", "fetchNotificationFeeds",
         "searchTachiyomiManga", "fetchTachiyomiSearchFilters", "fetchTachiyomiChapters", "fetchTachiyomiManga", "viewManga",
+        "fetchConversations", "fetchUser", "fetchUserAppearance", "fetchUserAchievements", "fetchUserProfileExtra",
         "fetchMangaChapters", "fetchMangaRelations", "fetchMangaViewerState", "fetchMangaCharacters", "fetchMangaStaff",
     )
 
