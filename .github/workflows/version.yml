@@ -1,0 +1,55 @@
+name: Set version
+
+# Только ручной запуск (Actions → Set version → Run workflow).
+# Меняет versionName и/или versionCode в app/build.gradle.kts и коммитит в ветку запуска.
+# Ничего не собирает и не публикует (ни артефактов, ни релизов).
+on:
+  workflow_dispatch:
+    inputs:
+      version_name:
+        description: "Версия приложения (versionName), например 0.2.0. Пусто — не менять"
+        type: string
+        required: false
+      version_code:
+        description: "Номер сборки (versionCode), целое число. Пусто — не менять"
+        type: string
+        required: false
+
+permissions:
+  contents: write
+
+jobs:
+  set-version:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Update version
+        env:
+          NAME: ${{ inputs.version_name }}
+          CODE: ${{ inputs.version_code }}
+        run: |
+          f=app/build.gradle.kts
+          if [ -z "$NAME" ] && [ -z "$CODE" ]; then
+            echo "::error::Укажите версию и/или номер сборки"; exit 1
+          fi
+          if [ -n "$NAME" ]; then
+            [[ "$NAME" =~ ^[0-9A-Za-z.+_-]+$ ]] || { echo "::error::Недопустимая версия: $NAME"; exit 1; }
+            sed -i -E "s/^([[:space:]]*versionName[[:space:]]*=[[:space:]]*)\"[^\"]*\"/\1\"$NAME\"/" "$f"
+          fi
+          if [ -n "$CODE" ]; then
+            [[ "$CODE" =~ ^[0-9]+$ ]] || { echo "::error::Номер сборки должен быть целым числом: $CODE"; exit 1; }
+            sed -i -E "s/^([[:space:]]*versionCode[[:space:]]*=[[:space:]]*)[0-9]+/\1$CODE/" "$f"
+          fi
+          grep -nE "versionName|versionCode" "$f"
+
+      - name: Commit and push
+        run: |
+          if git diff --quiet; then
+            echo "::notice::Значения уже такие же, коммитить нечего"; exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -am "Версия: $(grep -m1 -oP 'versionName\s*=\s*"\K[^"]+' app/build.gradle.kts), сборка $(grep -m1 -oP 'versionCode\s*=\s*\K[0-9]+' app/build.gradle.kts)"
+          git push
