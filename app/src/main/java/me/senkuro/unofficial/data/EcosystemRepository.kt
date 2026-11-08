@@ -32,7 +32,7 @@ import kotlinx.serialization.json.put
 @Serializable class EPack(
     val id: String = "", val slug: String = "", val titles: List<Title>? = null, val cover: Cover? = null,
     val credits: Int? = null, val points: Int? = null, val quantity: Int? = null, val pickCount: Int? = null,
-    val viewerFreeOpens: Int? = null, val viewerOpens: Int? = null, val maxRolls: Int? = null,
+    val viewerFreeOpens: Int? = null, val viewerOpens: Int? = null, val maxRolls: Int? = null, val pickLimit: Int? = null, val endAt: String? = null,
     val dropRates: List<EDrop>? = null, val coverCards: List<ECard>? = null,
 )
 @Serializable class EDrop(val rank: JsonElement? = null, val chance: JsonElement? = null)
@@ -42,6 +42,8 @@ import kotlinx.serialization.json.put
 @Serializable class EPackResponse(val cardPack: EPack? = null)
 @Serializable class EOpen(val id: String = "", val completedAt: String? = null, val resultCards: List<ECard>? = null)
 @Serializable class EOpenPayload(val opens: List<EOpen> = emptyList())
+@Serializable class EPendingOpen(val id: String = "", val pack: EPack? = null, val resultCards: List<ECard>? = null)
+@Serializable class EPendingOpensResponse(val viewerPendingCardPackOpens: List<EPendingOpen> = emptyList())
 @Serializable class EOpenResponse(val openCardPack: EOpenPayload? = null)
 
 @Serializable class ESlots(val baseSlots: Int? = null, val subscriptionSlots: Int? = null, val used: Int? = null, val available: Int? = null, val resetAt: String? = null)
@@ -75,7 +77,8 @@ data class DeckCard(val cardId: String, val slug: String, val title: String, val
 data class DeckItem(val id: String, val slug: String, val title: String, val author: String?, val quantity: Int, val up: Int, val down: Int, val views: Int, val preview: List<String>)
 data class DeckDetails(val item: DeckItem, val date: String?, val cards: List<DeckCard>, val mine: Boolean, val canDelete: Boolean, val vote: Boolean?)
 data class PackItem(val id: String, val slug: String, val title: String, val cover: String?, val credits: Int?, val points: Int?, val freeOpens: Int)
-data class PackDetails(val item: PackItem, val pickCount: Int, val maxRolls: Int, val rates: List<Pair<String, String>>, val covers: List<String>)
+data class PendingOpen(val id: String, val packId: String, val packTitle: String, val pickLimit: Int, val cards: List<DroppedCard>)
+data class PackDetails(val item: PackItem, val pickCount: Int, val maxRolls: Int, val expired: Boolean, val rates: List<Pair<String, String>>, val covers: List<String>)
 data class DroppedCard(val slug: String, val title: String, val rank: String?, val image: String?, val modifier: String? = null, val quantity: Int = 1)
 data class PackOpenResult(val cards: List<DroppedCard>, val needsChoice: Boolean)
 data class ForgeSlots(val available: Int, val used: Int, val total: Int, val resetAt: String?)
@@ -156,9 +159,30 @@ class EcosystemRepository(private val api: SenkuroApi) {
 
     suspend fun pack(slug: String): PackDetails? {
         val p = api.execute("fetchCardPack", "fetchCardPack", buildJsonObject { put("slug", slug) }, EPackResponse.serializer()).cardPack ?: return null
-        return PackDetails(p.item(), p.pickCount ?: 1, p.maxRolls ?: 1,
+        return PackDetails(p.item(), p.pickCount ?: 1, p.maxRolls ?: 1, isExpired(p.endAt),
             p.dropRates.orEmpty().map { (it.rank.s() ?: "?") to (it.chance.s()?.toDoubleOrNull()?.let { v -> (if (v <= 1.0) v * 100 else v).let { x -> "%.2f%%".format(x) } } ?: "") },
             p.coverCards.orEmpty().mapNotNull { it.image?.original?.url })
+    }
+
+    private fun isExpired(endAt: String?): Boolean = runCatching {
+        val f = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", java.util.Locale.US).apply { timeZone = java.util.TimeZone.getTimeZone("UTC") }
+        endAt != null && f.parse(endAt.take(19))!!.time < System.currentTimeMillis()
+    }.getOrDefault(false)
+
+    /** Открытия, ожидающие выбора карт (пока они есть, сервер не даёт открывать новые паки). */
+    suspend fun pendingOpens(): List<PendingOpen> =
+        api.execute("fetchPendingPackOpens", "fetchPendingPackOpens", buildJsonObject {}, EPendingOpensResponse.serializer()).viewerPendingCardPackOpens.map { o ->
+            PendingOpen(o.id, o.pack?.id.orEmpty(), o.pack?.titles.pick() ?: "Пак", o.pack?.pickLimit ?: o.pack?.pickCount ?: 1, o.resultCards.orEmpty().map { it.drop() })
+        }
+
+    /** indexes — позиции выбранных карт в списке выпавших (так делает сайт). */
+    suspend fun chooseCards(open: PendingOpen, indexes: List<Int>) {
+        val input = buildJsonObject {
+            put("opens", JsonArray(listOf(buildJsonObject {
+                put("openId", open.id); put("packId", open.packId); put("indexes", JsonArray(indexes.map { JsonPrimitive(it) }))
+            })))
+        }
+        mutate("bulkChooseCardPackOpen", input)
     }
 
     /** currency: POINTS или CREDITS, rolls — число открытий (как на сайте). */

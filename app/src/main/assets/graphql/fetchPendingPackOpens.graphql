@@ -1,0 +1,7 @@
+query fetchPendingPackOpens {
+  viewerPendingCardPackOpens {
+    id
+    pack { id slug titles { lang content } pickLimit pickCount }
+    resultCards { id slug titles { lang content } rank image { original { url } } }
+  }
+}

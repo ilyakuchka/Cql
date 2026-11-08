@@ -12,6 +12,7 @@ import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
@@ -101,6 +102,8 @@ private fun Throwable.friendly(): String {
     if (this is CancellationException) throw this
     val m = msg()
     return when {
+        m.contains("expired pack", true) -> "Этот пак уже недоступен: срок вышел"
+        m.contains("in progress", true) -> "Есть незавершённое открытие: сначала выберите карты (блок «Выбор карт» на странице пака)"
         m.contains("same rank", true) -> "Все карты должны быть одного ранга"
         m.contains("enough rights", true) -> "Недостаточно прав для этого действия"
         m.contains("Time expired", true) -> "Время на это действие истекло"
@@ -280,7 +283,11 @@ fun PackScreen(slug: String, onBack: () -> Unit) {
     var result by remember { mutableStateOf<PackOpenResult?>(null) }
     var busy by remember { mutableStateOf(false) }
     var info by remember { mutableStateOf<String?>(null) }
+    var pending by remember { mutableStateOf<List<PendingOpen>>(emptyList()) }
+    val chosen = remember { mutableStateMapOf<String, Set<Int>>() }
     val scope = rememberCoroutineScope()
+    fun loadPending() { scope.launch { pending = runCatching { AppGraph.eco.pendingOpens() }.getOrDefault(emptyList()) } }
+    LaunchedEffect(Unit) { if (AppGraph.account.value != null) loadPending() }
     fun load() { scope.launch { error = null; try { pack = AppGraph.eco.pack(slug) ?: run { error = "Пак не найден"; null } } catch (e: Exception) { error = e.friendly() } } }
     LaunchedEffect(slug) { load() }
     Column(Modifier.fillMaxSize()) {
@@ -292,9 +299,34 @@ fun PackScreen(slug: String, onBack: () -> Unit) {
                 item {
                     Text(listOfNotNull(p.item.points?.let { "$it очков" }, p.item.credits?.let { "$it кредитов" }).joinToString(" или ") + " за открытие", fontSize = 14.sp, color = MaterialTheme.colorScheme.onBackground)
                     if (p.item.freeOpens > 0) Text("Бесплатных открытий: ${p.item.freeOpens}", fontSize = 12.sp, color = muted)
-                    if (p.pickCount > 1) Text("Из выпавших карт нужно выбрать ${p.pickCount} (выбор — на сайте)", fontSize = 12.sp, color = muted)
+                    if (p.pickCount > 1) Text("После открытия нужно выбрать карты из выпавших (до ${p.pickCount})", fontSize = 12.sp, color = muted)
                 }
-                if (AppGraph.account.value != null) item {
+                if (p.expired) item { Text("Срок действия пака вышел — открыть его нельзя", fontSize = 13.sp, color = MaterialTheme.colorScheme.error) }
+                if (pending.isNotEmpty()) {
+                    item { Text("Выбор карт (незавершённые открытия)", fontSize = 14.sp, color = MaterialTheme.colorScheme.onBackground) }
+                    items(pending, key = { it.id }) { o ->
+                        val sel = chosen[o.id].orEmpty()
+                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Text("${o.packTitle}: выберите до ${o.pickLimit} карт (выбрано ${sel.size})", fontSize = 12.sp, color = muted)
+                            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                itemsIndexed(o.cards) { i, c ->
+                                    Column(Modifier.width(96.dp)) {
+                                        CardThumb(c.image, c.title, c.rank.orEmpty(), null, if (i in sel) 1 else 0) {
+                                            chosen[o.id] = if (i in sel) sel - i else if (sel.size < o.pickLimit) sel + i else sel
+                                        }
+                                    }
+                                }
+                            }
+                            Button(enabled = !busy && sel.isNotEmpty(), onClick = {
+                                busy = true; info = null
+                                scope.launch {
+                                    try { AppGraph.eco.chooseCards(o, sel.sorted()); chosen.remove(o.id); loadPending(); load(); info = "Карты выбраны" } catch (e: Exception) { info = e.friendly() } finally { busy = false }
+                                }
+                            }) { Text("Подтвердить выбор") }
+                        }
+                    }
+                }
+                if (AppGraph.account.value != null && !p.expired) item {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         if (p.item.points != null) Button(enabled = !busy, onClick = { confirm = "POINTS" }) { Text("За очки") }
                         if (p.item.credits != null) Button(enabled = !busy, onClick = { confirm = "CREDITS" }) { Text("За кредиты") }
@@ -321,13 +353,13 @@ fun PackScreen(slug: String, onBack: () -> Unit) {
             confirmButton = { TextButton(onClick = {
                 confirm = null; busy = true; info = null
                 scope.launch {
-                    try { result = AppGraph.eco.openPack(pack!!.item.id, AppGraph.account.value?.userId.orEmpty(), cur, 1); load() } catch (e: Exception) { info = e.friendly() } finally { busy = false }
+                    try { result = AppGraph.eco.openPack(pack!!.item.id, AppGraph.account.value?.userId.orEmpty(), cur, 1); load(); loadPending() } catch (e: Exception) { info = e.friendly() } finally { busy = false }
                 }
             }) { Text("Открыть") } },
             dismissButton = { TextButton(onClick = { confirm = null }) { Text("Отмена") } },
         )
     }
-    result?.let { DroppedDialog("Выпало", it.cards, if (it.needsChoice) "Нужно выбрать карты — завершите открытие на сайте" else null) { result = null } }
+    result?.let { DroppedDialog("Выпало", it.cards, if (it.needsChoice) "Нужно выбрать карты — блок «Выбор карт» на странице пака" else null) { result = null } }
 }
 
 // ---------------- кузница

@@ -1,0 +1,3 @@
+mutation bulkChooseCardPackOpen($input: BulkChooseCardPackOpenInput!) {
+  bulkChooseCardPackOpen(input: $input) { success }
+}
