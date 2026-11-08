@@ -23,12 +23,16 @@ object DebugTools {
     @Composable
     fun Screen(onBack: () -> Unit) = CaptureScreen(onBack)
 
+    @Composable
+    fun JournalScreen(onBack: () -> Unit) = ApiJournalScreen(onBack)
+
     private fun crashFile(context: Context) = File(context.filesDir, "last-crash.txt")
 
     /** Сохраняет стек последнего падения в файл; при следующем запуске его покажет [CrashDialog]. */
     fun installCrashHandler(context: Context) {
         // Объекты со snapshot-состоянием создаём заранее, вне композиции: иначе фоновый поток WebView
         // (shouldInterceptRequest) мог создать их позже снимка композиции, и чтение падало с IllegalStateException.
+        ApiJournal.install()
         FileCapture.files.size
         CaptureLog.calls.size
         val app = context.applicationContext

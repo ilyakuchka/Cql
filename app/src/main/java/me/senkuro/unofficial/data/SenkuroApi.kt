@@ -80,21 +80,39 @@ class SenkuroApi(private val context: Context, private val client: OkHttpClient)
             .post(payload.toRequestBody("application/json".toMediaType()))
             .build()
 
-        client.newCall(request).execute().use { response ->
-            val text = response.body?.string().orEmpty()
-            val root = try {
-                json.parseToJsonElement(text).jsonObject
-            } catch (e: Exception) {
-                if (!response.isSuccessful) throw ApiException("HTTP ${response.code}")
-                throw ApiException("Некорректный ответ сервера")
+        val sink = ApiTrace.sink
+        val started = System.currentTimeMillis()
+        var code = 0
+        var body = ""
+        var failure: String? = null
+        try {
+            client.newCall(request).execute().use { response ->
+                code = response.code
+                val text = response.body?.string().orEmpty()
+                body = text
+                val root = try {
+                    json.parseToJsonElement(text).jsonObject
+                } catch (e: Exception) {
+                    if (!response.isSuccessful) throw ApiException("HTTP ${response.code}")
+                    throw ApiException("Некорректный ответ сервера")
+                }
+                val data = root["data"]
+                if (data == null || data is JsonNull) {
+                    val message = root["errors"]?.jsonArray?.firstOrNull()?.jsonObject
+                        ?.get("message")?.jsonPrimitive?.contentOrNull
+                    throw ApiException(message ?: "HTTP ${response.code}")
+                }
+                if (root["errors"] != null && root["errors"] !is JsonNull) failure = "Частичные ошибки в ответе (errors)"
+                json.decodeFromJsonElement(deserializer, data)
             }
-            val data = root["data"]
-            if (data == null || data is JsonNull) {
-                val message = root["errors"]?.jsonArray?.firstOrNull()?.jsonObject
-                    ?.get("message")?.jsonPrimitive?.contentOrNull
-                throw ApiException(message ?: "HTTP ${response.code}")
+        } catch (e: Throwable) {
+            failure = (e.message ?: e.javaClass.simpleName)
+            throw e
+        } finally {
+            if (sink != null) runCatching {
+                sink(ApiCall(started, operation, query(file), ApiTrace.safeVariables(operation, variables.toString()), code,
+                    System.currentTimeMillis() - started, body.take(30_000), failure))
             }
-            json.decodeFromJsonElement(deserializer, data)
         }
     }
 }

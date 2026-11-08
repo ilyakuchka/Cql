@@ -22,7 +22,7 @@ import me.senkuro.unofficial.data.SenkuroConfig
 
 /** Настройки: пока только переключатель тёмной темы. */
 @Composable
-fun SettingsScreen(onCards: () -> Unit = {}, onCardCatalog: () -> Unit = {}, onOffers: () -> Unit = {}, onPosts: () -> Unit = {}, onFeed: () -> Unit = {}, onCardHub: () -> Unit = {}) {
+fun SettingsScreen(onCards: () -> Unit = {}, onCardCatalog: () -> Unit = {}, onOffers: () -> Unit = {}, onPosts: () -> Unit = {}, onFeed: () -> Unit = {}, onCardHub: () -> Unit = {}, onJournal: (() -> Unit)? = null) {
     val dark by AppGraph.themeDark.collectAsState()
     val token by AppGraph.auth.token.collectAsState()
     val account by AppGraph.account.collectAsState()
@@ -53,6 +53,7 @@ fun SettingsScreen(onCards: () -> Unit = {}, onCardCatalog: () -> Unit = {}, onO
             }
             Switch(checked = dark, onCheckedChange = AppGraph::setDarkTheme)
         }
+        if (onJournal != null) TextButton(onClick = onJournal, modifier = Modifier.padding(horizontal = 8.dp)) { Text("Журнал запросов (debug)") }
         if (token != null) {
             TextButton(onClick = onCards, modifier = Modifier.padding(horizontal = 8.dp)) { Text("Мои карточки") }
             TextButton(onClick = onCardCatalog, modifier = Modifier.padding(horizontal = 8.dp)) { Text("Каталог карточек") }
