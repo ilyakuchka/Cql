@@ -156,7 +156,7 @@ object SsoClient {
         val challenge = b64url(MessageDigest.getInstance("SHA-256").digest(verifier.toByteArray()))
         var url: HttpUrl = "$SSO/oauth/authorize".toHttpUrl().newBuilder()
             .addQueryParameter("response_type", "code")
-            .addQueryParameter("client_id", SenkuroConfig.APP_ID)
+            .addQueryParameter("client_id", SenkuroConfig.appId)
             .addQueryParameter("redirect_uri", REDIRECT)
             .addQueryParameter("scope", "identify email")
             .addQueryParameter("state", state)
@@ -188,7 +188,7 @@ object SsoClient {
             .add("grant_type", "authorization_code")
             .add("code", authCode)
             .add("redirect_uri", REDIRECT)
-            .add("client_id", SenkuroConfig.APP_ID)
+            .add("client_id", SenkuroConfig.appId)
             .add("code_verifier", verifier)
             .build()
         client.newCall(request("$SSO/oauth/token").post(form).build()).execute().use { r ->

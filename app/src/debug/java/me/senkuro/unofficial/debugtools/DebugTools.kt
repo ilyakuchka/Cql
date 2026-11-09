@@ -26,6 +26,9 @@ object DebugTools {
     @Composable
     fun JournalScreen(onBack: () -> Unit) = ApiJournalScreen(onBack)
 
+    @Composable
+    fun SiteVersionScreen(onBack: () -> Unit) = me.senkuro.unofficial.debugtools.SiteVersionScreen(onBack)
+
     private fun crashFile(context: Context) = File(context.filesDir, "last-crash.txt")
 
     /** Сохраняет стек последнего падения в файл; при следующем запуске его покажет [CrashDialog]. */

@@ -60,6 +60,7 @@ private object Routes {
     const val LIBRARY = "library"
     const val DEBUG = "debug"
     const val API_JOURNAL = "apijournal"
+    const val SITE_VERSION = "siteversion"
     const val LOGIN = "login"
     const val SETTINGS = "settings"
     const val NOTIFICATIONS = "notifications"
@@ -258,6 +259,7 @@ fun AppRoot() {
                                 onFeed = { nav.navigate(Routes.FEED) },
                                 onCardHub = { nav.navigate(Routes.CARD_HUB) },
                                 onJournal = if (BuildConfig.DEBUG_TOOLS) ({ nav.navigate(Routes.API_JOURNAL) }) else null,
+                                onSiteVersion = if (BuildConfig.DEBUG_TOOLS) ({ nav.navigate(Routes.SITE_VERSION) }) else null,
                             )
                         }
                     }
@@ -357,6 +359,9 @@ fun AppRoot() {
                         UnofficialTheme(dark = appDark) {
                             LoginScreen(onBack = { nav.popBackStack() }, onDone = { nav.popBackStack() })
                         }
+                    }
+                    composable(Routes.SITE_VERSION) {
+                        UnofficialTheme(dark = appDark) { DebugTools.SiteVersionScreen(onBack = { nav.popBackStack() }) }
                     }
                     composable(Routes.API_JOURNAL) {
                         UnofficialTheme(dark = appDark) { DebugTools.JournalScreen(onBack = { nav.popBackStack() }) }

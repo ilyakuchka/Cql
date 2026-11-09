@@ -18,6 +18,11 @@ object DebugTools {
         LaunchedEffect(Unit) { onBack() }
     }
 
+    @Composable
+    fun SiteVersionScreen(onBack: () -> Unit) {
+        LaunchedEffect(Unit) { onBack() }
+    }
+
     fun installCrashHandler(context: android.content.Context) {}
 
     @Composable

@@ -33,8 +33,8 @@ private class HeadersInterceptor(private val token: () -> String?) : Interceptor
         if (SenkuroConfig.isApiHost(original.url.host)) {
             builder.header("Origin", SenkuroConfig.BASE_URL)
             builder.header("Accept", "application/json")
-            builder.header("App-Id", SenkuroConfig.APP_ID)
-            builder.header("App-Version", SenkuroConfig.APP_VERSION)
+            builder.header("App-Id", SenkuroConfig.appId)
+            builder.header("App-Version", SenkuroConfig.appVersion)
             // Токен уходит только на хосты API, не на картинки.
             token()?.let { builder.header("Authorization", "Bearer $it") }
         }

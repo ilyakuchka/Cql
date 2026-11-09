@@ -42,7 +42,14 @@ object SenkuroConfig {
             "(KHTML, like Gecko) Version/18.5 Mobile/15E148 Safari/604.1"
 
     const val APP_ID = "4026531840100"
-    const val APP_VERSION = "060626"
+    // Версия, которую сайт шлёт в заголовке App-Version (смотрите в debug: «Версия сайта»).
+    const val APP_VERSION = "301026"
+
+    /** Подмена на время работы приложения (только для проверки в debug-инструменте «Версия сайта»). */
+    @Volatile var appIdOverride: String? = null
+    @Volatile var appVersionOverride: String? = null
+    val appId: String get() = appIdOverride ?: APP_ID
+    val appVersion: String get() = appVersionOverride ?: APP_VERSION
 
     /** Размер страницы выдачи mangaTachiyomiSearch (offset-пагинация). */
     const val SEARCH_PAGE_SIZE = 10
