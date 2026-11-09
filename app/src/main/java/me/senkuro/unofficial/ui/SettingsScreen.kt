@@ -1,5 +1,6 @@
 package me.senkuro.unofficial.ui
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -53,13 +54,21 @@ fun SettingsScreen(onCards: () -> Unit = {}, onCardCatalog: () -> Unit = {}, onO
             }
             Switch(checked = dark, onCheckedChange = AppGraph::setDarkTheme)
         }
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onPosts)
+                .padding(horizontal = 16.dp, vertical = 10.dp),
+        ) {
+            Text("Новости сайта", color = MaterialTheme.colorScheme.onBackground, fontSize = 15.sp)
+            Text("Посты и объявления Senkuro", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+        }
         if (onJournal != null) TextButton(onClick = onJournal, modifier = Modifier.padding(horizontal = 8.dp)) { Text("Журнал запросов (debug)") }
         if (token != null) {
             TextButton(onClick = onCards, modifier = Modifier.padding(horizontal = 8.dp)) { Text("Мои карточки") }
             TextButton(onClick = onCardCatalog, modifier = Modifier.padding(horizontal = 8.dp)) { Text("Каталог карточек") }
             TextButton(onClick = onOffers, modifier = Modifier.padding(horizontal = 8.dp)) { Text("Обмены карточек") }
             TextButton(onClick = onCardHub, modifier = Modifier.padding(horizontal = 8.dp)) { Text("Колоды, паки, кузница, магазин, Shorts") }
-            TextButton(onClick = onPosts, modifier = Modifier.padding(horizontal = 8.dp)) { Text("Посты") }
             TextButton(onClick = onFeed, modifier = Modifier.padding(horizontal = 8.dp)) { Text("Новые главы (лента)") }
         }
         if (token != null) {
