@@ -257,7 +257,6 @@ fun AppRoot() {
                                 onCardCatalog = { nav.navigate(Routes.CARD_CATALOG) },
                                 onOffers = { nav.navigate(Routes.OFFERS) },
                                 onPosts = { nav.navigate(Routes.POSTS) },
-                                onFeed = { nav.navigate(Routes.FEED) },
                                 onCardHub = { nav.navigate(Routes.CARD_HUB) },
                                 onJournal = if (BuildConfig.DEBUG_TOOLS) ({ nav.navigate(Routes.API_JOURNAL) }) else null,
                                 onSiteVersion = if (BuildConfig.DEBUG_TOOLS) ({ nav.navigate(Routes.SITE_VERSION) }) else null,

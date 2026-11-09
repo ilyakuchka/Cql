@@ -24,7 +24,7 @@ import me.senkuro.unofficial.data.SenkuroConfig
 
 /** Настройки: пока только переключатель тёмной темы. */
 @Composable
-fun SettingsScreen(onCards: () -> Unit = {}, onCardCatalog: () -> Unit = {}, onOffers: () -> Unit = {}, onPosts: () -> Unit = {}, onFeed: () -> Unit = {}, onCardHub: () -> Unit = {}, onJournal: (() -> Unit)? = null, onSiteVersion: (() -> Unit)? = null) {
+fun SettingsScreen(onCards: () -> Unit = {}, onCardCatalog: () -> Unit = {}, onOffers: () -> Unit = {}, onPosts: () -> Unit = {}, onCardHub: () -> Unit = {}, onJournal: (() -> Unit)? = null, onSiteVersion: (() -> Unit)? = null) {
     val dark by AppGraph.themeDark.collectAsState()
     val token by AppGraph.auth.token.collectAsState()
     val account by AppGraph.account.collectAsState()
@@ -67,7 +67,6 @@ fun SettingsScreen(onCards: () -> Unit = {}, onCardCatalog: () -> Unit = {}, onO
             TextButton(onClick = onCardCatalog, modifier = Modifier.padding(horizontal = 8.dp)) { Text("Каталог карточек") }
             TextButton(onClick = onOffers, modifier = Modifier.padding(horizontal = 8.dp)) { Text("Обмены карточек") }
             TextButton(onClick = onCardHub, modifier = Modifier.padding(horizontal = 8.dp)) { Text("Колоды, паки, кузница, магазин, Shorts") }
-            TextButton(onClick = onFeed, modifier = Modifier.padding(horizontal = 8.dp)) { Text("Новые главы (лента)") }
         }
         if (token != null) {
             Row(
