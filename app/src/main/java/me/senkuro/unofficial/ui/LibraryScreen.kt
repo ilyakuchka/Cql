@@ -15,7 +15,7 @@ import me.senkuro.unofficial.data.MangaItem
 
 /** Закладки: коллекции аккаунта на сайте (вход через аватарку на главной или кнопку на этой странице). */
 @Composable
-fun LibraryScreen(onManga: (MangaItem) -> Unit, onLogin: () -> Unit, onDebug: (() -> Unit)? = null) {
+fun LibraryScreen(onManga: (MangaItem) -> Unit, onLogin: () -> Unit) {
     Column(
         Modifier
             .fillMaxSize()
@@ -27,14 +27,6 @@ fun LibraryScreen(onManga: (MangaItem) -> Unit, onLogin: () -> Unit, onDebug: ((
             color = MaterialTheme.colorScheme.onBackground,
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
         )
-        if (onDebug != null) {
-            OutlinedButton(
-                onClick = onDebug,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 4.dp),
-            ) { Text("Отладка: перехват запросов сайта") }
-        }
         SiteBookmarksTab(onManga = onManga, onLogin = onLogin)
     }
 }

@@ -175,8 +175,6 @@ fun AppRoot() {
                             LibraryScreen(
                                 onManga = openManga,
                                 onLogin = { nav.navigate(Routes.LOGIN) },
-                                // Кнопка есть только в debug-сборке (BuildConfig.DEBUG_TOOLS = false в release).
-                                onDebug = if (BuildConfig.DEBUG_TOOLS) ({ nav.navigate(Routes.DEBUG) }) else null,
                             )
                         }
                     }
@@ -259,6 +257,7 @@ fun AppRoot() {
                                 onPosts = { nav.navigate(Routes.POSTS) },
                                 onCardHub = { nav.navigate(Routes.CARD_HUB) },
                                 onJournal = if (BuildConfig.DEBUG_TOOLS) ({ nav.navigate(Routes.API_JOURNAL) }) else null,
+                                onCapture = if (BuildConfig.DEBUG_TOOLS) ({ nav.navigate(Routes.DEBUG) }) else null,
                                 onSiteVersion = if (BuildConfig.DEBUG_TOOLS) ({ nav.navigate(Routes.SITE_VERSION) }) else null,
                             )
                         }

@@ -24,7 +24,7 @@ import me.senkuro.unofficial.data.SenkuroConfig
 
 /** Настройки: пока только переключатель тёмной темы. */
 @Composable
-fun SettingsScreen(onCards: () -> Unit = {}, onCardCatalog: () -> Unit = {}, onOffers: () -> Unit = {}, onPosts: () -> Unit = {}, onCardHub: () -> Unit = {}, onJournal: (() -> Unit)? = null, onSiteVersion: (() -> Unit)? = null) {
+fun SettingsScreen(onCards: () -> Unit = {}, onCardCatalog: () -> Unit = {}, onOffers: () -> Unit = {}, onPosts: () -> Unit = {}, onCardHub: () -> Unit = {}, onJournal: (() -> Unit)? = null, onCapture: (() -> Unit)? = null, onSiteVersion: (() -> Unit)? = null) {
     val dark by AppGraph.themeDark.collectAsState()
     val token by AppGraph.auth.token.collectAsState()
     val account by AppGraph.account.collectAsState()
@@ -59,6 +59,7 @@ fun SettingsScreen(onCards: () -> Unit = {}, onCardCatalog: () -> Unit = {}, onO
         SectionLabel("Сайт")
         TextButton(onClick = onPosts, modifier = Modifier.padding(horizontal = 8.dp)) { Text("Новости сайта (посты и объявления)") }
         if (onJournal != null) TextButton(onClick = onJournal, modifier = Modifier.padding(horizontal = 8.dp)) { Text("Журнал запросов (debug)") }
+        if (onCapture != null) TextButton(onClick = onCapture, modifier = Modifier.padding(horizontal = 8.dp)) { Text("Отладка: перехват запросов сайта (debug)") }
         if (onSiteVersion != null) TextButton(onClick = onSiteVersion, modifier = Modifier.padding(horizontal = 8.dp)) { Text("Версия сайта: App-Version и App-Id (debug)") }
         if (token != null) {
             HorizontalDivider(Modifier.padding(vertical = 8.dp))
