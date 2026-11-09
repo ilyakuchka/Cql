@@ -79,6 +79,16 @@ class TitleRepository(private val api: SenkuroApi) {
         else -> n.toLong().toString()
     }
 
+    private fun linkLabel(l: TLink): String {
+        val host = runCatching { java.net.URI(l.url).host.orEmpty().removePrefix("www.") }.getOrDefault("")
+        return when {
+            l.type == "OFFICIAL_SITE" -> "Официальный сайт"
+            !l.service.isNullOrBlank() && l.service != "UNKNOWN" -> when (l.service) { "SHIKIMORI" -> "Shikimori"; "MY_ANIME_LIST" -> "MyAnimeList"; "MANGA_UPDATES" -> "MangaUpdates"; else -> l.service }
+            host.isNotBlank() -> host
+            else -> l.url
+        }
+    }
+
     suspend fun page(slug: String): TitlePage? {
         val m = api.execute("fetchMangaPage", "fetchMangaPage", buildJsonObject { put("slug", slug) }, TMangaResponse.serializer()).manga ?: return null
         val teams = LinkedHashMap<String, TitleTeam>()
@@ -108,7 +118,7 @@ class TitleRepository(private val api: SenkuroApi) {
             source = m.source,
             chapters = m.chapters,
             formats = m.formats.orEmpty(),
-            links = m.links.orEmpty().filter { it.url.isNotBlank() }.map { TitleLink(it.url, it.service?.takeIf { s -> s.isNotBlank() } ?: it.type ?: it.url) },
+            links = m.links.orEmpty().filter { it.url.isNotBlank() }.map { TitleLink(it.url, linkLabel(it)) },
             publishers = m.publishers.orEmpty().map { TitlePublisher(it.slug, it.name.ifBlank { it.titles.ru().orEmpty() }, it.logotype?.original?.url) },
             teams = teams.values.toList(),
             scores = m.scoreDistributions.orEmpty().map { TitleListCount(it.score.toString(), it.count) }.sortedByDescending { it.collectionId.toInt() },

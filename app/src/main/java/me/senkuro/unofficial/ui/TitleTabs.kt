@@ -202,7 +202,7 @@ fun LazyListScope.statsItems(page: TitlePage?, loading: Boolean) {
                 Heading("В списках у $total пользователей")
                 page.lists.forEachIndexed { i, l ->
                     Row(Modifier.fillMaxWidth().padding(horizontal = 21.dp, vertical = 3.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text(names[l.collectionId] ?: "Список ${i + 1}", color = AppColors.DarkSecondary, fontSize = 13.sp)
+                        Text(systemListName(l.collectionId) ?: names[l.collectionId] ?: (if (l.collectionId.isBlank()) "Другое" else "Список ${i + 1}"), color = AppColors.DarkSecondary, fontSize = 13.sp)
                         Text("${l.count}", color = Color.White, fontSize = 13.sp)
                     }
                 }
@@ -368,4 +368,13 @@ fun LazyListScope.commentsItems(state: TitleComments, loggedIn: Boolean, enabled
             else if (state.loaded && state.items.isEmpty() && state.error == null) Text("Комментариев пока нет", color = AppColors.DarkSecondary, fontSize = 13.sp)
         }
     }
+}
+
+/** id системных коллекций сайта — base64 от «USER_BOOKMARK_COLLECTION:N»; N=7..12 одинаковы у всех пользователей. */
+private fun systemListName(id: String): String? {
+    if (id.isBlank()) return null
+    val n = runCatching {
+        String(android.util.Base64.decode(id, android.util.Base64.URL_SAFE or android.util.Base64.NO_PADDING)).substringAfterLast(':').toInt()
+    }.getOrNull()
+    return when (n) { 7 -> "Читаю"; 8 -> "В планах"; 9 -> "Прочитано"; 10 -> "Любимое"; 11 -> "Отложено"; 12 -> "Брошено"; else -> null }
 }
