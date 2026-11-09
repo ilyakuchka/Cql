@@ -104,6 +104,7 @@ private fun Throwable.friendly(): String {
     return when {
         m.contains("expired pack", true) -> "Этот пак уже недоступен: срок вышел"
         m.contains("in progress", true) -> "Есть незавершённое открытие: сначала выберите карты (блок «Выбор карт» на странице пака)"
+        Regex("You need (\\d+) cards", RegexOption.IGNORE_CASE).find(m) != null -> "Нужно карт для кузницы: ${Regex("(\\d+)").find(m)?.value}"
         m.contains("same rank", true) -> "Все карты должны быть одного ранга"
         m.contains("enough rights", true) -> "Недостаточно прав для этого действия"
         m.contains("Time expired", true) -> "Время на это действие истекло"
@@ -386,7 +387,7 @@ fun ForgeScreen(onBack: () -> Unit) {
             }
         }
         Text(
-            when (mode) { "SPLIT" -> "Раскол: карта распадается на несколько других"; "MERGE" -> "Объединение: несколько карт сливаются в одну"; else -> "Переплавка: карты одного ранга улучшаются в более высокий" } +
+            when (mode) { "SPLIT" -> "Раскол: карта распадается на несколько других"; "MERGE" -> "Объединение: несколько карт сливаются в одну"; else -> "Переплавка: 3 карты одного ранга дают 1 карту рангом выше" } +
                 (slots?.let { " · попыток осталось: ${it.available} из ${it.total}" } ?: ""),
             fontSize = 12.sp, color = muted, modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
         )
