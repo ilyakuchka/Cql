@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -54,17 +55,13 @@ fun SettingsScreen(onCards: () -> Unit = {}, onCardCatalog: () -> Unit = {}, onO
             }
             Switch(checked = dark, onCheckedChange = AppGraph::setDarkTheme)
         }
-        Column(
-            Modifier
-                .fillMaxWidth()
-                .clickable(onClick = onPosts)
-                .padding(horizontal = 16.dp, vertical = 10.dp),
-        ) {
-            Text("Новости сайта", color = MaterialTheme.colorScheme.onBackground, fontSize = 15.sp)
-            Text("Посты и объявления Senkuro", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
-        }
+        HorizontalDivider(Modifier.padding(vertical = 8.dp))
+        SectionLabel("Сайт")
+        TextButton(onClick = onPosts, modifier = Modifier.padding(horizontal = 8.dp)) { Text("Новости сайта (посты и объявления)") }
         if (onJournal != null) TextButton(onClick = onJournal, modifier = Modifier.padding(horizontal = 8.dp)) { Text("Журнал запросов (debug)") }
         if (token != null) {
+            HorizontalDivider(Modifier.padding(vertical = 8.dp))
+            SectionLabel("Мой аккаунт")
             TextButton(onClick = onCards, modifier = Modifier.padding(horizontal = 8.dp)) { Text("Мои карточки") }
             TextButton(onClick = onCardCatalog, modifier = Modifier.padding(horizontal = 8.dp)) { Text("Каталог карточек") }
             TextButton(onClick = onOffers, modifier = Modifier.padding(horizontal = 8.dp)) { Text("Обмены карточек") }
@@ -90,4 +87,9 @@ fun SettingsScreen(onCards: () -> Unit = {}, onCardCatalog: () -> Unit = {}, onO
             }
         }
     }
+}
+
+@Composable
+private fun SectionLabel(text: String) {
+    Text(text, color = MaterialTheme.colorScheme.primary, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
 }
