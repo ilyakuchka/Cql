@@ -429,16 +429,18 @@ fun ContestScreen(onBack: () -> Unit) {
             error != null -> ErrorBox(error.orEmpty(), onRetry = { load() })
             !loaded -> LoadingBox()
             c == null || c.cards.isEmpty() -> Text("Сейчас нет активного турнира", Modifier.padding(16.dp), color = muted)
-            else -> Column(Modifier.fillMaxSize().padding(12.dp)) {
-                Text(listOfNotNull(c.character, c.rank?.let { "ранг $it" }).joinToString(" · "), fontSize = 14.sp, color = MaterialTheme.colorScheme.onBackground)
-                Text("Выберите карточку, которая должна победить", fontSize = 12.sp, color = muted, modifier = Modifier.padding(bottom = 8.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    c.cards.take(2).forEach { k ->
-                        Column(Modifier.weight(1f)) { CardThumb(k.image, k.title, listOfNotNull(k.rank, k.author).joinToString(" · "), null, 0) { if (AppGraph.account.value != null) pick = k } }
+            else -> LazyVerticalGrid(GridCells.Fixed(2), Modifier.fillMaxSize(), contentPadding = PaddingValues(12.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                item(span = { GridItemSpan(maxLineSpan) }) {
+                    Column {
+                        Text(listOfNotNull(c.character, c.rank?.let { "ранг $it" }, c.endAt?.let { "до ${it.take(16).replace('T', ' ')} UTC" }).joinToString(" · "), fontSize = 14.sp, color = MaterialTheme.colorScheme.onBackground)
+                        Text("Выберите карточку, которая должна победить (${c.cards.size} кандидатов)", fontSize = 12.sp, color = muted)
+                        info?.let { Text(it, fontSize = 13.sp, color = muted, modifier = Modifier.padding(top = 6.dp)) }
+                        if (AppGraph.account.value == null) Text("Войдите, чтобы голосовать", fontSize = 12.sp, color = muted, modifier = Modifier.padding(top = 4.dp))
                     }
                 }
-                info?.let { Text(it, fontSize = 13.sp, color = muted, modifier = Modifier.padding(top = 12.dp)) }
-                if (AppGraph.account.value == null) Text("Войдите, чтобы голосовать", fontSize = 12.sp, color = muted, modifier = Modifier.padding(top = 8.dp))
+                items(c.cards, key = { it.id }) { k ->
+                    CardThumb(k.image, k.title, listOfNotNull(k.rank, k.author).joinToString(" · "), null, 0) { if (AppGraph.account.value != null) pick = k }
+                }
             }
         }
     }

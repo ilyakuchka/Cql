@@ -83,7 +83,7 @@ data class DroppedCard(val slug: String, val title: String, val rank: String?, v
 data class PackOpenResult(val cards: List<DroppedCard>, val needsChoice: Boolean)
 data class ForgeSlots(val available: Int, val used: Int, val total: Int, val resetAt: String?)
 data class ContestCard(val id: String, val title: String, val rank: String?, val image: String?, val author: String?)
-data class Contest(val id: String, val character: String?, val rank: String?, val cards: List<ContestCard>)
+data class Contest(val id: String, val character: String?, val rank: String?, val endAt: String?, val cards: List<ContestCard>)
 data class ShopItem(val id: String, val title: String, val type: String, val price: Int?, val basePrice: Int?, val image: String?, val owned: Boolean, val active: Boolean)
 
 /** Колоды, паки, кузница, турнир карт, магазин. Входные поля мутаций частично угаданы по соглашениям сайта. */
@@ -215,7 +215,7 @@ class EcosystemRepository(private val api: SenkuroApi) {
 
     suspend fun contest(): Contest? {
         val c = api.execute("fetchPendingCardContest", "fetchPendingCardContest", buildJsonObject {}, EContestResponse.serializer()).pendingCardContest ?: return null
-        return Contest(c.id, c.character?.titles.pick(), c.rank.s(), c.pendingCards.orEmpty().map {
+        return Contest(c.id, c.character?.titles.pick(), c.rank.s(), c.endAt, c.pendingCards.orEmpty().map {
             ContestCard(it.id, it.titles.pick() ?: "Карточка", it.rank.s(), it.image?.original?.url, it.author?.name)
         })
     }
