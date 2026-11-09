@@ -10,12 +10,12 @@ on:
         description: "Версия приложения (versionName). В поле — текущая; измените её"
         type: string
         required: false
-        default: "0.1.0" # cur-name
+        default: "0.1.2-alpha" # cur-name
       version_code:
         description: "Номер сборки (versionCode). В поле — текущий; измените его"
         type: string
         required: false
-        default: "1" # cur-code
+        default: "3" # cur-code
       bump_code:
         description: "Номер сборки +1 от текущего (если поле выше не менялось или пустое)"
         type: boolean
