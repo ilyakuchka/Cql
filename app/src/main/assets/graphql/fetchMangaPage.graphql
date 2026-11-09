@@ -1,0 +1,47 @@
+query fetchMangaPage($slug: String!) {
+  manga(slug: $slug) {
+    id
+    slug
+    type
+    status
+    formats
+    source
+    translitionStatus
+    views
+    score
+    totalChaptersViews
+    originCountry
+    releasedOn
+    completedOn
+    rating
+    chapters
+    isLicensed
+    commentsEnabled
+    links { url type service }
+    publishers { id slug name titles { lang content } logotype { original { url } } }
+    branches {
+      id
+      lang
+      chapters
+      translitionStatus
+      primaryBranch
+      teamActivities: volumeTeamActivities {
+        volumes { volume ranges { start end } }
+        team { id slug name verified avatar { original { url } } }
+      }
+    }
+    userBookmarkCollectionDistributions { collectionId count }
+    scoreDistributions { count score }
+    recommendations {
+      id
+      slug
+      originalName { lang content }
+      titles { lang content }
+      status
+      rating
+      score
+      cover { original { url } }
+    }
+    viewerVote
+  }
+}

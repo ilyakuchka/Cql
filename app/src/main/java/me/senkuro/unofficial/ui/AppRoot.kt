@@ -383,6 +383,7 @@ fun AppRoot() {
                                 onOpenManga = openManga,
                                 onOpenCharacter = { nav.navigate("character/" + Uri.encode(it)) },
                                 onOpenPerson = { nav.navigate("person/" + Uri.encode(it)) },
+                                onOpenCard = { nav.navigate("card/" + Uri.encode(it)) },
                             )
                         }
                     }

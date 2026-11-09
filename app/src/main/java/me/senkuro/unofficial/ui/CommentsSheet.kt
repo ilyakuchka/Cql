@@ -166,7 +166,7 @@ fun CommentsSheet(chapterSlug: String, pageIndex: Int, onDismiss: () -> Unit) {
 }
 
 @Composable
-private fun CommentRow(c: CommentItem, onVote: (Boolean) -> Unit, onEdit: () -> Unit, onDelete: () -> Unit) {
+internal fun CommentRow(c: CommentItem, onVote: (Boolean) -> Unit, onEdit: () -> Unit, onDelete: () -> Unit) {
     Column(
         Modifier
             .fillMaxWidth()

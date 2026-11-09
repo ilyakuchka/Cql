@@ -107,7 +107,7 @@ class CardsRepository(private val api: SenkuroApi) {
     private fun List<TiptapBlockDto>?.plain() =
         orEmpty().joinToString("\n") { b -> b.content.orEmpty().joinToString("") { it.text.orEmpty() } }.trim()
 
-    suspend fun catalog(after: String?, characterId: String? = null, f: CardFilters = CardFilters()): Pair<List<CardEntry>, String?> {
+    suspend fun catalog(after: String?, characterId: String? = null, f: CardFilters = CardFilters(), mangaId: String? = null, direction: String = "DESC"): Pair<List<CardEntry>, String?> {
         val vars = buildJsonObject {
             if (after != null) put("after", after)
             put("orderField", f.order)
@@ -117,7 +117,8 @@ class CardsRepository(private val api: SenkuroApi) {
             if (f.audio) put("audio", true)
             if (f.featured) put("featured", true)
             if (f.explicit) put("explicit", true)
-            put("orderDirection", "DESC")
+            put("orderDirection", direction)
+            if (mangaId != null) put("entity", buildJsonObject { put("include", JsonArray(listOf(JsonPrimitive(mangaId)))) })
             if (characterId != null) put("character", buildJsonObject { put("include", JsonArray(listOf(JsonPrimitive(characterId)))) })
         }
         val c = api.execute("fetchCards", "fetchCards", vars, CCardsResponse.serializer()).cards

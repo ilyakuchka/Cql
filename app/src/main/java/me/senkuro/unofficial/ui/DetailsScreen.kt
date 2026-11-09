@@ -81,6 +81,7 @@ fun DetailsScreen(
     onOpenManga: (MangaItem) -> Unit = {},
     onOpenCharacter: (String) -> Unit = {},
     onOpenPerson: (String) -> Unit = {},
+    onOpenCard: (String) -> Unit = {},
     vm: DetailsViewModel = viewModel(key = "details-$mangaId"),
 ) {
     LaunchedEffect(mangaId) { vm.load(mangaId) }
@@ -108,7 +109,7 @@ fun DetailsScreen(
         when (val state = vm.state) {
             is UiState.Loading -> LoadingBox()
             is UiState.Error -> ErrorBox(state.message, { vm.load(mangaId, force = true) })
-            is UiState.Ready -> DetailsContent(state.data, readIds, onRead, onOpenManga, onOpenCharacter, onOpenPerson)
+            is UiState.Ready -> DetailsContent(state.data, readIds, onRead, onOpenManga, onOpenCharacter, onOpenPerson, onOpenCard)
         }
         var bookmarkDialog by remember { mutableStateOf(false) }
         if (bookmarkDialog) {
@@ -186,7 +187,7 @@ private fun shareManga(context: Context, item: MangaItem) {
 }
 
 @Composable
-private fun DetailsContent(data: DetailsData, readIds: Set<String>, onRead: (Chapter) -> Unit, onOpenManga: (MangaItem) -> Unit, onOpenCharacter: (String) -> Unit, onOpenPerson: (String) -> Unit) {
+private fun DetailsContent(data: DetailsData, readIds: Set<String>, onRead: (Chapter) -> Unit, onOpenManga: (MangaItem) -> Unit, onOpenCharacter: (String) -> Unit, onOpenPerson: (String) -> Unit, onOpenCard: (String) -> Unit) {
     val details = data.details
     val extras by androidx.compose.runtime.produceState(DetailsExtras(), details.item.id) {
         value = DetailsExtras(
@@ -195,6 +196,14 @@ private fun DetailsContent(data: DetailsData, readIds: Set<String>, onRead: (Cha
             staff = runCatching { AppGraph.directory.staff(details.item.id) }.getOrDefault(emptyList()),
         )
     }
+    val titlePage by androidx.compose.runtime.produceState<me.senkuro.unofficial.data.TitlePage?>(null, details.item.slug) {
+        value = runCatching { AppGraph.title.page(details.item.slug) }.getOrNull()
+    }
+    var tab by rememberSaveable { mutableStateOf(TitleTab.ABOUT) }
+    val tabScope = androidx.compose.runtime.rememberCoroutineScope()
+    val comments = remember(details.item.id) { TitleComments(details.item.id, tabScope) }
+    val titleCards = remember(details.item.id) { TitleCards(details.item.id) }
+    val loggedIn = AppGraph.account.collectAsState().value != null
     val branches = data.chapters.branches
     var branchIndex by rememberSaveable { mutableIntStateOf(0) }
     val branch = branches.getOrNull(branchIndex) ?: branches.firstOrNull()
@@ -275,7 +284,14 @@ private fun DetailsContent(data: DetailsData, readIds: Set<String>, onRead: (Cha
             }
         }
 
-        if (extras.relations.isNotEmpty()) {
+        item(key = "tabs") { TitleTabBar(tab) { tab = it } }
+
+        if (tab == TitleTab.ABOUT) aboutItems(details, titlePage, branch?.chapters?.size, onOpenManga)
+        if (tab == TitleTab.STATS) statsItems(titlePage, loading = true)
+        if (tab == TitleTab.COMMENTS) commentsItems(comments, loggedIn, titlePage?.commentsEnabled ?: true)
+        if (tab == TitleTab.CARDS) cardsItems(titleCards, tabScope, onOpenCard)
+
+        if (tab == TitleTab.ABOUT && extras.relations.isNotEmpty()) {
             item(key = "relations") {
                 Column(Modifier.padding(top = 12.dp)) {
                     Text("Связанное", style = HeadingStyle, color = MaterialTheme.colorScheme.onBackground, modifier = Modifier.padding(horizontal = 21.dp, vertical = 6.dp))
@@ -294,7 +310,7 @@ private fun DetailsContent(data: DetailsData, readIds: Set<String>, onRead: (Cha
             }
         }
 
-        if (extras.staff.isNotEmpty()) {
+        if (tab == TitleTab.ABOUT && extras.staff.isNotEmpty()) {
             item(key = "staff") {
                 Column(Modifier.padding(top = 12.dp)) {
                     Text("Авторы", style = HeadingStyle, color = MaterialTheme.colorScheme.onBackground, modifier = Modifier.padding(horizontal = 21.dp, vertical = 6.dp))
@@ -313,7 +329,7 @@ private fun DetailsContent(data: DetailsData, readIds: Set<String>, onRead: (Cha
                 }
             }
         }
-        if (extras.characters.isNotEmpty()) {
+        if (tab == TitleTab.ABOUT && extras.characters.isNotEmpty()) {
             item(key = "characters") {
                 Column(Modifier.padding(top = 12.dp)) {
                     Text("Персонажи", style = HeadingStyle, color = MaterialTheme.colorScheme.onBackground, modifier = Modifier.padding(horizontal = 21.dp, vertical = 6.dp))
@@ -336,7 +352,7 @@ private fun DetailsContent(data: DetailsData, readIds: Set<String>, onRead: (Cha
             }
         }
 
-        bookmarkNumber?.let { num ->
+        bookmarkNumber?.takeIf { tab == TitleTab.CHAPTERS }?.let { num ->
             item(key = "bookmark-jump") {
                 androidx.compose.material3.TextButton(
                     modifier = Modifier.padding(horizontal = 13.dp),
@@ -354,7 +370,7 @@ private fun DetailsContent(data: DetailsData, readIds: Set<String>, onRead: (Cha
             }
         }
 
-        item(key = "chapters-title") {
+        if (tab == TitleTab.CHAPTERS) item(key = "chapters-title") {
             Column(Modifier.padding(horizontal = 21.dp, vertical = 14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text(
                     text = "Главы" + if (branch != null) " (${branch.chapters.size})" else "",
@@ -377,11 +393,11 @@ private fun DetailsContent(data: DetailsData, readIds: Set<String>, onRead: (Cha
             }
         }
 
-        if (chaptersDescending.isNotEmpty()) {
+        if (tab == TitleTab.CHAPTERS && chaptersDescending.isNotEmpty()) {
             item(key = "ad-manga-chapters") { YandexAdBlock(AdPositions.MANGA_CHAPTERS) }
         }
 
-        items(chaptersDescending, key = { it.id }) { chapter ->
+        if (tab == TitleTab.CHAPTERS) items(chaptersDescending, key = { it.id }) { chapter ->
             ChapterRow(
                 chapter = chapter,
                 cover = details.item.cover,
