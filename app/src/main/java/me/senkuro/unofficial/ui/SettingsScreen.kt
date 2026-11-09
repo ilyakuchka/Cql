@@ -55,12 +55,16 @@ fun SettingsScreen(onCards: () -> Unit = {}, onCardCatalog: () -> Unit = {}, onO
             }
             Switch(checked = dark, onCheckedChange = AppGraph::setDarkTheme)
         }
+        if (onJournal != null || onCapture != null || onSiteVersion != null) {
+            HorizontalDivider(Modifier.padding(vertical = 8.dp))
+            SectionLabel("Debug")
+            if (onJournal != null) TextButton(onClick = onJournal, modifier = Modifier.padding(horizontal = 8.dp)) { Text("Журнал запросов (debug)") }
+            if (onCapture != null) TextButton(onClick = onCapture, modifier = Modifier.padding(horizontal = 8.dp)) { Text("Отладка: перехват запросов сайта (debug)") }
+            if (onSiteVersion != null) TextButton(onClick = onSiteVersion, modifier = Modifier.padding(horizontal = 8.dp)) { Text("Версия сайта: App-Version и App-Id (debug)") }
+        }
         HorizontalDivider(Modifier.padding(vertical = 8.dp))
         SectionLabel("Сайт")
         TextButton(onClick = onPosts, modifier = Modifier.padding(horizontal = 8.dp)) { Text("Новости сайта (посты и объявления)") }
-        if (onJournal != null) TextButton(onClick = onJournal, modifier = Modifier.padding(horizontal = 8.dp)) { Text("Журнал запросов (debug)") }
-        if (onCapture != null) TextButton(onClick = onCapture, modifier = Modifier.padding(horizontal = 8.dp)) { Text("Отладка: перехват запросов сайта (debug)") }
-        if (onSiteVersion != null) TextButton(onClick = onSiteVersion, modifier = Modifier.padding(horizontal = 8.dp)) { Text("Версия сайта: App-Version и App-Id (debug)") }
         if (token != null) {
             HorizontalDivider(Modifier.padding(vertical = 8.dp))
             SectionLabel("Мой аккаунт")
