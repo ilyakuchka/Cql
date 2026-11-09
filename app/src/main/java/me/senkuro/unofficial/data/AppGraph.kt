@@ -135,6 +135,13 @@ object AppGraph {
         refreshAccount()
     }
 
+    /** Показано ли стартовое предупреждение о неофициальности приложения. */
+    fun disclaimerSeen(): Boolean = settings.getBoolean("disclaimer_seen", false)
+
+    fun markDisclaimerSeen() {
+        settings.edit().putBoolean("disclaimer_seen", true).apply()
+    }
+
     fun setDarkTheme(dark: Boolean) {
         settings.edit().putBoolean(KEY_DARK, dark).apply()
         _themeDark.value = dark
