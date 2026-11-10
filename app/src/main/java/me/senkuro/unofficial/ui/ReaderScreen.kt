@@ -242,6 +242,48 @@ fun ReaderScreen(
                         }
                     }
                 }
+                if (controls && urls.isNotEmpty()) {
+                    val total = urls.size
+                    val current = listState.firstVisibleItemIndex.coerceIn(0, total - 1)
+                    var dragging by remember { mutableStateOf<Float?>(null) }
+                    Column(
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .fillMaxWidth()
+                            .background(Color(0xCC000000))
+                            .navigationBarsPadding()
+                            .padding(horizontal = 8.dp, vertical = 4.dp),
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            androidx.compose.material3.TextButton(
+                                onClick = { data.previous?.let(onOpenChapter) },
+                                enabled = data.previous != null,
+                            ) { Text("‹ Глава", color = if (data.previous != null) Color.White else Color(0xFF777777)) }
+                            Text(
+                                "${(dragging?.toInt() ?: current) + 1} / $total",
+                                color = Color.White,
+                                style = MaterialTheme.typography.bodySmall,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.weight(1f),
+                            )
+                            androidx.compose.material3.TextButton(
+                                onClick = { data.next?.let(onOpenChapter) ?: onToTitle() },
+                            ) { Text(if (data.next != null) "Глава ›" else "К тайтлу", color = Color.White) }
+                        }
+                        if (total > 1) {
+                            androidx.compose.material3.Slider(
+                                value = dragging ?: current.toFloat(),
+                                onValueChange = {
+                                    dragging = it
+                                    scope.launch { listState.scrollToItem(it.toInt().coerceIn(0, total - 1)) }
+                                },
+                                onValueChangeFinished = { dragging = null },
+                                valueRange = 0f..(total - 1).toFloat(),
+                                steps = if (total in 3..60) total - 2 else 0,
+                            )
+                        }
+                    }
+                }
                 if (showErrors) ReaderErrorsDialog(
                     context = "Манга ${data.manga?.title.orEmpty()} (${mangaId}), глава ${data.chapter.title} [${data.chapter.slug}], страниц: ${urls.size}",
                     onDismiss = { showErrors = false },
