@@ -216,17 +216,6 @@ private fun DetailsContent(data: DetailsData, readIds: Set<String>, onRead: (Cha
                 (it.name?.lowercase()?.contains(q) == true) || "том ${it.volume}".lowercase() == q || it.date?.contains(q) == true
         }
     }
-    val continueFrom = remember(branch, readIds) {
-        val list = branch?.chapters.orEmpty()
-        list.firstOrNull { it.id !in readIds } ?: list.firstOrNull()
-    }
-    val readLabel = when {
-        continueFrom == null -> "Нет глав"
-        continueFrom.id in readIds -> "Читать заново"
-        branch?.chapters?.any { it.id in readIds } == true -> "Продолжить"
-        else -> "Начать читать"
-    }
-    val navBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     val bookmarkScope = androidx.compose.runtime.rememberCoroutineScope()
     var bookmarkNumber by remember(data.details.item.slug) { mutableStateOf<String?>(null) }
     androidx.compose.runtime.LaunchedEffect(data.details.item.slug, AppGraph.account.collectAsState().value?.userId) {
@@ -234,6 +223,24 @@ private fun DetailsContent(data: DetailsData, readIds: Set<String>, onRead: (Cha
             AppGraph.repository.bookmarkNumber(data.details.item.slug)
         } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Exception) { null }
     }
+    // Закладка с сайта (viewerBookmark.number): продолжаем с той главы, где остановились, а не с первой.
+    val bookmarkChapter = remember(branch, bookmarkNumber) {
+        bookmarkNumber?.let { num -> branch?.chapters.orEmpty().firstOrNull { it.number == num } }
+    }
+    val continueFrom = remember(branch, readIds, bookmarkChapter) {
+        bookmarkChapter ?: run {
+            val list = branch?.chapters.orEmpty()
+            list.firstOrNull { it.id !in readIds } ?: list.firstOrNull()
+        }
+    }
+    val readLabel = when {
+        continueFrom == null -> "Нет глав"
+        bookmarkChapter != null -> "Продолжить: глава ${bookmarkChapter.number}"
+        continueFrom.id in readIds -> "Читать заново"
+        branch?.chapters?.any { it.id in readIds } == true -> "Продолжить"
+        else -> "Начать читать"
+    }
+    val navBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     var expanded by rememberSaveable { mutableStateOf(false) }
 
     LazyColumn(
