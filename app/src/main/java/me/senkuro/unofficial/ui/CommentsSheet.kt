@@ -47,6 +47,7 @@ fun CommentsSheet(chapterSlug: String, pageIndex: Int, onDismiss: () -> Unit) {
     var error by remember { mutableStateOf<String?>(null) }
     var input by remember { mutableStateOf("") }
     var editing by remember { mutableStateOf<CommentItem?>(null) }
+    var replyTo by remember { mutableStateOf<CommentItem?>(null) }
     var busy by remember { mutableStateOf(false) }
 
     fun guarded(block: suspend () -> Unit) {
@@ -115,7 +116,8 @@ fun CommentsSheet(chapterSlug: String, pageIndex: Int, onDismiss: () -> Unit) {
                                 }
                             }
                         },
-                        onEdit = { editing = c; input = c.text },
+                        onEdit = { editing = c; replyTo = null; input = c.text },
+                        onReply = if (token != null) ({ replyTo = c; editing = null }) else null,
                         onDelete = {
                             if (!busy) {
                                 busy = true
@@ -138,11 +140,11 @@ fun CommentsSheet(chapterSlug: String, pageIndex: Int, onDismiss: () -> Unit) {
                 OutlinedTextField(
                     value = input,
                     onValueChange = { input = it },
-                    label = { Text(if (editing != null) "Правка комментария" else "Новый комментарий") },
+                    label = { Text(if (editing != null) "Правка комментария" else replyTo?.let { "Ответ: ${it.author}" } ?: "Новый комментарий") },
                     modifier = Modifier.fillMaxWidth(),
                 )
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    if (editing != null) TextButton(onClick = { editing = null; input = "" }) { Text("Отмена") }
+                    if (editing != null || replyTo != null) TextButton(onClick = { editing = null; replyTo = null; input = "" }) { Text("Отмена") }
                     Row(Modifier.weight(1f)) {}
                     TextButton(
                         enabled = !busy && input.isNotBlank() && subject != null,
@@ -152,9 +154,10 @@ fun CommentsSheet(chapterSlug: String, pageIndex: Int, onDismiss: () -> Unit) {
                             busy = true
                             guarded {
                                 if (target != null) AppGraph.repository.editComment(target.id, text)
-                                else AppGraph.repository.addComment(subject!!, text)
+                                else AppGraph.repository.addComment(replyTo?.id ?: subject!!, text)
                                 input = ""
                                 editing = null
+                                replyTo = null
                                 load(true)
                             }
                         },
@@ -166,7 +169,7 @@ fun CommentsSheet(chapterSlug: String, pageIndex: Int, onDismiss: () -> Unit) {
 }
 
 @Composable
-internal fun CommentRow(c: CommentItem, onVote: (Boolean) -> Unit, onEdit: () -> Unit, onDelete: () -> Unit) {
+internal fun CommentRow(c: CommentItem, onVote: (Boolean) -> Unit, onEdit: () -> Unit, onDelete: () -> Unit, onReply: (() -> Unit)? = null) {
     Column(
         Modifier
             .fillMaxWidth()
@@ -186,6 +189,7 @@ internal fun CommentRow(c: CommentItem, onVote: (Boolean) -> Unit, onEdit: () ->
                 Text("▼ ${c.down}", fontSize = 12.sp, color = if (c.vote == false) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant)
             }
             Row(Modifier.weight(1f)) {}
+            if (onReply != null) TextButton(onClick = onReply) { Text("Ответить", fontSize = 12.sp) }
             if (c.canEdit) TextButton(onClick = onEdit) { Text("Изменить", fontSize = 12.sp) }
             if (c.canDelete) TextButton(onClick = onDelete) { Text("Удалить", fontSize = 12.sp) }
         }

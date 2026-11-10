@@ -272,6 +272,7 @@ class TitleComments(private val subjectId: String, private val scope: CoroutineS
     var error by mutableStateOf<String?>(null)
     var input by mutableStateOf("")
     var editing by mutableStateOf<CommentItem?>(null)
+    var replyTo by mutableStateOf<CommentItem?>(null)
     var busy by mutableStateOf(false)
 
     private fun run(block: suspend () -> Unit) {
@@ -321,8 +322,8 @@ class TitleComments(private val subjectId: String, private val scope: CoroutineS
         val target = editing
         busy = true
         run {
-            if (target != null) AppGraph.repository.editComment(target.id, text) else AppGraph.repository.addComment(subjectId, text)
-            input = ""; editing = null
+            if (target != null) AppGraph.repository.editComment(target.id, text) else AppGraph.repository.addComment(replyTo?.id ?: subjectId, text)
+            input = ""; editing = null; replyTo = null
             loading = false
             load(true)
         }
@@ -341,10 +342,10 @@ fun LazyListScope.commentsItems(state: TitleComments, loggedIn: Boolean, enabled
             } else {
                 OutlinedTextField(
                     value = state.input, onValueChange = { state.input = it }, modifier = Modifier.fillMaxWidth(),
-                    label = { Text(if (state.editing != null) "Правка комментария" else "Новый комментарий") },
+                    label = { Text(if (state.editing != null) "Правка комментария" else state.replyTo?.let { "Ответ: ${it.author}" } ?: "Новый комментарий") },
                 )
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    if (state.editing != null) TextButton(onClick = { state.editing = null; state.input = "" }) { Text("Отмена") }
+                    if (state.editing != null || state.replyTo != null) TextButton(onClick = { state.editing = null; state.replyTo = null; state.input = "" }) { Text("Отмена") }
                     Box(Modifier.weight(1f))
                     TextButton(enabled = !state.busy && state.input.isNotBlank(), onClick = { state.send() }) {
                         Text(if (state.editing != null) "Сохранить" else "Отправить")
@@ -356,7 +357,8 @@ fun LazyListScope.commentsItems(state: TitleComments, loggedIn: Boolean, enabled
     }
     items(state.items.toList(), key = { "c-" + it.id }) { c ->
         Column(Modifier.padding(horizontal = 21.dp)) {
-            CommentRow(c, onVote = { state.vote(c, it) }, onEdit = { state.editing = c; state.input = c.text }, onDelete = { state.delete(c) })
+            CommentRow(c, onVote = { state.vote(c, it) }, onEdit = { state.editing = c; state.replyTo = null; state.input = c.text }, onDelete = { state.delete(c) },
+                onReply = if (loggedIn) ({ state.replyTo = c; state.editing = null }) else null)
             HorizontalDivider(color = AppColors.DarkBorder, thickness = 0.5.dp)
         }
     }
