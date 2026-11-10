@@ -14,6 +14,10 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.ThumbUp
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
@@ -41,6 +45,7 @@ import me.senkuro.unofficial.data.CommentItem
 /** Комментарии к странице главы (на сайте тред привязан к странице): список, отправка, правка, удаление. */
 @Composable
 fun CommentsSheet(chapterSlug: String, pageIndex: Int, onDismiss: () -> Unit) {
+    val openUser = LocalOpenUser.current
     val scope = rememberCoroutineScope()
     val token by AppGraph.auth.token.collectAsState()
     var subject by remember { mutableStateOf<String?>(null) }
@@ -103,6 +108,7 @@ fun CommentsSheet(chapterSlug: String, pageIndex: Int, onDismiss: () -> Unit) {
                 items(items, key = { it.id }) { c ->
                     CommentRow(
                         c,
+                        onUser = { onDismiss(); openUser(it) },
                         onVote = { up ->
                             if (!busy) {
                                 busy = true
@@ -172,7 +178,8 @@ fun CommentsSheet(chapterSlug: String, pageIndex: Int, onDismiss: () -> Unit) {
 }
 
 @Composable
-internal fun CommentRow(c: CommentItem, onVote: (Boolean) -> Unit, onEdit: () -> Unit, onDelete: () -> Unit, onReply: (() -> Unit)? = null) {
+internal fun CommentRow(c: CommentItem, onVote: (Boolean) -> Unit, onEdit: () -> Unit, onDelete: () -> Unit, onReply: (() -> Unit)? = null, onUser: ((String) -> Unit)? = null) {
+    val openUser = onUser ?: LocalOpenUser.current
     var confirmDelete by remember { mutableStateOf(false) }
     Column(
         Modifier
@@ -180,17 +187,35 @@ internal fun CommentRow(c: CommentItem, onVote: (Boolean) -> Unit, onEdit: () ->
             .padding(start = (c.depth.coerceIn(0, 3) * 14).dp, top = 8.dp, bottom = 8.dp),
         verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {
-        Text(
-            listOfNotNull(c.author.ifBlank { null }, c.date).joinToString(" · "),
-            color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp,
-        )
+        Row(
+            Modifier.clickable(enabled = c.authorSlug.isNotBlank()) { openUser(c.authorSlug) },
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            AvatarWithFrame(c.avatar, c.frame, 30.dp)
+            Text(
+                c.author.ifBlank { "—" },
+                color = MaterialTheme.colorScheme.onSurface, fontSize = 13.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Medium,
+                maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false),
+            )
+            if (c.status != null) coil3.compose.AsyncImage(c.status, c.statusCaption, modifier = Modifier.size(18.dp))
+            c.date?.let { Text(it, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp) }
+        }
         Text(c.text.ifBlank { "…" }, color = MaterialTheme.colorScheme.onSurface, fontSize = 14.sp)
         Row(verticalAlignment = Alignment.CenterVertically) {
             TextButton(onClick = { onVote(true) }) {
-                Text("▲ ${c.up}", fontSize = 12.sp, color = if (c.vote == true) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
+                val tint = if (c.vote == true) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Filled.ThumbUp, contentDescription = "Нравится", tint = tint, modifier = Modifier.size(18.dp))
+                Text(" ${c.up}", fontSize = 12.sp, color = tint)
             }
             TextButton(onClick = { onVote(false) }) {
-                Text("▼ ${c.down}", fontSize = 12.sp, color = if (c.vote == false) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant)
+                val tint = if (c.vote == false) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
+                // ThumbDown есть только в расширенном наборе иконок — берём ThumbUp, перевёрнутый вверх ногами
+                androidx.compose.material3.Icon(
+                    androidx.compose.material.icons.Icons.Filled.ThumbUp, contentDescription = "Не нравится", tint = tint,
+                    modifier = Modifier.size(18.dp).graphicsLayer { rotationZ = 180f },
+                )
+                Text(" ${c.down}", fontSize = 12.sp, color = tint)
             }
             Row(Modifier.weight(1f)) {}
             if (onReply != null) TextButton(onClick = onReply) { Text("Ответить", fontSize = 12.sp) }
@@ -212,3 +237,6 @@ internal fun CommentRow(c: CommentItem, onVote: (Boolean) -> Unit, onEdit: () ->
         )
     }
 }
+
+/** Переход в профиль пользователя; задаётся в AppRoot. */
+val LocalOpenUser = androidx.compose.runtime.staticCompositionLocalOf<(String) -> Unit> { {} }

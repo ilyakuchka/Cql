@@ -149,6 +149,11 @@ data class CommentItem(
     val down: Int,
     val canEdit: Boolean,
     val canDelete: Boolean,
+    val authorSlug: String = "",
+    val frame: String? = null,
+    /** Эмодзи-статус рядом с ником (даётся с подпиской). */
+    val status: String? = null,
+    val statusCaption: String? = null,
     /** true — вы поставили ▲, false — ▼, null — не голосовали. */
     val vote: Boolean? = null,
 )

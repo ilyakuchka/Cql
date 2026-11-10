@@ -33,7 +33,10 @@ fragment CommentBase on Comment {
   viewerCanDelete
   author {
     id
+    slug
     name
     avatar { original { url } }
+    frame { original { url } }
+    status { caption original { url } }
   }
 }

@@ -148,6 +148,7 @@ fun AppRoot() {
                     .padding(padding)
                     .consumeWindowInsets(padding),
             ) {
+                CompositionLocalProvider(LocalOpenUser provides { slug: String -> nav.navigate("user/" + Uri.encode(slug)) }) {
                 NavHost(
                     navController = nav,
                     startDestination = Routes.HOME,
@@ -419,6 +420,7 @@ fun AppRoot() {
                             )
                         }
                     }
+                }
                 }
 
                 if (showBar) BottomBar(route = route, onSelect = navigateTop)

@@ -315,7 +315,10 @@ class TiptapChildDto(val text: String? = null)
 class TiptapBlockDto(val content: List<TiptapChildDto>? = null)
 
 @Serializable
-class CommentAuthorDto(val id: String = "", val name: String = "", val avatar: Cover? = null, val frame: Cover? = null)
+class CommentStatusDto(val caption: String? = null, val original: ImageSize? = null)
+
+@Serializable
+class CommentAuthorDto(val id: String = "", val slug: String = "", val name: String = "", val avatar: Cover? = null, val frame: Cover? = null, val status: CommentStatusDto? = null)
 
 @Serializable
 class CommentDto(
