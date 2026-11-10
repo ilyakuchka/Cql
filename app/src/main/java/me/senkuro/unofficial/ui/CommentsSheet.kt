@@ -11,6 +11,9 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
@@ -170,6 +173,7 @@ fun CommentsSheet(chapterSlug: String, pageIndex: Int, onDismiss: () -> Unit) {
 
 @Composable
 internal fun CommentRow(c: CommentItem, onVote: (Boolean) -> Unit, onEdit: () -> Unit, onDelete: () -> Unit, onReply: (() -> Unit)? = null) {
+    var confirmDelete by remember { mutableStateOf(false) }
     Column(
         Modifier
             .fillMaxWidth()
@@ -190,8 +194,21 @@ internal fun CommentRow(c: CommentItem, onVote: (Boolean) -> Unit, onEdit: () ->
             }
             Row(Modifier.weight(1f)) {}
             if (onReply != null) TextButton(onClick = onReply) { Text("Ответить", fontSize = 12.sp) }
-            if (c.canEdit) TextButton(onClick = onEdit) { Text("Изменить", fontSize = 12.sp) }
-            if (c.canDelete) TextButton(onClick = onDelete) { Text("Удалить", fontSize = 12.sp) }
+            if (c.canEdit) androidx.compose.material3.IconButton(onClick = onEdit) {
+                androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Filled.Edit, contentDescription = "Изменить", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            if (c.canDelete) androidx.compose.material3.IconButton(onClick = { confirmDelete = true }) {
+                androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Filled.Delete, contentDescription = "Удалить", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
         }
+    }
+    if (confirmDelete) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { confirmDelete = false },
+            title = { Text("Удалить комментарий?") },
+            text = { Text("Комментарий будет удалён с сайта от вашего имени. Это действие нельзя отменить.") },
+            confirmButton = { TextButton(onClick = { confirmDelete = false; onDelete() }) { Text("Удалить", color = MaterialTheme.colorScheme.error) } },
+            dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text("Отмена") } },
+        )
     }
 }
