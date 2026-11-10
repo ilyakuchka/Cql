@@ -553,7 +553,8 @@ class SenkuroRepository(private val api: SenkuroApi) {
     suspend fun addComment(subjectId: String, text: String) {
         val vars = buildJsonObject {
             put("input", buildJsonObject {
-                put("authorId", JsonNull)
+                // автор — сам пользователь (с null сайт ставит автора по умолчанию, например команду)
+                put("authorId", AppGraph.account.value?.userId?.let { JsonPrimitive(it) } ?: JsonNull)
                 put("content", commentBody(text))
                 put("subjectId", subjectId)
             })
