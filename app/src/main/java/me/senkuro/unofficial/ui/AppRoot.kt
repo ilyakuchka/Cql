@@ -402,6 +402,12 @@ fun AppRoot() {
                                 mangaId = mangaId,
                                 chapterId = chapterId,
                                 onBack = { nav.popBackStack() },
+                                onToTitle = {
+                                    // если страница тайтла уже в стеке — просто возвращаемся к ней, иначе открываем её
+                                    if (!nav.popBackStack(Routes.MANGA, inclusive = false)) {
+                                        nav.navigate(Routes.manga(mangaId)) { popUpTo(Routes.READER) { inclusive = true } }
+                                    }
+                                },
                                 onOpenChapter = { chapter ->
                                     nav.navigate(Routes.reader(mangaId, chapter.id)) {
                                         popUpTo(Routes.READER) { inclusive = true }

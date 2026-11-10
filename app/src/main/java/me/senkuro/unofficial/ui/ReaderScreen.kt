@@ -56,6 +56,7 @@ fun ReaderScreen(
     mangaId: String,
     chapterId: String,
     onBack: () -> Unit,
+    onToTitle: () -> Unit = onBack,
     onOpenChapter: (Chapter) -> Unit,
     vm: ReaderViewModel = viewModel(key = "reader-$mangaId-$chapterId"),
 ) {
@@ -204,9 +205,8 @@ fun ReaderScreen(
                                     enabled = data.previous != null,
                                 ) { Text("Назад") }
                                 Button(
-                                    onClick = { data.next?.let(onOpenChapter) },
-                                    enabled = data.next != null,
-                                ) { Text("Следующая") }
+                                    onClick = { data.next?.let(onOpenChapter) ?: onToTitle() },
+                                ) { Text(if (data.next != null) "Следующая" else "На страницу тайтла") }
                             }
                         }
                     }
