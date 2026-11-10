@@ -403,8 +403,11 @@ fun AppRoot() {
                                 chapterId = chapterId,
                                 onBack = { nav.popBackStack() },
                                 onToTitle = {
-                                    // если страница тайтла уже в стеке — просто возвращаемся к ней, иначе открываем её
-                                    if (!nav.popBackStack(Routes.MANGA, inclusive = false)) {
+                                    // всегда страница именно этого тайтла: если она прямо под читалкой — возвращаемся, иначе открываем
+                                    val below = nav.previousBackStackEntry
+                                    if (below?.destination?.route == Routes.MANGA && below.arguments?.getString("id") == mangaId) {
+                                        nav.popBackStack()
+                                    } else {
                                         nav.navigate(Routes.manga(mangaId)) { popUpTo(Routes.READER) { inclusive = true } }
                                     }
                                 },
