@@ -77,6 +77,7 @@ fun DetailsScreen(
     mangaId: String,
     onBack: () -> Unit,
     onRead: (Chapter) -> Unit,
+    onReadAt: (Chapter, Int) -> Unit = { c, _ -> onRead(c) },
     onLogin: () -> Unit,
     onOpenManga: (MangaItem) -> Unit = {},
     onOpenCharacter: (String) -> Unit = {},
@@ -109,7 +110,7 @@ fun DetailsScreen(
         when (val state = vm.state) {
             is UiState.Loading -> LoadingBox()
             is UiState.Error -> ErrorBox(state.message, { vm.load(mangaId, force = true) })
-            is UiState.Ready -> DetailsContent(state.data, readIds, onRead, onOpenManga, onOpenCharacter, onOpenPerson, onOpenCard)
+            is UiState.Ready -> DetailsContent(state.data, readIds, onRead, onReadAt, onOpenManga, onOpenCharacter, onOpenPerson, onOpenCard)
         }
         var bookmarkDialog by remember { mutableStateOf(false) }
         if (bookmarkDialog) {
@@ -187,7 +188,7 @@ private fun shareManga(context: Context, item: MangaItem) {
 }
 
 @Composable
-private fun DetailsContent(data: DetailsData, readIds: Set<String>, onRead: (Chapter) -> Unit, onOpenManga: (MangaItem) -> Unit, onOpenCharacter: (String) -> Unit, onOpenPerson: (String) -> Unit, onOpenCard: (String) -> Unit) {
+private fun DetailsContent(data: DetailsData, readIds: Set<String>, onRead: (Chapter) -> Unit, onReadAt: (Chapter, Int) -> Unit, onOpenManga: (MangaItem) -> Unit, onOpenCharacter: (String) -> Unit, onOpenPerson: (String) -> Unit, onOpenCard: (String) -> Unit) {
     val details = data.details
     val extras by androidx.compose.runtime.produceState(DetailsExtras(), details.item.id) {
         value = DetailsExtras(
@@ -218,9 +219,12 @@ private fun DetailsContent(data: DetailsData, readIds: Set<String>, onRead: (Cha
     }
     val bookmarkScope = androidx.compose.runtime.rememberCoroutineScope()
     var bookmarkNumber by remember(data.details.item.slug) { mutableStateOf<String?>(null) }
+    var bookmarkPage by remember(data.details.item.slug) { mutableStateOf(1) }
     androidx.compose.runtime.LaunchedEffect(data.details.item.slug, AppGraph.account.collectAsState().value?.userId) {
         bookmarkNumber = if (AppGraph.account.value == null) null else try {
-            AppGraph.repository.bookmarkNumber(data.details.item.slug)
+            AppGraph.repository.bookmarkNumber(data.details.item.slug).also {
+                bookmarkPage = try { AppGraph.repository.bookmarkPage(data.details.item.slug) ?: 1 } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Exception) { 1 }
+            }
         } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Exception) { null }
     }
     // Закладка с сайта (viewerBookmark.number): продолжаем с той главы, где остановились, а не с первой.
@@ -235,7 +239,7 @@ private fun DetailsContent(data: DetailsData, readIds: Set<String>, onRead: (Cha
     }
     val readLabel = when {
         continueFrom == null -> "Нет глав"
-        bookmarkChapter != null -> "Продолжить: глава ${bookmarkChapter.number}"
+        bookmarkChapter != null -> "Продолжить: глава ${bookmarkChapter.number}" + if (bookmarkPage > 1) ", стр. $bookmarkPage" else ""
         continueFrom.id in readIds -> "Читать заново"
         branch?.chapters?.any { it.id in readIds } == true -> "Продолжить"
         else -> "Начать читать"
@@ -249,7 +253,7 @@ private fun DetailsContent(data: DetailsData, readIds: Set<String>, onRead: (Cha
     ) {
         item(key = "hero") {
             Hero(details, chapterCount = branch?.chapters?.size, readLabel = readLabel, enabled = continueFrom != null) {
-                continueFrom?.let(onRead)
+                continueFrom?.let { c -> if (c == bookmarkChapter) onReadAt(c, bookmarkPage) else onRead(c) }
             }
         }
 
@@ -374,11 +378,11 @@ private fun DetailsContent(data: DetailsData, readIds: Set<String>, onRead: (Cha
                     onClick = {
                         val all = branches.flatMap { it.chapters }
                         val local = all.firstOrNull { it.number == num && (branch == null || it.branchId == branch.id) } ?: all.firstOrNull { it.number == num }
-                        if (local != null) onRead(local) else bookmarkScope.launch {
+                        if (local != null) onReadAt(local, bookmarkPage) else bookmarkScope.launch {
                             val slug = try {
                                 AppGraph.repository.bookmarkChapterSlug(branch?.id.orEmpty(), num)
                             } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Exception) { null }
-                            all.firstOrNull { it.slug == slug }?.let(onRead)
+                            all.firstOrNull { it.slug == slug }?.let { onReadAt(it, bookmarkPage) }
                         }
                     },
                 ) { Text("К закладке: глава $num") }

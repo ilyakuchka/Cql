@@ -97,10 +97,10 @@ private object Routes {
     const val TEAM = "team/{slug}"
     const val PERSON = "person/{slug}"
     const val MANGA = "manga/{id}"
-    const val READER = "reader/{mangaId}/{chapterId}"
+    const val READER = "reader/{mangaId}/{chapterId}?page={page}"
 
     fun manga(id: String) = "manga/$id"
-    fun reader(mangaId: String, chapterId: String) = "reader/$mangaId/$chapterId"
+    fun reader(mangaId: String, chapterId: String, page: Int = 1) = "reader/$mangaId/$chapterId?page=$page"
 }
 
 private class TopLevel(val route: String, val title: String, val icon: ImageVector)
@@ -380,6 +380,7 @@ fun AppRoot() {
                                 mangaId = id,
                                 onBack = { nav.popBackStack() },
                                 onRead = { chapter -> nav.navigate(Routes.reader(id, chapter.id)) },
+                                onReadAt = { chapter, page -> nav.navigate(Routes.reader(id, chapter.id, page)) },
                                 onLogin = { nav.navigate(Routes.LOGIN) },
                                 onOpenManga = openManga,
                                 onOpenCharacter = { nav.navigate("character/" + Uri.encode(it)) },
@@ -394,14 +395,17 @@ fun AppRoot() {
                         arguments = listOf(
                             navArgument("mangaId") { type = NavType.StringType },
                             navArgument("chapterId") { type = NavType.StringType },
+                            navArgument("page") { type = NavType.IntType; defaultValue = 1 },
                         ),
                     ) { backStack ->
+                        val startPage = backStack.arguments?.getInt("page") ?: 1
                         val mangaId = backStack.arguments?.getString("mangaId").orEmpty()
                         val chapterId = backStack.arguments?.getString("chapterId").orEmpty()
                         UnofficialTheme(dark = true) {
                             ReaderScreen(
                                 mangaId = mangaId,
                                 chapterId = chapterId,
+                                startPage = startPage,
                                 onBack = { nav.popBackStack() },
                                 onToTitle = {
                                     // всегда страница именно этого тайтла: если она прямо под читалкой — возвращаемся, иначе открываем

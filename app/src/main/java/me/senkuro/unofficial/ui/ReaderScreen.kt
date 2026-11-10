@@ -55,6 +55,7 @@ import me.senkuro.unofficial.data.Chapter
 fun ReaderScreen(
     mangaId: String,
     chapterId: String,
+    startPage: Int = 1,
     onBack: () -> Unit,
     onToTitle: () -> Unit = onBack,
     onOpenChapter: (Chapter) -> Unit,
@@ -126,6 +127,10 @@ fun ReaderScreen(
                                 catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Exception) { }
                             }
                         }
+                }
+                // закладка с сайта: открываем главу сразу на сохранённой странице (нумерация с 1)
+                LaunchedEffect(data.chapter.id) {
+                    if (startPage > 1 && urls.isNotEmpty()) listState.scrollToItem((startPage - 1).coerceIn(0, urls.size - 1))
                 }
                 LazyColumn(
                     state = listState,

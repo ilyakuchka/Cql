@@ -594,6 +594,11 @@ class SenkuroRepository(private val api: SenkuroApi) {
         api.execute("fetchMangaViewerState", "fetchMangaViewerState", buildJsonObject { put("slug", slug) },
             ViewerStateResponse.serializer()).manga?.viewerBookmark?.number.text()?.takeIf { it.isNotBlank() }
 
+    /** Закладка с сайта: номер главы и страница (нумерация страниц с 1, как на сайте). */
+    suspend fun bookmarkPage(slug: String): Int? =
+        api.execute("fetchMangaViewerState", "fetchMangaViewerState", buildJsonObject { put("slug", slug) },
+            ViewerStateResponse.serializer()).manga?.viewerBookmark?.page?.takeIf { it > 0 }
+
     suspend fun bookmarkChapterSlug(branchId: String, number: String): String? =
         api.execute("fetchMangaBookmarkChapter", "fetchMangaBookmarkChapter",
             buildJsonObject { put("branchId", branchId); put("number", number) },
