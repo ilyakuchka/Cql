@@ -207,7 +207,15 @@ private fun DetailsContent(data: DetailsData, readIds: Set<String>, onRead: (Cha
     val branches = data.chapters.branches
     var branchIndex by rememberSaveable { mutableIntStateOf(0) }
     val branch = branches.getOrNull(branchIndex) ?: branches.firstOrNull()
-    val chaptersDescending = remember(branch) { branch?.chapters.orEmpty().asReversed() }
+    var chapterQuery by rememberSaveable { mutableStateOf("") }
+    val chaptersDescending = remember(branch, chapterQuery) {
+        val all = branch?.chapters.orEmpty().asReversed()
+        val q = chapterQuery.trim().removePrefix("#").lowercase()
+        if (q.isEmpty()) all else all.filter {
+            it.number.lowercase().startsWith(q) || it.title.lowercase().contains(q) ||
+                (it.name?.lowercase()?.contains(q) == true) || "том ${it.volume}".lowercase() == q || it.date?.contains(q) == true
+        }
+    }
     val continueFrom = remember(branch, readIds) {
         val list = branch?.chapters.orEmpty()
         list.firstOrNull { it.id !in readIds } ?: list.firstOrNull()
@@ -383,6 +391,21 @@ private fun DetailsContent(data: DetailsData, readIds: Set<String>, onRead: (Cha
                             OutlineChip(b.label, selected = index == branchIndex, onClick = { branchIndex = index })
                         }
                     }
+                }
+                androidx.compose.material3.OutlinedTextField(
+                    value = chapterQuery,
+                    onValueChange = { chapterQuery = it },
+                    singleLine = true,
+                    placeholder = { Text("Поиск по главам: номер, название, дата") },
+                    trailingIcon = {
+                        if (chapterQuery.isNotEmpty()) {
+                            androidx.compose.material3.TextButton(onClick = { chapterQuery = "" }) { Text("✕") }
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                if (chapterQuery.isNotBlank() && chaptersDescending.isEmpty()) {
+                    Text("Ничего не найдено", color = AppColors.DarkSecondary, fontSize = 12.sp)
                 }
                 data.chapters.message?.takeIf { it.isNotBlank() }?.let {
                     Text(it, color = AppColors.DarkSecondary, fontSize = 12.sp)
