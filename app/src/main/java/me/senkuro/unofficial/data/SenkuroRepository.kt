@@ -594,6 +594,37 @@ class SenkuroRepository(private val api: SenkuroApi) {
         api.execute("fetchMangaViewerState", "fetchMangaViewerState", buildJsonObject { put("slug", slug) },
             ViewerStateResponse.serializer()).manga?.viewerBookmark?.number.text()?.takeIf { it.isNotBlank() }
 
+    private var progressCache: Triple<String, Double?, Int?>? = null
+
+    /**
+     * Прогресс чтения как на сайте (reader.js): страница = MangaChapterPage.number, сохраняется в закладку
+     * через updateUserBookmark {subjectId, number, page, manual:false}. Только если закладка уже есть и
+     * новая позиция не позади сохранённой; на последней странице последней главы — следующий целый номер и page=null.
+     */
+    suspend fun saveReadProgress(mangaId: String, slug: String, chapterNumber: String, page: Int, lastOfLast: Boolean) {
+        val cur = progressCache?.takeIf { it.first == mangaId } ?: run {
+            val b = api.execute("fetchMangaViewerState", "fetchMangaViewerState", buildJsonObject { put("slug", slug) },
+                ViewerStateResponse.serializer()).manga?.viewerBookmark
+            Triple(mangaId, b?.number.text()?.toDoubleOrNull(), b?.page).also { progressCache = if (b == null) Triple(mangaId, null, null) else it }
+        }
+        val saved = cur.second ?: return            // закладки нет — сайт тоже ничего не сохраняет
+        val num = chapterNumber.toDoubleOrNull() ?: return
+        if (num < saved) return
+        if (num == saved && cur.third != null && page <= cur.third!!) return
+        val ceil = kotlin.math.ceil(num)
+        val nextNumber = if (num == ceil) (ceil + 1).toLong().toString() else ceil.toLong().toString()
+        val vars = buildJsonObject {
+            put("input", buildJsonObject {
+                put("subjectId", mangaId)
+                put("number", if (lastOfLast) nextNumber else chapterNumber)
+                if (lastOfLast) put("page", JsonNull) else put("page", page)
+                put("manual", false)
+            })
+        }
+        api.execute("updateUserBookmark", "updateUserBookmark", vars, MutationResponse.serializer())
+        progressCache = Triple(mangaId, if (lastOfLast) nextNumber.toDouble() else num, if (lastOfLast) null else page)
+    }
+
     /** Закладка с сайта: номер главы и страница (нумерация страниц с 1, как на сайте). */
     suspend fun bookmarkPage(slug: String): Int? =
         api.execute("fetchMangaViewerState", "fetchMangaViewerState", buildJsonObject { put("slug", slug) },

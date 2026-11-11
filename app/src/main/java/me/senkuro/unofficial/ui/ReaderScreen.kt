@@ -29,6 +29,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import kotlinx.coroutines.flow.debounce
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -126,6 +127,20 @@ fun ReaderScreen(
                                 try { AppGraph.repository.readerEvent(mangaId, data.chapter, "COMPLETED_READING") }
                                 catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Exception) { }
                             }
+                        }
+                }
+                // прогресс чтения — в закладку сайта, как это делает сайт (с задержкой 1,5 с)
+                @OptIn(kotlinx.coroutines.FlowPreview::class)
+                LaunchedEffect(data.chapter.id, hasToken, urls.size) {
+                    val slug = data.manga?.slug
+                    if (hasToken == null || slug == null || urls.isEmpty()) return@LaunchedEffect
+                    androidx.compose.runtime.snapshotFlow { listState.firstVisibleItemIndex }
+                        .debounce(1500)
+                        .collect { idx ->
+                            val page = idx.coerceIn(0, urls.size - 1) + 1
+                            val last = data.next == null && page == urls.size
+                            try { AppGraph.repository.saveReadProgress(mangaId, slug, data.chapter.number, page, last) }
+                            catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Exception) { }
                         }
                 }
                 // закладка с сайта: открываем главу сразу на сохранённой странице (нумерация с 1)
