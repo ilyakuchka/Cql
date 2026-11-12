@@ -22,6 +22,7 @@ import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
@@ -148,17 +149,25 @@ fun LazyListScope.aboutItems(details: MangaDetails, page: TitlePage?, chapterCou
         }
     }
     if (page != null && page.teams.isNotEmpty()) item(key = "about-teams") {
+        var all by androidx.compose.runtime.remember { mutableStateOf(false) }
         Column(Modifier.padding(top = 10.dp)) {
             Heading("Переводчики")
-            page.teams.forEach { t ->
-                Row(Modifier.padding(horizontal = 21.dp, vertical = 4.dp), verticalAlignment = Alignment.Top) {
-                    AsyncImage(t.avatar, null, contentScale = ContentScale.Crop, modifier = Modifier.size(32.dp).clip(CircleShape).background(AppColors.DarkItem))
-                    Column(Modifier.padding(start = 10.dp)) {
-                        Text(t.name + if (t.verified) " ✓" else "", color = Color.White, fontSize = 13.sp)
-                        t.volumes.forEach { Text(it, color = AppColors.DarkSecondary, fontSize = 11.sp) }
-                    }
-                }
+            page.teams.take(2).forEach { TeamRow(it) }
+            if (page.teams.size > 2) {
+                TextButton(onClick = { all = true }, modifier = Modifier.padding(horizontal = 13.dp)) { Text("Показать всех (${page.teams.size})") }
             }
+        }
+        if (all) {
+            androidx.compose.material3.AlertDialog(
+                onDismissRequest = { all = false },
+                title = { Text("Переводчики (${page.teams.size})") },
+                text = {
+                    Column(Modifier.verticalScroll(rememberScrollState())) {
+                        page.teams.forEach { TeamRow(it, horizontal = 0.dp) }
+                    }
+                },
+                confirmButton = { TextButton(onClick = { all = false }) { Text("Закрыть") } },
+            )
         }
     }
     if (page != null && page.recommendations.isNotEmpty()) item(key = "about-recs") {
@@ -379,4 +388,15 @@ private fun systemListName(id: String): String? {
         String(android.util.Base64.decode(id, android.util.Base64.URL_SAFE or android.util.Base64.NO_PADDING)).substringAfterLast(':').toInt()
     }.getOrNull()
     return when (n) { 7 -> "Читаю"; 8 -> "В планах"; 9 -> "Прочитано"; 10 -> "Любимое"; 11 -> "Отложено"; 12 -> "Брошено"; else -> null }
+}
+
+@Composable
+private fun TeamRow(t: me.senkuro.unofficial.data.TitleTeam, horizontal: androidx.compose.ui.unit.Dp = 21.dp) {
+    Row(Modifier.padding(horizontal = horizontal, vertical = 4.dp), verticalAlignment = Alignment.Top) {
+        AsyncImage(t.avatar, null, contentScale = ContentScale.Crop, modifier = Modifier.size(32.dp).clip(CircleShape).background(AppColors.DarkItem))
+        Column(Modifier.padding(start = 10.dp)) {
+            Text(t.name + if (t.verified) " ✓" else "", color = MaterialTheme.colorScheme.onSurface, fontSize = 13.sp)
+            t.volumes.forEach { Text(it, color = AppColors.DarkSecondary, fontSize = 11.sp) }
+        }
+    }
 }
