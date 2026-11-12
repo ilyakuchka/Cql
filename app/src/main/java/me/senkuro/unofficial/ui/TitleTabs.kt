@@ -119,7 +119,22 @@ fun LazyListScope.aboutItems(details: MangaDetails, page: TitlePage?, chapterCou
     if (details.altNames.isNotEmpty()) item(key = "about-alt") {
         Column(Modifier.padding(top = 10.dp)) {
             Heading("Другие названия")
-            details.altNames.forEach { Text(it, color = AppColors.DarkSecondary, fontSize = 13.sp, modifier = Modifier.padding(horizontal = 21.dp, vertical = 1.dp)) }
+            details.altNames.forEach { name ->
+                val clipboard = androidx.compose.ui.platform.LocalClipboardManager.current
+                val ctx = androidx.compose.ui.platform.LocalContext.current
+                Row(Modifier.fillMaxWidth().padding(start = 21.dp, end = 9.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text(name, color = AppColors.DarkSecondary, fontSize = 13.sp, modifier = Modifier.weight(1f).padding(vertical = 4.dp))
+                    androidx.compose.material3.IconButton(
+                        onClick = {
+                            clipboard.setText(androidx.compose.ui.text.AnnotatedString(name))
+                            android.widget.Toast.makeText(ctx, "Название скопировано", android.widget.Toast.LENGTH_SHORT).show()
+                        },
+                        modifier = Modifier.size(32.dp),
+                    ) {
+                        androidx.compose.material3.Icon(CopyIcon, contentDescription = "Копировать название", tint = AppColors.DarkSecondary, modifier = Modifier.size(18.dp))
+                    }
+                }
+            }
         }
     }
     if (page != null && page.links.isNotEmpty()) item(key = "about-links") {
@@ -399,4 +414,16 @@ private fun TeamRow(t: me.senkuro.unofficial.data.TitleTeam, horizontal: android
             t.volumes.forEach { Text(it, color = AppColors.DarkSecondary, fontSize = 11.sp) }
         }
     }
+}
+
+/** Иконка «копировать» (в базовом наборе material-icons её нет, рисуем по пути из Material Icons). */
+private val CopyIcon: androidx.compose.ui.graphics.vector.ImageVector by lazy {
+    androidx.compose.ui.graphics.vector.ImageVector.Builder(
+        name = "ContentCopy", defaultWidth = 24.dp, defaultHeight = 24.dp, viewportWidth = 24f, viewportHeight = 24f,
+    ).addPath(
+        pathData = androidx.compose.ui.graphics.vector.PathParser()
+            .parsePathString("M16,1L4,1c-1.1,0 -2,0.9 -2,2v14h2L4,3h12L16,1zM19,5L8,5c-1.1,0 -2,0.9 -2,2v14c0,1.1 0.9,2 2,2h11c1.1,0 2,-0.9 2,-2L21,7c0,-1.1 -0.9,-2 -2,-2zM19,21L8,21L8,7h11v14z")
+            .toNodes(),
+        fill = androidx.compose.ui.graphics.SolidColor(Color.Black),
+    ).build()
 }
