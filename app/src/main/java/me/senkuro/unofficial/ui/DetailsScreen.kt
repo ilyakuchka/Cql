@@ -113,6 +113,17 @@ fun DetailsScreen(
             is UiState.Ready -> DetailsContent(state.data, readIds, onRead, onReadAt, onOpenManga, onOpenCharacter, onOpenPerson, onOpenCard)
         }
         var bookmarkDialog by remember { mutableStateOf(false) }
+        // Состояние закладки показываем на самой кнопке: название списка из аккаунта или с сервера
+        val marks by AppGraph.marks.collectAsState()
+        val account by AppGraph.account.collectAsState()
+        LaunchedEffect(item?.slug, account) {
+            val slug = item?.slug ?: return@LaunchedEffect
+            val acc = account ?: return@LaunchedEffect
+            try {
+                val id = AppGraph.repository.bookmarkCollectionId(slug)
+                AppGraph.setMark(mangaId, id?.let { cid -> acc.collections.firstOrNull { it.id == cid }?.name })
+            } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Exception) { }
+        }
         if (bookmarkDialog) {
             BookmarkDialog(mangaId = mangaId, onLogin = onLogin, onDismiss = { bookmarkDialog = false })
         }
@@ -122,6 +133,7 @@ fun DetailsScreen(
             onBack = onBack,
             onRate = { rateDialog = true },
             onBookmark = { bookmarkDialog = true },
+            bookmarkName = marks[mangaId],
             loaded = item != null,
             onShare = { item?.let { shareManga(context, it) } },
         )
@@ -134,6 +146,7 @@ private fun TopActions(
     onBack: () -> Unit,
     onBookmark: () -> Unit,
     onRate: () -> Unit,
+    bookmarkName: String? = null,
     loaded: Boolean,
     onShare: () -> Unit,
 ) {
@@ -162,12 +175,13 @@ private fun TopActions(
                 )
                 androidx.compose.foundation.layout.Spacer(Modifier.padding(horizontal = 3.dp))
                 Text(
-                    text = "+ Закладки",
+                    text = if (bookmarkName != null) "✓ $bookmarkName" else "+ Закладки",
                     color = Color.Black,
                     fontSize = 11.sp,
+                    fontWeight = if (bookmarkName != null) FontWeight.Bold else FontWeight.Normal,
                     modifier = Modifier
                         .clip(RoundedCornerShape(25.dp))
-                        .background(Color.White)
+                        .background(if (bookmarkName != null) AppColors.Accent else Color.White)
                         .clickable(onClick = onBookmark)
                         .padding(horizontal = 12.dp, vertical = 5.dp),
                 )

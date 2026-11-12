@@ -349,7 +349,7 @@ class CommentsConn(val edges: List<CommentEdge> = emptyList(), val pageInfo: Pag
 class CommentsResponse(val comments: CommentsConn = CommentsConn())
 
 @Serializable
-class ViewerBookmarkDto(val number: kotlinx.serialization.json.JsonElement? = null, val page: Int? = null)
+class ViewerBookmarkDto(val number: kotlinx.serialization.json.JsonElement? = null, val page: Int? = null, val collectionId: String? = null)
 
 @Serializable
 class ViewerVoteManga(val viewerVote: kotlinx.serialization.json.JsonElement? = null, val viewerBookmark: ViewerBookmarkDto? = null)

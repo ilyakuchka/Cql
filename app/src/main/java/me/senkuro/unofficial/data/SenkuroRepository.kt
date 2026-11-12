@@ -609,6 +609,11 @@ class SenkuroRepository(private val api: SenkuroApi) {
         return chapter to (bookmarkPage(manga.slug) ?: 1)
     }
 
+    /** id коллекции закладок этого тайтла у пользователя (null — не в закладках). */
+    suspend fun bookmarkCollectionId(slug: String): String? =
+        api.execute("fetchMangaViewerState", "fetchMangaViewerState", buildJsonObject { put("slug", slug) },
+            ViewerStateResponse.serializer()).manga?.viewerBookmark?.collectionId?.takeIf { it.isNotBlank() }
+
     private var progressCache: Triple<String, Double?, Int?>? = null
 
     /**
