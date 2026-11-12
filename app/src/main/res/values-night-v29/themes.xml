@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+        Ресурсы -night важнее -v29, поэтому при включённой тёмной теме values-v29 не учитывается и
+        forceDarkAllowed терялся. Этот файл возвращает запрет принудительной тёмной темы на Android 10+.
+    -->
+    <style name="Theme.Unofficial" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">#FFFFFF</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:forceDarkAllowed">false</item>
+    </style>
+</resources>
