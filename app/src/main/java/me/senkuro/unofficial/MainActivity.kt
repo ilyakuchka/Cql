@@ -21,6 +21,9 @@ class MainActivity : ComponentActivity() {
             navigationBarStyle = SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT),
         )
         super.onCreate(savedInstanceState)
+        // Android 10: «принудительная тёмная тема» системы инвертирует цвета Compose-экранов
+        // (белый текст на белой кнопке и т.п.). Тему приложение рисует само.
+        if (android.os.Build.VERSION.SDK_INT >= 29) window.decorView.isForceDarkAllowed = false
         setContent {
             val dark by AppGraph.themeDark.collectAsState()
             UnofficialTheme(dark = dark) {

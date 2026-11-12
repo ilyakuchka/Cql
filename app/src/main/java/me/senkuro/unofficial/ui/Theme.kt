@@ -102,7 +102,16 @@ fun UnofficialTheme(dark: Boolean = false, content: @Composable () -> Unit) {
             }
         }
     }
-    MaterialTheme(colorScheme = if (dark) DarkColors else LightColors, content = content)
+    val scheme = if (dark) DarkColors else LightColors
+    MaterialTheme(colorScheme = scheme) {
+        // Каждый экран оборачивается в свою тему (светлую или тёмную), а Scaffold в AppRoot и его
+        // LocalContentColor остаются от внешней темы. Из-за этого Text без явного цвета мог получать
+        // белый текст на светлой странице и серый на тёмной. Задаём цвет содержимого для самой темы.
+        androidx.compose.runtime.CompositionLocalProvider(
+            androidx.compose.material3.LocalContentColor provides scheme.onBackground,
+            content = content,
+        )
+    }
 }
 
 private fun findActivity(context: Context): Activity? {
