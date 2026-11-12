@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
@@ -379,11 +380,10 @@ fun LazyListScope.commentsItems(state: TitleComments, loggedIn: Boolean, enabled
             state.error?.let { Text(it, color = MaterialTheme.colorScheme.error, fontSize = 12.sp) }
         }
     }
-    items(state.items.toList(), key = { "c-" + it.id }) { c ->
+    itemsIndexed(state.items.toList(), key = { _, it -> "c-" + it.id }) { index, c ->
         Column(Modifier.padding(horizontal = 21.dp)) {
-            CommentRow(c, onVote = { state.vote(c, it) }, onEdit = { state.editing = c; state.replyTo = null; state.input = c.text }, onDelete = { state.delete(c) },
+            CommentRow(c, threadGap = index > 0, onVote = { state.vote(c, it) }, onEdit = { state.editing = c; state.replyTo = null; state.input = c.text }, onDelete = { state.delete(c) },
                 onReply = if (loggedIn) ({ state.replyTo = c; state.editing = null }) else null)
-            HorizontalDivider(color = AppColors.DarkBorder, thickness = 0.5.dp)
         }
     }
     item(key = "comments-foot") {

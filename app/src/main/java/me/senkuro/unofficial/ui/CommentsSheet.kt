@@ -17,6 +17,11 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.ThumbUp
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -105,9 +110,10 @@ fun CommentsSheet(chapterSlug: String, pageIndex: Int, onDismiss: () -> Unit) {
                 if (items.isEmpty() && !loading && error == null) {
                     item { Text("Комментариев пока нет", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp) }
                 }
-                items(items, key = { it.id }) { c ->
+                itemsIndexed(items, key = { _, it -> it.id }) { index, c ->
                     CommentRow(
                         c,
+                        threadGap = index > 0,
                         onUser = { onDismiss(); openUser(it) },
                         onVote = { up ->
                             if (!busy) {
@@ -137,7 +143,6 @@ fun CommentsSheet(chapterSlug: String, pageIndex: Int, onDismiss: () -> Unit) {
                             }
                         },
                     )
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outline, thickness = 0.5.dp)
                 }
                 if (cursor != null) item {
                     TextButton(onClick = { load(false) }, enabled = !loading) { Text("Ещё") }
@@ -178,15 +183,30 @@ fun CommentsSheet(chapterSlug: String, pageIndex: Int, onDismiss: () -> Unit) {
 }
 
 @Composable
-internal fun CommentRow(c: CommentItem, onVote: (Boolean) -> Unit, onEdit: () -> Unit, onDelete: () -> Unit, onReply: (() -> Unit)? = null, onUser: ((String) -> Unit)? = null) {
+internal fun CommentRow(c: CommentItem, onVote: (Boolean) -> Unit, onEdit: () -> Unit, onDelete: () -> Unit, onReply: (() -> Unit)? = null, onUser: ((String) -> Unit)? = null, threadGap: Boolean = false) {
     val openUser = onUser ?: LocalOpenUser.current
     var confirmDelete by remember { mutableStateOf(false) }
+    val reply = c.depth > 0
+    val indent = c.depth.coerceIn(0, 4) * 18
+    val lineColor = MaterialTheme.colorScheme.primary
+    val bandColor = MaterialTheme.colorScheme.surfaceVariant
+    // Новая ветка (корневой комментарий) отделяется широкой полосой, ответы — отступом и линией слева
+    if (!reply && threadGap) {
+        androidx.compose.foundation.layout.Box(Modifier.fillMaxWidth().height(10.dp).background(bandColor))
+    }
     Column(
         Modifier
             .fillMaxWidth()
-            .padding(start = (c.depth.coerceIn(0, 3) * 14).dp, top = 8.dp, bottom = 8.dp),
+            .then(
+                if (reply) Modifier.background(bandColor.copy(alpha = 0.45f)).drawBehind {
+                    val x = (indent - 9).dp.toPx()
+                    drawLine(lineColor.copy(alpha = 0.7f), Offset(x, 4.dp.toPx()), Offset(x, size.height - 4.dp.toPx()), strokeWidth = 2.dp.toPx())
+                } else Modifier,
+            )
+            .padding(start = indent.dp, top = 8.dp, bottom = 8.dp, end = if (reply) 4.dp else 0.dp),
         verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {
+        if (reply) Text("↳ ответ", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 10.sp)
         Row(
             Modifier.clickable(enabled = c.authorSlug.isNotBlank()) { openUser(c.authorSlug) },
             verticalAlignment = Alignment.CenterVertically,
