@@ -114,6 +114,7 @@ fun CommentsSheet(chapterSlug: String, pageIndex: Int, onDismiss: () -> Unit) {
                     CommentRow(
                         c,
                         threadGap = index > 0,
+                        afterReplies = index > 0 && items[index - 1].depth > 0,
                         onUser = { onDismiss(); openUser(it) },
                         onVote = { up ->
                             if (!busy) {
@@ -183,7 +184,7 @@ fun CommentsSheet(chapterSlug: String, pageIndex: Int, onDismiss: () -> Unit) {
 }
 
 @Composable
-internal fun CommentRow(c: CommentItem, onVote: (Boolean) -> Unit, onEdit: () -> Unit, onDelete: () -> Unit, onReply: (() -> Unit)? = null, onUser: ((String) -> Unit)? = null, threadGap: Boolean = false) {
+internal fun CommentRow(c: CommentItem, onVote: (Boolean) -> Unit, onEdit: () -> Unit, onDelete: () -> Unit, onReply: (() -> Unit)? = null, onUser: ((String) -> Unit)? = null, threadGap: Boolean = false, afterReplies: Boolean = false) {
     val openUser = onUser ?: LocalOpenUser.current
     var confirmDelete by remember { mutableStateOf(false) }
     val reply = c.depth > 0
@@ -191,8 +192,10 @@ internal fun CommentRow(c: CommentItem, onVote: (Boolean) -> Unit, onEdit: () ->
     val lineColor = MaterialTheme.colorScheme.primary
     val bandColor = MaterialTheme.colorScheme.surfaceVariant
     // Новая ветка (корневой комментарий) отделяется широкой полосой, ответы — отступом и линией слева
+    // Широкая полоса — только после ветки с ответами; между одиночными комментариями тонкая линия.
     if (!reply && threadGap) {
-        androidx.compose.foundation.layout.Box(Modifier.fillMaxWidth().height(10.dp).background(bandColor))
+        if (afterReplies) androidx.compose.foundation.layout.Box(Modifier.fillMaxWidth().height(10.dp).background(bandColor))
+        else HorizontalDivider(color = MaterialTheme.colorScheme.outline, thickness = 0.5.dp)
     }
     Column(
         Modifier

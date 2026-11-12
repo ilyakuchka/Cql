@@ -382,7 +382,7 @@ fun LazyListScope.commentsItems(state: TitleComments, loggedIn: Boolean, enabled
     }
     itemsIndexed(state.items.toList(), key = { _, it -> "c-" + it.id }) { index, c ->
         Column(Modifier.padding(horizontal = 21.dp)) {
-            CommentRow(c, threadGap = index > 0, onVote = { state.vote(c, it) }, onEdit = { state.editing = c; state.replyTo = null; state.input = c.text }, onDelete = { state.delete(c) },
+            CommentRow(c, threadGap = index > 0, afterReplies = index > 0 && state.items[index - 1].depth > 0, onVote = { state.vote(c, it) }, onEdit = { state.editing = c; state.replyTo = null; state.input = c.text }, onDelete = { state.delete(c) },
                 onReply = if (loggedIn) ({ state.replyTo = c; state.editing = null }) else null)
         }
     }
