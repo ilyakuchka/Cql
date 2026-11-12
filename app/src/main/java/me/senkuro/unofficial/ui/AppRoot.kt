@@ -185,6 +185,7 @@ fun AppRoot() {
                                 onBack = { nav.popBackStack() },
                                 onManga = openManga,
                                 onChapter = { manga, chapterId -> nav.navigate(Routes.reader(manga.id, chapterId)) },
+                                onChapterAt = { manga, chapterId, page -> nav.navigate(Routes.reader(manga.id, chapterId, page)) },
                                 onPost = { slug -> nav.navigate("post/" + Uri.encode(slug)) },
                                 onSettings = { nav.navigate(Routes.NOTIF_SETTINGS) },
                             )

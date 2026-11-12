@@ -594,6 +594,21 @@ class SenkuroRepository(private val api: SenkuroApi) {
         api.execute("fetchMangaViewerState", "fetchMangaViewerState", buildJsonObject { put("slug", slug) },
             ViewerStateResponse.serializer()).manga?.viewerBookmark?.number.text()?.takeIf { it.isNotBlank() }
 
+    /**
+     * Место, где пользователь остановился (закладка сайта), для уведомления о новой главе [notifChapterId].
+     * null — закладки нет, она не позади новой главы или такой главы нет в ветке.
+     */
+    suspend fun bookmarkTarget(manga: MangaItem, notifChapterId: String, notifNumber: String): Pair<Chapter, Int>? {
+        val num = bookmarkNumber(manga.slug) ?: return null
+        val saved = num.toDoubleOrNull() ?: return null
+        val fresh = notifNumber.toDoubleOrNull() ?: return null
+        if (saved >= fresh) return null                 // новая глава уже прочитана — продолжать нечего
+        val res = chapters(manga.id)
+        val branch = res.branches.firstOrNull { b -> b.chapters.any { it.id == notifChapterId } } ?: res.branches.firstOrNull() ?: return null
+        val chapter = branch.chapters.firstOrNull { it.number == num } ?: return null
+        return chapter to (bookmarkPage(manga.slug) ?: 1)
+    }
+
     private var progressCache: Triple<String, Double?, Int?>? = null
 
     /**

@@ -32,6 +32,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -53,6 +54,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import me.senkuro.unofficial.data.AppGraph
+import me.senkuro.unofficial.data.Chapter
 import me.senkuro.unofficial.data.MangaItem
 import me.senkuro.unofficial.data.NotifChapter
 import me.senkuro.unofficial.data.NotificationItem
@@ -203,6 +205,7 @@ fun NotificationsScreen(
     onBack: () -> Unit,
     onManga: (MangaItem) -> Unit,
     onChapter: (MangaItem, String) -> Unit = { m, _ -> onManga(m) },
+    onChapterAt: (MangaItem, String, Int) -> Unit = { m, c, _ -> onChapter(m, c) },
     onPost: (String) -> Unit = {},
     onSettings: () -> Unit = {},
     vm: NotificationsViewModel = viewModel(),
@@ -303,6 +306,7 @@ fun NotificationsScreen(
                             hidden = vm.read,
                             onManga = onManga,
                             onChapter = onChapter,
+                            onChapterAt = onChapterAt,
                             onPost = onPost,
                             onHide = { vm.act(false, listOf(item)) },
                             onDelete = { vm.act(true, listOf(item)) },
@@ -365,6 +369,7 @@ private fun NotificationCard(
     hidden: Boolean,
     onManga: (MangaItem) -> Unit,
     onChapter: (MangaItem, String) -> Unit,
+    onChapterAt: (MangaItem, String, Int) -> Unit,
     onPost: (String) -> Unit,
     onHide: () -> Unit,
     onDelete: () -> Unit,
@@ -373,6 +378,14 @@ private fun NotificationCard(
     val time = relativeTime(item.at) ?: item.date
     // Читать с самой ранней из новых глав (на сайте кнопка ведёт к «своей» главе).
     val target: NotifChapter? = item.chapters.minByOrNull { it.number.toDoubleOrNull() ?: Double.MAX_VALUE }
+    // Где пользователь остановился (закладка сайта) — чтобы дочитать до новой главы с того же места.
+    val loggedIn by AppGraph.auth.token.collectAsState()
+    var resume by remember(item.id) { mutableStateOf<Pair<Chapter, Int>?>(null) }
+    LaunchedEffect(item.id, loggedIn) {
+        if (loggedIn == null || target == null || item.manga == null) return@LaunchedEffect
+        resume = try { AppGraph.repository.bookmarkTarget(item.manga, target.id, target.number) }
+        catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Exception) { null }
+    }
     Column(
         Modifier
             .fillMaxWidth()
@@ -466,8 +479,18 @@ private fun NotificationCard(
                 }
             }
             if (target != null && item.manga != null) {
-                Button(onClick = { onChapter(item.manga, target.id) }, modifier = Modifier.fillMaxWidth()) {
-                    Text("К главе ${target.number}")
+                val r = resume
+                if (r != null) {
+                    Button(onClick = { onChapterAt(item.manga, r.first.id, r.second) }, modifier = Modifier.fillMaxWidth()) {
+                        Text("Продолжить: глава ${r.first.number}" + if (r.second > 1) ", стр. ${r.second}" else "")
+                    }
+                    OutlinedButton(onClick = { onChapter(item.manga, target.id) }, modifier = Modifier.fillMaxWidth()) {
+                        Text("К новой главе ${target.number}")
+                    }
+                } else {
+                    Button(onClick = { onChapter(item.manga, target.id) }, modifier = Modifier.fillMaxWidth()) {
+                        Text("К главе ${target.number}")
+                    }
                 }
             }
         } else {
