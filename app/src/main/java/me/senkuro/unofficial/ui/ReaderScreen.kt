@@ -70,7 +70,7 @@ fun ReaderScreen(
     val ctx = androidx.compose.ui.platform.LocalContext.current
     val widthPx = ctx.resources.displayMetrics.widthPixels
     val errorCount = me.senkuro.unofficial.data.ReaderErrorLog.entries.size
-    val listState = androidx.compose.foundation.lazy.rememberLazyListState()
+    val listState = androidx.compose.foundation.lazy.rememberLazyListState(initialFirstVisibleItemIndex = (startPage - 1).coerceAtLeast(0))
 
     Box(
         modifier = Modifier
@@ -144,8 +144,13 @@ fun ReaderScreen(
                         }
                 }
                 // закладка с сайта: открываем главу сразу на сохранённой странице (нумерация с 1)
-                LaunchedEffect(data.chapter.id) {
-                    if (startPage > 1 && urls.isNotEmpty()) listState.scrollToItem((startPage - 1).coerceIn(0, urls.size - 1))
+                // пока позиция не выставлена, картинки не грузим: страницы до нужной пропускаются
+                var positioned by remember(data.chapter.id) { mutableStateOf(startPage <= 1) }
+                LaunchedEffect(data.chapter.id, urls.size) {
+                    if (!positioned && urls.isNotEmpty()) {
+                        listState.scrollToItem((startPage - 1).coerceIn(0, urls.size - 1))
+                        positioned = true
+                    }
                 }
                 LazyColumn(
                     state = listState,
@@ -157,6 +162,10 @@ fun ReaderScreen(
                         ) { controls = !controls },
                 ) {
                     itemsIndexed(urls) { index, url ->
+                        if (!positioned) {
+                            Box(Modifier.fillMaxWidth().height(400.dp))
+                            return@itemsIndexed
+                        }
                         SubcomposeAsyncImage(
                             // Высокие ленты не помещаются в аппаратный bitmap: декодируем программно,
                             // сжимая до ширины экрана и в RGB_565 (вдвое меньше памяти).
