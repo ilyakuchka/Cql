@@ -461,11 +461,15 @@ private fun Hero(details: MangaDetails, chapterCount: Int?, readLabel: String, e
             contentScale = ContentScale.Crop,
             modifier = Modifier.matchParentSize(),
         )
+        var poster by remember { mutableStateOf(false) }
         Box(
             Modifier
                 .matchParentSize()
-                .background(Brush.verticalGradient(0f to Color(0xCC161616), 0.6f to Color(0xE6161616), 1f to AppColors.DarkBg)),
+                .background(Brush.verticalGradient(0f to Color(0xCC161616), 0.6f to Color(0xE6161616), 1f to AppColors.DarkBg))
+                // нажатие на обложку — просмотрщик постера
+                .clickable(enabled = details.item.cover != null) { poster = true },
         )
+        if (poster) details.item.cover?.let { PosterViewer(it) { poster = false } }
         Column(
             Modifier
                 .statusBarsPadding()
