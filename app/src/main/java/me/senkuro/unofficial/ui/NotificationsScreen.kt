@@ -479,18 +479,16 @@ private fun NotificationCard(
                 }
             }
             if (target != null && item.manga != null) {
+                // Одна кнопка: с закладкой — «Продолжить», без закладки — к новой главе
                 val r = resume
-                if (r != null) {
-                    Button(onClick = { onChapterAt(item.manga, r.first.id, r.second) }, modifier = Modifier.fillMaxWidth()) {
-                        Text("Продолжить: глава ${r.first.number}" + if (r.second > 1) ", стр. ${r.second}" else "")
-                    }
-                    OutlinedButton(onClick = { onChapter(item.manga, target.id) }, modifier = Modifier.fillMaxWidth()) {
-                        Text("К новой главе ${target.number}")
-                    }
-                } else {
-                    Button(onClick = { onChapter(item.manga, target.id) }, modifier = Modifier.fillMaxWidth()) {
-                        Text("К главе ${target.number}")
-                    }
+                Button(
+                    onClick = { if (r != null) onChapterAt(item.manga, r.first.id, r.second) else onChapter(item.manga, target.id) },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(
+                        if (r != null) "Продолжить: глава ${r.first.number}" + if (r.second > 1) ", стр. ${r.second}" else ""
+                        else "К новой главе ${target.number}",
+                    )
                 }
             }
         } else {
