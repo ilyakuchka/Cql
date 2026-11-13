@@ -58,7 +58,22 @@ object FilterDefs {
         "TEFCRUw6Nw" to "Демография",
     )
 
-    val sortFields = listOf("POPULARITY_SCORE" to "По популярности", "SCORE" to "По рейтингу")
+    /** Поля сортировки каталога. Две последние — по датам, для них направление подписывается «от нового к старому». */
+    val sortFields = listOf(
+        "POPULARITY_SCORE" to "По популярности",
+        "SCORE" to "По рейтингу",
+        "LAST_CHAPTER_AT" to "По дате залива",
+        "CREATED_AT" to "По дате создания",
+    )
+
+    /** Поля-даты: LAST_CHAPTER_AT — когда у тайтла вышла последняя глава, CREATED_AT — когда тайтл создан на сайте. */
+    val dateSortFields = setOf("LAST_CHAPTER_AT", "CREATED_AT")
+
+    /** Подпись направления сортировки: для дат «новое/старое», для остальных полей «убывание/возрастание». */
+    fun directionTitle(field: String, ascending: Boolean): String = when {
+        field in dateSortFields -> if (ascending) "От старого к новому" else "От нового к старому"
+        else -> if (ascending) "По возрастанию" else "По убыванию"
+    }
 }
 
 data class CatalogFilters(

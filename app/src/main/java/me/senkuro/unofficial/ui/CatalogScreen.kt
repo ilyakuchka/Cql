@@ -226,7 +226,7 @@ private fun FiltersSheet(
                         FilterChip(
                             selected = filters.ascending,
                             onClick = { filters = filters.copy(ascending = !filters.ascending) },
-                            label = { Text(if (filters.ascending) "По возрастанию" else "По убыванию") },
+                            label = { Text(FilterDefs.directionTitle(filters.orderField, filters.ascending)) },
                         )
                     }
                 }
