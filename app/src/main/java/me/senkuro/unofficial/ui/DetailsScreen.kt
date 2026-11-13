@@ -83,6 +83,7 @@ fun DetailsScreen(
     onOpenCharacter: (String) -> Unit = {},
     onOpenPerson: (String) -> Unit = {},
     onOpenCard: (String) -> Unit = {},
+    onOpenLabel: (String) -> Unit = {},
     vm: DetailsViewModel = viewModel(key = "details-$mangaId"),
 ) {
     LaunchedEffect(mangaId) { vm.load(mangaId) }
@@ -312,7 +313,7 @@ private fun DetailsContent(data: DetailsData, readIds: Set<String>, onRead: (Cha
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    details.labels.forEach { OutlineChip(it, selected = false, onClick = null) }
+                    details.labels.forEach { OutlineChip(it, selected = false, onClick = { onOpenLabel(it) }) }
                 }
             }
         }

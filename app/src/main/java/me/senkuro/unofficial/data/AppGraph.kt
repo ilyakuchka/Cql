@@ -17,6 +17,9 @@ import okhttp3.OkHttpClient
 
 /** Простейший сервис-локатор: один клиент, API, репозиторий, вход и локальная библиотека на процесс. */
 object AppGraph {
+    /** Название метки, выбранной на странице тайтла: каталог откроется с ней в фильтре. */
+    val pendingCatalogLabel = MutableStateFlow<String?>(null)
+
     lateinit var httpClient: OkHttpClient
         private set
     lateinit var repository: SenkuroRepository

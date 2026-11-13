@@ -387,6 +387,7 @@ fun AppRoot() {
                                 onOpenCharacter = { nav.navigate("character/" + Uri.encode(it)) },
                                 onOpenPerson = { nav.navigate("person/" + Uri.encode(it)) },
                                 onOpenCard = { nav.navigate("card/" + Uri.encode(it)) },
+                                onOpenLabel = { AppGraph.pendingCatalogLabel.value = it; navigateTop(Routes.CATALOG) },
                             )
                         }
                     }

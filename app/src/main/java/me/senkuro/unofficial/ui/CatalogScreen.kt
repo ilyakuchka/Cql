@@ -72,6 +72,19 @@ fun CatalogScreen(onManga: (MangaItem) -> Unit, vm: CatalogViewModel = viewModel
     val focus: FocusManager = LocalFocusManager.current
     val gridState = rememberLazyGridState()
 
+    val pendingLabel by me.senkuro.unofficial.data.AppGraph.pendingCatalogLabel.collectAsState()
+    LaunchedEffect(pendingLabel, vm.labels) {
+        val name = pendingLabel ?: return@LaunchedEffect
+        if (vm.labels.isEmpty()) return@LaunchedEffect
+        val hit = vm.labels.firstOrNull { it.title.equals(name, ignoreCase = true) }
+        me.senkuro.unofficial.data.AppGraph.pendingCatalogLabel.value = null
+        if (hit != null) {
+            text = ""
+            vm.submit("")
+            vm.applyFilters(CatalogFilters().toggle(FilterDefs.GROUP_LABEL, hit.slug))
+        }
+    }
+
     LaunchedEffect(vm.items.size) {
         snapshotFlow { gridState.layoutInfo.visibleItemsInfo.lastOrNull()?.index }
             .collect { last ->
