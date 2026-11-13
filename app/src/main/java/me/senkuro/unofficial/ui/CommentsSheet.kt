@@ -68,6 +68,7 @@ fun CommentsSheet(chapterSlug: String, pageIndex: Int, onDismiss: () -> Unit) {
     var editing by remember { mutableStateOf<CommentItem?>(null) }
     var replyTo by remember { mutableStateOf<CommentItem?>(null) }
     var busy by remember { mutableStateOf(false) }
+    var sort by remember { mutableStateOf(CommentSort.NORMAL) }
 
     fun guarded(block: suspend () -> Unit) {
         scope.launch {
@@ -102,7 +103,6 @@ fun CommentsSheet(chapterSlug: String, pageIndex: Int, onDismiss: () -> Unit) {
         }
     }
 
-    var sort by remember { mutableStateOf(CommentSort.NORMAL) }
     val shown = remember(items, sort) { sortComments(items, sort) }
     androidx.compose.ui.window.Dialog(
         onDismissRequest = onDismiss,
