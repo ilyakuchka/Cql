@@ -4,6 +4,10 @@ package me.senkuro.unofficial.ui
 
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -271,45 +275,86 @@ private fun FilterGroup(
     onToggle: (String) -> Unit,
     collapsible: Boolean = false,
 ) {
-    var expanded by rememberSaveable(title) { mutableStateOf(false) }
-    var query by rememberSaveable(title + "q") { mutableStateOf("") }
-    val shown = when {
-        !collapsible -> options
-        !expanded -> options.take(5)
-        query.isBlank() -> options
-        else -> options.filter { it.second.contains(query.trim(), ignoreCase = true) }
+    var showAll by remember { mutableStateOf(false) }
+    // Свёрнутый вид: первые 5 тегов + все выбранные (чтобы выбор был виден).
+    val shown = if (!collapsible) options else {
+        val first = options.take(5)
+        first + options.drop(5).filter { stateOf(it.first) != Tri.NONE }
     }
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(title, style = MaterialTheme.typography.titleSmall)
-        if (collapsible && expanded) {
-            OutlinedTextField(
-                value = query,
-                onValueChange = { query = it },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                placeholder = { Text("Поиск") },
-            )
-        }
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            for ((value, name) in shown) {
-                val state = stateOf(value)
-                FilterChip(
-                    selected = state != Tri.NONE,
-                    onClick = { onToggle(value) },
-                    label = { Text(if (state == Tri.EXCLUDE) "− $name" else name) },
-                    colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = if (state == Tri.EXCLUDE) {
-                            MaterialTheme.colorScheme.errorContainer
-                        } else {
-                            MaterialTheme.colorScheme.primaryContainer
-                        },
-                    ),
-                )
-            }
+            for ((value, name) in shown) TagChip(name, stateOf(value)) { onToggle(value) }
         }
         if (collapsible && options.size > 5) {
-            TextButton(onClick = { expanded = !expanded; if (!expanded) query = "" }) {
-                Text(if (expanded) "Свернуть" else "Показать все")
+            TextButton(onClick = { showAll = true }) { Text("Показать все (${options.size})") }
+        }
+    }
+    if (showAll) AllTagsDialog(title, options, stateOf, onToggle) { showAll = false }
+}
+
+@Composable
+private fun TagChip(name: String, state: Tri, onClick: () -> Unit) {
+    FilterChip(
+        selected = state != Tri.NONE,
+        onClick = onClick,
+        label = { Text(if (state == Tri.EXCLUDE) "− $name" else name) },
+        colors = FilterChipDefaults.filterChipColors(
+            selectedContainerColor = if (state == Tri.EXCLUDE) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.primaryContainer,
+        ),
+    )
+}
+
+/** Отдельное окно со всеми тегами: ленивый список (рисуются только видимые строки) + поиск. */
+@Composable
+private fun AllTagsDialog(
+    title: String,
+    options: List<Pair<String, String>>,
+    stateOf: (String) -> Tri,
+    onToggle: (String) -> Unit,
+    onClose: () -> Unit,
+) {
+    var query by rememberSaveable(title) { mutableStateOf("") }
+    val list = remember(options, query) {
+        val q = query.trim()
+        if (q.isEmpty()) options else options.filter { it.second.contains(q, ignoreCase = true) }
+    }
+    androidx.compose.ui.window.Dialog(
+        onDismissRequest = onClose,
+        properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false),
+    ) {
+        androidx.compose.material3.Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+            Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().imePadding().padding(horizontal = 16.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(title, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+                    TextButton(onClick = onClose) { Text("Готово") }
+                }
+                OutlinedTextField(
+                    value = query,
+                    onValueChange = { query = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    placeholder = { Text("Поиск") },
+                )
+                Text("Нажатие: включить → исключить → снять", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(vertical = 4.dp))
+                androidx.compose.foundation.lazy.LazyColumn(Modifier.weight(1f)) {
+                    items(list.size, key = { list[it].first }) { i ->
+                        val (value, name) = list[i]
+                        val st = stateOf(value)
+                        Row(
+                            Modifier.fillMaxWidth().clickable { onToggle(value) }.padding(vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(name, modifier = Modifier.weight(1f), fontSize = 15.sp)
+                            when (st) {
+                                Tri.INCLUDE -> Text("✓", color = MaterialTheme.colorScheme.primary, fontSize = 16.sp)
+                                Tri.EXCLUDE -> Text("−", color = MaterialTheme.colorScheme.error, fontSize = 18.sp)
+                                Tri.NONE -> {}
+                            }
+                        }
+                        androidx.compose.material3.HorizontalDivider(thickness = 0.5.dp)
+                    }
+                }
             }
         }
     }
