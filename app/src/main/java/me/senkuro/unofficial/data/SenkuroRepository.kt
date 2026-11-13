@@ -831,7 +831,7 @@ class SenkuroRepository(private val api: SenkuroApi) {
             manga = manga,
             caption = caption ?: subtitle,
             at = lastEventAt,
-            chapters = chapterRefs,
+            chapters = if (headline != null) emptyList() else chapterRefs,
             type = type,
             headline = headline,
             actors = actors,
