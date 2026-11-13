@@ -71,6 +71,11 @@ import me.senkuro.unofficial.data.Tri
 @Composable
 fun CatalogScreen(onManga: (MangaItem) -> Unit, vm: CatalogViewModel = viewModel()) {
     val marks by me.senkuro.unofficial.data.AppGraph.marks.collectAsState()
+    val account by me.senkuro.unofficial.data.AppGraph.account.collectAsState()
+    // Системные коллекции закладок аккаунта (у вошедшего пользователя); без входа группа не показывается.
+    val bookmarkOptions = remember(account) {
+        account?.collections.orEmpty().filter { it.system }.map { it.name to it.name }
+    }
     var text by rememberSaveable { mutableStateOf(vm.query) }
     var showFilters by remember { mutableStateOf(false) }
     val focus: FocusManager = LocalFocusManager.current
@@ -186,6 +191,7 @@ fun CatalogScreen(onManga: (MangaItem) -> Unit, vm: CatalogViewModel = viewModel
         FiltersSheet(
             initial = vm.filters,
             labels = vm.labels,
+            bookmarkOptions = bookmarkOptions,
             onApply = {
                 showFilters = false
                 vm.applyFilters(it)
@@ -199,6 +205,7 @@ fun CatalogScreen(onManga: (MangaItem) -> Unit, vm: CatalogViewModel = viewModel
 private fun FiltersSheet(
     initial: CatalogFilters,
     labels: List<LabelItem>,
+    bookmarkOptions: List<Pair<String, String>>,
     onApply: (CatalogFilters) -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -239,6 +246,17 @@ private fun FiltersSheet(
                         stateOf = { filters.state(group.key, it) },
                         onToggle = { filters = filters.toggle(group.key, it) },
                     )
+                }
+                // «Статус закладок» — сразу после «Статуса перевода».
+                if (group.key == "translationStatus" && bookmarkOptions.isNotEmpty()) {
+                    item(key = FilterDefs.GROUP_BOOKMARK) {
+                        FilterGroup(
+                            title = "Статус закладок",
+                            options = bookmarkOptions,
+                            stateOf = { filters.state(FilterDefs.GROUP_BOOKMARK, it) },
+                            onToggle = { filters = filters.toggle(FilterDefs.GROUP_BOOKMARK, it) },
+                        )
+                    }
                 }
             }
             for ((rootId, title) in FilterDefs.labelRoots) {

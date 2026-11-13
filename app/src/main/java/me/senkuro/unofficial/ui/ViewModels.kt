@@ -195,12 +195,22 @@ class CatalogViewModel : ViewModel() {
         error = null
         job = viewModelScope.launch {
             try {
-                val page = AppGraph.repository.search(query, filters, nextOffset)
-                if (token != requestId) return@launch
-                nextOffset += page.size
-                val known = items.mapTo(HashSet()) { it.id }
-                items = items + page.filter { it.id !in known }
-                if (page.size < SenkuroConfig.SEARCH_PAGE_SIZE) endReached = true
+                // Фильтр по статусу закладок работает на клиенте, и страница может целиком отсеяться:
+                // тогда догружаем следующие, пока что-то не появится (но не бесконечно).
+                var added = 0
+                var requests = 0
+                do {
+                    val page = AppGraph.repository.search(query, filters, nextOffset)
+                    if (token != requestId) return@launch
+                    nextOffset += page.size
+                    if (page.size < SenkuroConfig.SEARCH_PAGE_SIZE) endReached = true
+                    val marks = AppGraph.marks.value
+                    val known = items.mapTo(HashSet()) { it.id }
+                    val fresh = page.filter { it.id !in known && filters.matchesBookmark(marks[it.id]) }
+                    items = items + fresh
+                    added += fresh.size
+                    requests++
+                } while (added == 0 && !endReached && filters.hasBookmarkFilter && requests < 15)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
