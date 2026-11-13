@@ -449,14 +449,37 @@ private fun NotificationCard(
             }
         }
         if (item.headline != null) {
-            item.entityTitle?.let { Text(it, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+            val tm = item.manga
+            val tc = item.targetChapterId
+            val canOpenPage = tm != null && tc != null
+            if (tm != null && item.targetLabel != null) {
+                Row(
+                    Modifier.fillMaxWidth().clickable { if (canOpenPage) onChapterAt(tm, tc!!, item.targetPage ?: 1) else onManga(tm) },
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    AsyncImage(
+                        model = tm.cover,
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.size(width = 25.dp, height = 36.dp).clip(RoundedCornerShape(4.dp)).background(MaterialTheme.colorScheme.surface),
+                    )
+                    Column(Modifier.weight(1f)) {
+                        Text(tm.title, color = MaterialTheme.colorScheme.onBackground, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(item.targetLabel, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+                    }
+                }
+            } else {
+                item.entityTitle?.let { Text(it, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+            }
             val open: (() -> Unit)? = when {
+                canOpenPage -> ({ onChapterAt(tm!!, tc!!, item.targetPage ?: 1) })
                 item.postSlug != null -> ({ onPost(item.postSlug) })
                 item.manga != null -> ({ onManga(item.manga) })
                 else -> null
             }
-            if (open != null) OutlinedButton(onClick = open, modifier = Modifier.fillMaxWidth()) { Text("Открыть страницу") }
-            time?.let { Text(it, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp) }
+            if (open != null) Button(onClick = open, modifier = Modifier.fillMaxWidth()) { Text("Открыть страницу") }
+            if (item.replies.isEmpty()) time?.let { Text(it, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp) }
         }
         if (item.chapters.isNotEmpty()) {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {

@@ -119,6 +119,12 @@ data class NotificationItem(
     /** Подпись объекта, под которым комментарий («Пост · …», «Глава 5»). */
     val entityTitle: String? = null,
     val postSlug: String? = null,
+    /** Куда вёл комментарий: глава и страница (как «Открыть страницу» на сайте). */
+    val targetChapterId: String? = null,
+    val targetPage: Int? = null,
+    val targetLabel: String? = null,
+    /** Время твоего/ответного комментария и непрочитанность — для точки справа. */
+    val unread: Boolean = false,
 )
 
 data class NotificationsPage(val items: List<NotificationItem>, val next: String?)

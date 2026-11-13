@@ -278,6 +278,7 @@ class SenkuroRepository(private val api: SenkuroApi) {
         ).viewerUnreadNotifications as? JsonPrimitive)?.contentOrNull?.toIntOrNull() ?: 0
 
     @Volatile private var extendedNotifications = true
+    @Volatile private var richNotifications = true
 
     /** Переключатели «Настройки уведомлений»: включено всё, кроме пар type+channel с frequency = NEVER. */
     suspend fun notificationOff(userId: String): Set<String> =
@@ -304,14 +305,24 @@ class SenkuroRepository(private val api: SenkuroApi) {
             if (types != null) put("types", kotlinx.serialization.json.JsonArray(types.map { JsonPrimitive(it) }))
         }
         // Расширенный запрос (комментарии, оценки). Если сервер его не принял — один раз откатываемся на простой.
-        val conn = try {
-            api.execute("fetchNotificationFeeds", if (extendedNotifications) "fetchNotificationFeeds" else "fetchNotificationFeedsBasic", vars, NotifResponse.serializer())
-        } catch (e: kotlinx.coroutines.CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            if (!extendedNotifications) throw e
-            extendedNotifications = false
-            api.execute("fetchNotificationFeeds", "fetchNotificationFeedsBasic", vars, NotifResponse.serializer())
+        val conn = run {
+            var last: Exception? = null
+            var res: NotifResponse? = null
+            // Три уровня: с главой/страницей → с комментариями → простой. Что сервер не принял — отключаем.
+            for (file in listOf("fetchNotificationFeedsRich", "fetchNotificationFeeds", "fetchNotificationFeedsBasic")) {
+                if (file == "fetchNotificationFeedsRich" && !richNotifications) continue
+                if (file == "fetchNotificationFeeds" && !extendedNotifications) continue
+                try {
+                    res = api.execute("fetchNotificationFeeds", file, vars, NotifResponse.serializer()); break
+                } catch (e: kotlinx.coroutines.CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    last = e
+                    if (file == "fetchNotificationFeedsRich") richNotifications = false
+                    else if (file == "fetchNotificationFeeds") extendedNotifications = false
+                }
+            }
+            res ?: throw (last ?: IllegalStateException("notifications"))
         }.notificationFeeds
         return NotificationsPage(
             items = conn.edges.map { it.node.toItem() },
@@ -749,10 +760,12 @@ class SenkuroRepository(private val api: SenkuroApi) {
     private fun NotifFeedDto.toItem(): NotificationItem {
         val nodes = listOfNotNull(notifiable, context)
         val mangaNode = nodes.firstOrNull { it.typename == "Manga" }
-        val manga = mangaNode?.let { n ->
+        val pageNode = nodes.firstOrNull { it.typename == "MangaChapterPage" }
+        val chapterNode = nodes.firstOrNull { it.typename == "MangaChapter" } ?: pageNode?.chapter
+        val mangaSrc = mangaNode ?: chapterNode?.manga
+        val manga = mangaSrc?.let { n ->
             n.id?.let { MangaItem(it, n.slug, pickTitle(n.titles, n.originalName, n.slug), n.cover?.original?.url) }
         }
-        val chapterNode = nodes.firstOrNull { it.typename == "MangaChapter" }
         val user = nodes.firstOrNull { it.typename == "User" }?.name
         val post = nodes.firstOrNull { it.typename == "Post" }?.title
         val numbers = payload?.chapters.orEmpty().mapNotNull { it.number.text() }
@@ -826,6 +839,13 @@ class SenkuroRepository(private val api: SenkuroApi) {
             replies = replies,
             entityTitle = entityTitle,
             postSlug = postNode?.slug?.takeIf { it.isNotBlank() },
+            targetChapterId = if (pageNode != null) chapterNode?.id else null,
+            targetPage = pageNode?.number.text()?.toIntOrNull(),
+            targetLabel = if (pageNode != null) buildString {
+                chapterNode?.volume.text()?.let { append("Том ").append(it).append(' ') }
+                chapterNode?.number.text()?.let { append("Глава ").append(it) }
+                pageNode.number.text()?.let { append(" Страница ").append(it) }
+            }.trim().ifBlank { null } else null,
         )
     }
 

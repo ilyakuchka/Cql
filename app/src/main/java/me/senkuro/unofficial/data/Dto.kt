@@ -217,6 +217,9 @@ class NotifNodeDto(
     val volume: kotlinx.serialization.json.JsonElement? = null,
     /** Текст комментария (для notifiable типа Comment). */
     val content: List<TiptapBlockDto>? = null,
+    /** MangaChapterPage → глава; MangaChapter → тайтл (расширенный запрос). */
+    val chapter: NotifNodeDto? = null,
+    val manga: NotifNodeDto? = null,
 )
 
 @Serializable
