@@ -299,6 +299,7 @@ class TitleComments(private val subjectId: String, private val scope: CoroutineS
     var editing by mutableStateOf<CommentItem?>(null)
     var replyTo by mutableStateOf<CommentItem?>(null)
     var busy by mutableStateOf(false)
+    var sort by mutableStateOf(CommentSort.NORMAL)
 
     private fun run(block: suspend () -> Unit) {
         scope.launch {
@@ -313,7 +314,7 @@ class TitleComments(private val subjectId: String, private val scope: CoroutineS
         if (loading) return
         loading = true
         run {
-            val page = AppGraph.repository.comments(subjectId, if (reset) null else cursor)
+            val page = AppGraph.repository.comments(subjectId, if (reset) null else cursor, sort.asc)
             if (reset) items.clear()
             items.addAll(page.items.filter { n -> items.none { it.id == n.id } })
             cursor = page.next
@@ -387,9 +388,19 @@ fun LazyListScope.commentsItems(state: TitleComments, loggedIn: Boolean, enabled
             state.error?.let { Text(it, color = MaterialTheme.colorScheme.error, fontSize = 12.sp) }
         }
     }
-    itemsIndexed(state.items.toList(), key = { _, it -> "c-" + it.id }) { index, c ->
+    item(key = "comments-sort") {
         Column(Modifier.padding(horizontal = 21.dp)) {
-            CommentRow(c, threadGap = index > 0, afterReplies = index > 0 && state.items[index - 1].depth > 0, onVote = { state.vote(c, it) }, onEdit = { state.editing = c; state.replyTo = null; state.input = c.text }, onDelete = { state.delete(c) },
+            CommentSortRow(state.sort) { new ->
+                val reload = new.asc != state.sort.asc
+                state.sort = new
+                if (reload) state.load(true)
+            }
+        }
+    }
+    val sortedItems = sortComments(state.items.toList(), state.sort)
+    itemsIndexed(sortedItems, key = { _, it -> "c-" + it.id }) { index, c ->
+        Column(Modifier.padding(horizontal = 21.dp)) {
+            CommentRow(c, threadGap = index > 0, afterReplies = index > 0 && sortedItems[index - 1].depth > 0, onVote = { state.vote(c, it) }, onEdit = { state.editing = c; state.replyTo = null; state.input = c.text }, onDelete = { state.delete(c) },
                 onReply = if (loggedIn) ({ state.replyTo = c; state.editing = null; state.input = "" }) else null)
             if (loggedIn && (state.replyTo?.id == c.id || state.editing?.id == c.id)) {
                 Column(Modifier.padding(start = ((c.depth + 1).coerceAtMost(3) * 18).dp, bottom = 8.dp)) { CommentForm(state) }

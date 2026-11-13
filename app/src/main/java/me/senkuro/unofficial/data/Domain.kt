@@ -151,6 +151,8 @@ data class CommentItem(
     val avatar: String?,
     val text: String,
     val date: String?,
+    /** Полная дата создания (ISO) — для сортировки. */
+    val createdAt: String? = null,
     val up: Int,
     val down: Int,
     val canEdit: Boolean,

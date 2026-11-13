@@ -509,13 +509,13 @@ class SenkuroRepository(private val api: SenkuroApi) {
             .mangaChapter?.pages?.map { it.id }?.filter { it.isNotBlank() }.orEmpty()
     }
 
-    suspend fun comments(subjectId: String, after: String?): CommentsPage {
+    suspend fun comments(subjectId: String, after: String?, ascending: Boolean = false): CommentsPage {
         val vars = buildJsonObject {
             put("subjectId", subjectId)
             if (after != null) put("after", after)
             put("orderBy", buildJsonObject {
                 put("field", "CREATED_AT")
-                put("direction", "DESC")
+                put("direction", if (ascending) "ASC" else "DESC")
             })
         }
         val conn = api.execute("fetchThreadComments", "fetchThreadComments", vars, CommentsResponse.serializer()).comments
@@ -534,6 +534,7 @@ class SenkuroRepository(private val api: SenkuroApi) {
                     statusCaption = c.author?.status?.caption,
                     text = c.content.orEmpty().joinToString("\n") { b -> b.content.orEmpty().joinToString("") { it.text.orEmpty() } }.trim(),
                     date = c.createdAt?.take(10),
+                    createdAt = c.createdAt,
                     up = c.upvotes ?: 0,
                     down = c.downvotes ?: 0,
                     canEdit = c.viewerCanUpdate,

@@ -3,6 +3,12 @@
 package me.senkuro.unofficial.ui
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -82,7 +88,7 @@ fun CommentsSheet(chapterSlug: String, pageIndex: Int, onDismiss: () -> Unit) {
         val id = subject ?: return
         loading = true
         guarded {
-            val page = AppGraph.repository.comments(id, if (reset) null else cursor)
+            val page = AppGraph.repository.comments(id, if (reset) null else cursor, sort.asc)
             items = if (reset) page.items else (items + page.items).distinctBy { it.id }
             cursor = page.next
         }
@@ -96,25 +102,49 @@ fun CommentsSheet(chapterSlug: String, pageIndex: Int, onDismiss: () -> Unit) {
         }
     }
 
-    ModalBottomSheet(onDismissRequest = onDismiss) {
+    var sort by remember { mutableStateOf(CommentSort.NORMAL) }
+    val shown = remember(items, sort) { sortComments(items, sort) }
+    androidx.compose.ui.window.Dialog(
+        onDismissRequest = onDismiss,
+        properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
+    ) {
+      var visible by remember { mutableStateOf(false) }
+      LaunchedEffect(Unit) { visible = true }
+      androidx.compose.animation.AnimatedVisibility(
+        visible = visible,
+        enter = androidx.compose.animation.slideInHorizontally(initialOffsetX = { it }),
+      ) {
+       androidx.compose.material3.Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         Column(
             Modifier
-                .fillMaxWidth()
+                .fillMaxSize()
+                .statusBarsPadding()
                 .navigationBarsPadding()
+                .imePadding()
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Text("Комментарии · стр. ${pageIndex + 1}", style = HeadingStyle, color = MaterialTheme.colorScheme.onSurface)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                androidx.compose.material3.IconButton(onClick = onDismiss) {
+                    androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Назад")
+                }
+                Text("Комментарии · стр. ${pageIndex + 1}", style = HeadingStyle, color = MaterialTheme.colorScheme.onBackground)
+            }
+            CommentSortRow(sort) { new ->
+                val reload = new.asc != sort.asc
+                sort = new
+                if (reload) load(true)
+            }
             error?.let { Text(it, color = MaterialTheme.colorScheme.error, fontSize = 12.sp) }
-            LazyColumn(Modifier.heightIn(max = 380.dp)) {
+            LazyColumn(Modifier.weight(1f)) {
                 if (items.isEmpty() && !loading && error == null) {
                     item { Text("Комментариев пока нет", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp) }
                 }
-                itemsIndexed(items, key = { _, it -> it.id }) { index, c ->
+                itemsIndexed(shown, key = { _, it -> it.id }) { index, c ->
                     CommentRow(
                         c,
                         threadGap = index > 0,
-                        afterReplies = index > 0 && items[index - 1].depth > 0,
+                        afterReplies = index > 0 && shown[index - 1].depth > 0,
                         onUser = { onDismiss(); openUser(it) },
                         onVote = { up ->
                             if (!busy) {
@@ -179,6 +209,41 @@ fun CommentsSheet(chapterSlug: String, pageIndex: Int, onDismiss: () -> Unit) {
                     ) { Text(if (editing != null) "Сохранить" else "Отправить") }
                 }
             }
+        }
+       }
+      }
+    }
+}
+
+enum class CommentSort(val title: String, val asc: Boolean = false) {
+    NORMAL("Обычная"), REPLIES("Популярные по ответам"), LIKES("Популярные по лайкам"), NEWEST("Самые новые"), OLDEST("Самые старые", asc = true),
+}
+
+/** Сортирует ветки целиком (корень + ответы). Обычная/новые/старые опираются на порядок сервера; популярные — среди загруженных. */
+internal fun sortComments(items: List<CommentItem>, sort: CommentSort): List<CommentItem> {
+    if (sort == CommentSort.NORMAL) return items
+    val groups = LinkedHashMap<String, MutableList<CommentItem>>()
+    items.forEach { groups.getOrPut(it.threadId) { mutableListOf() }.add(it) }
+    fun root(g: List<CommentItem>) = g.firstOrNull { it.depth == 0 } ?: g.first()
+    val list = groups.values.toList()
+    val sorted = when (sort) {
+        CommentSort.REPLIES -> list.sortedByDescending { g -> g.count { it.depth > 0 } }
+        CommentSort.LIKES -> list.sortedByDescending { g -> root(g).up - root(g).down }
+        CommentSort.NEWEST -> list.sortedByDescending { g -> root(g).createdAt.orEmpty() }
+        CommentSort.OLDEST -> list.sortedBy { g -> root(g).createdAt.orEmpty() }
+        CommentSort.NORMAL -> list
+    }
+    return sorted.flatten()
+}
+
+@Composable
+internal fun CommentSortRow(current: CommentSort, onPick: (CommentSort) -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        CommentSort.entries.forEach {
+            androidx.compose.material3.FilterChip(selected = it == current, onClick = { onPick(it) }, label = { Text(it.title) })
         }
     }
 }
