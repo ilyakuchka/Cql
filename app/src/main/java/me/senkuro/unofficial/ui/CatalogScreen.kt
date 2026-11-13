@@ -233,7 +233,7 @@ private fun FiltersSheet(
                         options = options,
                         stateOf = { filters.state(FilterDefs.GROUP_LABEL, it) },
                         onToggle = { filters = filters.toggle(FilterDefs.GROUP_LABEL, it) },
-                        collapsible = rootId in setOf("TEFCRUw6NQ", "TEFCRUw6NA", "TEFCRUw6Ng", "TEFCRUw6Mw"),
+                        collapsible = rootId in setOf("TEFCRUw6NQ", "TEFCRUw6NA", "TEFCRUw6Ng", "TEFCRUw6Mw", "TEFCRUw6Nw"),
                     )
                 }
             }
