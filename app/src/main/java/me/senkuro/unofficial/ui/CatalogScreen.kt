@@ -233,6 +233,7 @@ private fun FiltersSheet(
                         options = options,
                         stateOf = { filters.state(FilterDefs.GROUP_LABEL, it) },
                         onToggle = { filters = filters.toggle(FilterDefs.GROUP_LABEL, it) },
+                        collapsible = rootId == "TEFCRUw6NQ",
                     )
                 }
             }
@@ -255,11 +256,29 @@ private fun FilterGroup(
     options: List<Pair<String, String>>,
     stateOf: (String) -> Tri,
     onToggle: (String) -> Unit,
+    collapsible: Boolean = false,
 ) {
+    var expanded by rememberSaveable(title) { mutableStateOf(false) }
+    var query by rememberSaveable(title + "q") { mutableStateOf("") }
+    val shown = when {
+        !collapsible -> options
+        !expanded -> options.take(5)
+        query.isBlank() -> options
+        else -> options.filter { it.second.contains(query.trim(), ignoreCase = true) }
+    }
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(title, style = MaterialTheme.typography.titleSmall)
+        if (collapsible && expanded) {
+            OutlinedTextField(
+                value = query,
+                onValueChange = { query = it },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                placeholder = { Text("Поиск") },
+            )
+        }
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            for ((value, name) in options) {
+            for ((value, name) in shown) {
                 val state = stateOf(value)
                 FilterChip(
                     selected = state != Tri.NONE,
@@ -273,6 +292,11 @@ private fun FilterGroup(
                         },
                     ),
                 )
+            }
+        }
+        if (collapsible && options.size > 5) {
+            TextButton(onClick = { expanded = !expanded; if (!expanded) query = "" }) {
+                Text(if (expanded) "Свернуть" else "Показать все")
             }
         }
     }
