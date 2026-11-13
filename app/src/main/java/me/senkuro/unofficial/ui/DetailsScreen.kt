@@ -111,7 +111,7 @@ fun DetailsScreen(
         when (val state = vm.state) {
             is UiState.Loading -> LoadingBox()
             is UiState.Error -> ErrorBox(state.message, { vm.load(mangaId, force = true) })
-            is UiState.Ready -> DetailsContent(state.data, readIds, onRead, onReadAt, onOpenManga, onOpenCharacter, onOpenPerson, onOpenCard)
+            is UiState.Ready -> DetailsContent(state.data, readIds, onRead, onReadAt, onOpenManga, onOpenCharacter, onOpenPerson, onOpenCard, onOpenLabel)
         }
         var bookmarkDialog by remember { mutableStateOf(false) }
         // Состояние закладки показываем на самой кнопке: название списка из аккаунта или с сервера
@@ -203,7 +203,7 @@ private fun shareManga(context: Context, item: MangaItem) {
 }
 
 @Composable
-private fun DetailsContent(data: DetailsData, readIds: Set<String>, onRead: (Chapter) -> Unit, onReadAt: (Chapter, Int) -> Unit, onOpenManga: (MangaItem) -> Unit, onOpenCharacter: (String) -> Unit, onOpenPerson: (String) -> Unit, onOpenCard: (String) -> Unit) {
+private fun DetailsContent(data: DetailsData, readIds: Set<String>, onRead: (Chapter) -> Unit, onReadAt: (Chapter, Int) -> Unit, onOpenManga: (MangaItem) -> Unit, onOpenCharacter: (String) -> Unit, onOpenPerson: (String) -> Unit, onOpenCard: (String) -> Unit, onOpenLabel: (String) -> Unit) {
     val details = data.details
     val extras by androidx.compose.runtime.produceState(DetailsExtras(), details.item.id) {
         value = DetailsExtras(
