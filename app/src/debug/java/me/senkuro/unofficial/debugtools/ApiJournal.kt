@@ -72,7 +72,7 @@ object ApiJournal {
         "fetchCardDecks", "fetchCardDeck", "fetchCardPacks", "fetchCardPack", "fetchCollectibles", "fetchForgeCardsSlots", "fetchCardOffers",
         "fetchUserCards", "fetchUserTasks", "fetchCards", "fetchCard", "viewCard", "voteCard",
         "fetchConversations", "fetchUser", "fetchUserAppearance", "fetchUserAchievements", "fetchUserProfileExtra",
-        "fetchMangaPage", "fetchMangaChapters", "fetchMangaRelations", "fetchMangaViewerState", "fetchMangaCharacters", "fetchMangaStaff",
+        "fetchMangaPage", "fetchViewerBalance", "fetchMangaChapters", "fetchMangaRelations", "fetchMangaViewerState", "fetchMangaCharacters", "fetchMangaStaff",
     )
 
     fun install() {
