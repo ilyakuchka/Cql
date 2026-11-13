@@ -280,11 +280,12 @@ internal fun CommentRow(c: CommentItem, onVote: (Boolean) -> Unit, onEdit: () ->
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            AvatarWithFrame(c.avatar, c.frame, 30.dp)
+            val mine = isMe(slug = c.authorSlug)
+            AvatarWithFrame(c.avatar, c.frame, 30.dp, Modifier.streamerBlur(mine, 10.dp))
             Text(
                 c.author.ifBlank { "—" },
                 color = MaterialTheme.colorScheme.onSurface, fontSize = 13.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Medium,
-                maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false),
+                maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false).streamerBlur(mine),
             )
             if (c.status != null) coil3.compose.AsyncImage(c.status, c.statusCaption, modifier = Modifier.size(18.dp))
             c.date?.let { Text(it, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp) }

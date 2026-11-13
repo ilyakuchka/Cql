@@ -24,10 +24,11 @@ import androidx.compose.ui.unit.sp
 import me.senkuro.unofficial.data.AppGraph
 import me.senkuro.unofficial.data.SenkuroConfig
 
-/** Настройки: пока только переключатель тёмной темы. */
+/** Настройки: тёмная тема, режим стримера (под тёмной темой), обновления, разделы аккаунта. */
 @Composable
 fun SettingsScreen(onCards: () -> Unit = {}, onCardCatalog: () -> Unit = {}, onOffers: () -> Unit = {}, onPosts: () -> Unit = {}, onCardHub: () -> Unit = {}, onJournal: (() -> Unit)? = null, onCapture: (() -> Unit)? = null, onSiteVersion: (() -> Unit)? = null) {
     val dark by AppGraph.themeDark.collectAsState()
+    val streamer by AppGraph.streamerMode.collectAsState()
     val token by AppGraph.auth.token.collectAsState()
     val account by AppGraph.account.collectAsState()
     Column(
@@ -57,6 +58,25 @@ fun SettingsScreen(onCards: () -> Unit = {}, onCardCatalog: () -> Unit = {}, onO
                 )
             }
             Switch(checked = dark, onCheckedChange = AppGraph::setDarkTheme)
+        }
+        // Режим стримера живёт под тёмной темой и доступен только вошедшему пользователю.
+        if (dark && token != null) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 32.dp, end = 16.dp, top = 4.dp, bottom = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(Modifier.weight(1f)) {
+                    Text("Режим стримера", color = MaterialTheme.colorScheme.onBackground, fontSize = 15.sp)
+                    Text(
+                        "Размывает ваш ник, аватар, уровень, очки и кредиты",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontSize = 12.sp,
+                    )
+                }
+                Switch(checked = streamer, onCheckedChange = AppGraph::setStreamerMode)
+            }
         }
         HorizontalDivider(Modifier.padding(vertical = 8.dp))
         UpdateSettings()
@@ -91,6 +111,7 @@ fun SettingsScreen(onCards: () -> Unit = {}, onCardCatalog: () -> Unit = {}, onO
                         account?.name ?: SenkuroConfig.current.title,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 12.sp,
+                        modifier = Modifier.streamerBlur(hide = account != null),
                     )
                 }
                 TextButton(onClick = AppGraph::logout) { Text("Выйти") }

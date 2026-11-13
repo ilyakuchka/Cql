@@ -96,7 +96,7 @@ fun RanksScreen(onBack: () -> Unit, onUser: (String) -> Unit, vm: RanksViewModel
             else -> LazyColumn(contentPadding = PaddingValues(10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 if (page.myRank != null) item(key = "me") {
                     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(MaterialTheme.colorScheme.surfaceVariant).padding(14.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                        Text("Ты на ${page.myRank} месте", fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onBackground)
+                        Text("Ты на ${page.myRank} месте", fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onBackground, modifier = Modifier.streamerBlur())
                         Text(rankHint(page.myRank), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
@@ -115,12 +115,13 @@ private fun RankRow(e: RankEntry, onUser: (String) -> Unit) {
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         Text(e.rank.toString(), fontWeight = FontWeight.Bold, fontSize = 16.sp, color = MaterialTheme.colorScheme.primary, modifier = Modifier.width(28.dp))
-        AvatarWithFrame(e.avatar, e.frame, 44.dp)
+        val mine = isMe(slug = e.slug)
+        AvatarWithFrame(e.avatar, e.frame, 44.dp, Modifier.streamerBlur(mine, 14.dp))
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(e.name, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                    color = MaterialTheme.colorScheme.onBackground, modifier = Modifier.weight(1f, fill = false))
-                e.level?.let { Text("Ур. $it", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                    color = MaterialTheme.colorScheme.onBackground, modifier = Modifier.weight(1f, fill = false).streamerBlur(mine))
+                e.level?.let { Text("Ур. $it", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.streamerBlur(mine, 6.dp)) }
             }
             e.better?.let { Text("Лучше ${"%.1f".format(java.util.Locale.US, it)}% пользователей", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant) }
             Text("Прочитал(а) ${num(e.chapters)} гл. · Посмотрел(а) ${num(e.episodes)} серий", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)

@@ -135,10 +135,11 @@ private fun HomeHeader(onSearch: () -> Unit, onRefresh: () -> Unit, onLogin: () 
         val headerAvatar = account?.avatar
         val headerFrame = account?.frame
         if (headerAvatar != null && headerFrame != null) {
-            AvatarWithFrame(headerAvatar, headerFrame, 40.dp, Modifier.clickable { if (token == null) onLogin() else onProfile() })
+            AvatarWithFrame(headerAvatar, headerFrame, 40.dp, Modifier.streamerBlur(radius = 12.dp).clickable { if (token == null) onLogin() else onProfile() })
         } else Box(
             modifier = Modifier
                 .size(40.dp)
+                .streamerBlur(hide = headerAvatar != null, radius = 12.dp)
                 .clip(CircleShape)
                 .background(MaterialTheme.colorScheme.surfaceVariant)
                 .border(0.8.dp, MaterialTheme.colorScheme.outline, CircleShape)
@@ -159,8 +160,22 @@ private fun HomeHeader(onSearch: () -> Unit, onRefresh: () -> Unit, onLogin: () 
         }
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
-            Text(
-                account?.name?.takeIf { it.isNotBlank() }?.let { "${greeting()}, $it" } ?: greeting(),
+            val userName = account?.name?.takeIf { it.isNotBlank() }
+            if (userName != null) {
+                // Приветствие остаётся читаемым, размывается только ник.
+                Row {
+                    Text("${greeting()}, ", maxLines = 1, color = MaterialTheme.colorScheme.onBackground, style = HeadingStyle)
+                    Text(
+                        userName,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        color = MaterialTheme.colorScheme.onBackground,
+                        style = HeadingStyle,
+                        modifier = Modifier.weight(1f, fill = false).streamerBlur(),
+                    )
+                }
+            } else Text(
+                greeting(),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 color = MaterialTheme.colorScheme.onBackground,
@@ -171,9 +186,19 @@ private fun HomeHeader(onSearch: () -> Unit, onRefresh: () -> Unit, onLogin: () 
                 if (account != null) balance = AppGraph.repository.balance()
             }
             val b = balance
-            Text(
-                if (account != null && b != null) "Эстерии ${fmt(b.credits)} · Коины ${fmt(b.points)}" + (b.level?.let { " · Ур. $it" } ?: "")
-                else SenkuroConfig.current.title,
+            if (account != null && b != null) {
+                // Размываются только числа: кредиты, очки и уровень.
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    StreamerStat("Эстерии ", fmt(b.credits), hide = true, fontSize = 11.sp)
+                    Text(" · ", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp, maxLines = 1)
+                    StreamerStat("Коины ", fmt(b.points), hide = true, fontSize = 11.sp)
+                    b.level?.let {
+                        Text(" · ", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp, maxLines = 1)
+                        StreamerStat("Ур. ", it.toString(), hide = true, fontSize = 11.sp)
+                    }
+                }
+            } else Text(
+                SenkuroConfig.current.title,
                 color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
             )
         }

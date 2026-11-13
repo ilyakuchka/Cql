@@ -10,8 +10,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
 
@@ -51,6 +54,19 @@ object AppGraph {
 
     /** Тёмная тема для обычных страниц (страница тайтла и ридер всегда тёмные). */
     val themeDark: StateFlow<Boolean> = _themeDark.asStateFlow()
+
+    private val _streamer = MutableStateFlow(false)
+
+    /** Переключатель «Режим стримера» из настроек (само по себе ещё не включает режим: см. [streamerActive]). */
+    val streamerMode: StateFlow<Boolean> = _streamer.asStateFlow()
+
+    /**
+     * Режим стримера действует, только если переключатель включён, выбрана тёмная тема и пользователь вошёл.
+     * Если любое из условий пропало (выключили тёмную тему, вышли), личные данные снова показываются, а сам
+     * переключатель сохраняется и вернётся в силу при следующем включении тёмной темы или входе.
+     */
+    lateinit var streamerActive: StateFlow<Boolean>
+        private set
 
     private val _unread = MutableStateFlow(0)
 
@@ -114,7 +130,10 @@ object AppGraph {
         _domain.value = SenkuroConfig.current
 
         _themeDark.value = settings.getBoolean(KEY_DARK, false)
+        _streamer.value = settings.getBoolean(KEY_STREAMER, false)
         auth = AuthStore(app)
+        streamerActive = combine(_streamer, _themeDark, auth.token) { on, dark, token -> on && dark && token != null }
+            .stateIn(scope, SharingStarted.Eagerly, false)
         httpClient = createHttpClient { auth.current }
         val api = SenkuroApi(app, httpClient)
         repository = SenkuroRepository(api)
@@ -151,6 +170,11 @@ object AppGraph {
     fun setDarkTheme(dark: Boolean) {
         settings.edit().putBoolean(KEY_DARK, dark).apply()
         _themeDark.value = dark
+    }
+
+    fun setStreamerMode(on: Boolean) {
+        settings.edit().putBoolean(KEY_STREAMER, on).apply()
+        _streamer.value = on
     }
 
     fun refreshUnread() {
@@ -237,4 +261,5 @@ object AppGraph {
 
     private const val KEY_DOMAIN = "domain"
     private const val KEY_DARK = "dark_theme"
+    private const val KEY_STREAMER = "streamer_mode"
 }

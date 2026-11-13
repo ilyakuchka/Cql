@@ -90,7 +90,7 @@ fun TopsSection(vm: HomeViewModel, onTasks: () -> Unit, onUser: (String) -> Unit
                 (if (experience) "Ты набрал · " else "Ты пополнил · ") + numberFormat.format(data.viewerValue),
                 fontSize = 12.sp,
                 color = MaterialTheme.colorScheme.onBackground,
-                modifier = Modifier.padding(horizontal = 12.dp),
+                modifier = Modifier.padding(horizontal = 12.dp).streamerBlur(),
             )
         }
         when {
@@ -99,7 +99,7 @@ fun TopsSection(vm: HomeViewModel, onTasks: () -> Unit, onUser: (String) -> Unit
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 itemsIndexed(data.users, key = { _, u -> u.id }) { index, user ->
-                    TopCard(rank = index + 1, user = user, experience = experience, onClick = { user.slug?.let(onUser) })
+                    TopCard(rank = index + 1, user = user, experience = experience, mine = isMe(user.slug, user.id), onClick = { user.slug?.let(onUser) })
                 }
             }
             tab in vm.topsFailed -> Text(
@@ -136,7 +136,7 @@ private fun SegmentTab(label: String, selected: Boolean, onClick: () -> Unit) {
 }
 
 @Composable
-private fun TopCard(rank: Int, user: TopUser, experience: Boolean, onClick: () -> Unit = {}) {
+private fun TopCard(rank: Int, user: TopUser, experience: Boolean, mine: Boolean = false, onClick: () -> Unit = {}) {
     val accent: Color? = when (rank) {
         1 -> Color(0xFFFFD043)
         2 -> Color(0xFF5177FF)
@@ -164,7 +164,7 @@ private fun TopCard(rank: Int, user: TopUser, experience: Boolean, onClick: () -
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            Box(Modifier.size(48.dp), contentAlignment = Alignment.Center) {
+            Box(Modifier.size(48.dp).streamerBlur(mine, 16.dp), contentAlignment = Alignment.Center) {
                 AsyncImage(
                     model = user.avatar,
                     contentDescription = user.name,
@@ -184,16 +184,17 @@ private fun TopCard(rank: Int, user: TopUser, experience: Boolean, onClick: () -
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         color = MaterialTheme.colorScheme.onBackground,
-                        modifier = Modifier.weight(1f, fill = false),
+                        modifier = Modifier.weight(1f, fill = false).streamerBlur(mine),
                     )
                     if (user.status != null) AsyncImage(model = user.status, contentDescription = null, modifier = Modifier.size(16.dp))
                 }
-                if (user.level != null) LevelTag(user.level)
+                if (user.level != null) Box(Modifier.streamerBlur(mine, 6.dp)) { LevelTag(user.level) }
                 if (experience) {
                     Text(
                         (user.experience?.let { numberFormat.format(it) } ?: "0") + " XP",
                         fontSize = 13.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.streamerBlur(mine, 6.dp),
                     )
                 } else if (!user.guild.isNullOrBlank()) {
                     Text(

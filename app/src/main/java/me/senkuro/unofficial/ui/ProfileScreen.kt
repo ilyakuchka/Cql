@@ -133,10 +133,11 @@ fun ProfileScreen(
                 contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 24.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                item { Header(p, look, lookDone) }
+                item { Header(p, look, lookDone, hide = isOwn) }
                 item {
                     val done = achievements.count { it.done }
                     ProfileHub(
+                        hideStats = isOwn,
                         stats = listOf(
                             "Уровень" to (p.level?.toString() ?: "—"),
                             "Достижения" to done.toString(),
@@ -183,7 +184,7 @@ private fun cardColor(): androidx.compose.ui.graphics.Color =
     LocalCardColor.current.takeIf { it != androidx.compose.ui.graphics.Color.Unspecified } ?: MaterialTheme.colorScheme.surfaceVariant
 
 @Composable
-private fun Header(p: Profile, look: me.senkuro.unofficial.data.ProfileAppearance?, lookDone: Boolean) {
+private fun Header(p: Profile, look: me.senkuro.unofficial.data.ProfileAppearance?, lookDone: Boolean, hide: Boolean) {
     val accent = MaterialTheme.colorScheme.primary
     val card = cardColor()
     Box(
@@ -199,20 +200,20 @@ private fun Header(p: Profile, look: me.senkuro.unofficial.data.ProfileAppearanc
         verticalAlignment = Alignment.Top,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        AvatarWithFrame(if (lookDone) (look?.avatar ?: p.avatar) else null, look?.frame, 84.dp, Modifier.offset(y = (-34).dp), avatarVideo = look?.avatarVideo)
+        AvatarWithFrame(if (lookDone) (look?.avatar ?: p.avatar) else null, look?.frame, 84.dp, Modifier.offset(y = (-34).dp).streamerBlur(hide, 28.dp), avatarVideo = look?.avatarVideo)
         Column(Modifier.padding(top = 10.dp).weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
                     p.name + if (p.verified) " ✓" else "",
                     color = MaterialTheme.colorScheme.onBackground, fontSize = 20.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
-                    maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false),
+                    maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false).streamerBlur(hide),
                 )
                 look?.status?.let { AsyncImage(it, null, contentScale = ContentScale.Fit, modifier = Modifier.size(22.dp)) }
                 p.level?.let {
                     Text(
                         "Ур. $it", color = MaterialTheme.colorScheme.onPrimary, fontSize = 11.sp,
                         fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
-                        modifier = Modifier.clip(RoundedCornerShape(10.dp)).background(accent).padding(horizontal = 8.dp, vertical = 2.dp),
+                        modifier = Modifier.streamerBlur(hide, 6.dp).clip(RoundedCornerShape(10.dp)).background(accent).padding(horizontal = 8.dp, vertical = 2.dp),
                     )
                 }
             }
@@ -449,7 +450,7 @@ class HubLink(val title: String, val value: String? = null, val onClick: (() -> 
 
 /** Единый виджет профиля: сетка показателей и список ссылок на разделы. Новые разделы добавляются в [links]. */
 @Composable
-private fun ProfileHub(stats: List<Pair<String, String>>, links: List<HubLink>) {
+private fun ProfileHub(stats: List<Pair<String, String>>, links: List<HubLink>, hideStats: Boolean = false) {
     val divider = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.15f)
     Column(
         Modifier.padding(horizontal = 10.dp)
@@ -461,7 +462,7 @@ private fun ProfileHub(stats: List<Pair<String, String>>, links: List<HubLink>) 
                 row.forEachIndexed { i, (label, value) ->
                     if (i > 0) Box(Modifier.width(1.dp).height(32.dp).background(divider).align(Alignment.CenterVertically))
                     Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                        Text(value, color = MaterialTheme.colorScheme.onBackground, fontSize = 18.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, maxLines = 1)
+                        Text(value, color = MaterialTheme.colorScheme.onBackground, fontSize = 18.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, maxLines = 1, modifier = Modifier.streamerBlur(hideStats, 8.dp))
                         Text(label, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp, maxLines = 1, softWrap = false,
                             overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                     }
