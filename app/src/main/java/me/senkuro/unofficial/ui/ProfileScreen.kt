@@ -152,7 +152,6 @@ fun ProfileScreen(
                             extra?.takeIf { it.libraryTotal > 0 }?.let { add(HubLink("Библиотека манги", fmt(it.libraryTotal), if (isOwn) onLibrary else null)) }
                             if (isOwn) {
                                 add(HubLink("Карточки и обмены", "Коллекция и торговля", onCards))
-                                add(HubLink("Команды переводчиков", "Каталог команд", onTeams))
                                 add(HubLink("Задания", "Ежедневные и недельные", onOpenTasks))
                             }
                             // Новые разделы профиля добавляются сюда: add(HubLink("Название", "значение") { ... })
