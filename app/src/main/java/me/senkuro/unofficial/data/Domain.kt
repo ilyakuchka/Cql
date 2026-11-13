@@ -207,3 +207,6 @@ data class RanksPage(val myRank: Long?, val entries: List<RankEntry>)
 
 /** Short — глава-комикс для быстрого просмотра: страницы листаются, главы сменяют друг друга. */
 data class ShortItem(val id: String, val chapterSlug: String, val manga: MangaItem?, val number: String, val pages: List<String>)
+
+/** Баланс текущего пользователя: Эстерии (credits), Сенкурокоины (points) и уровень. */
+data class UserBalance(val credits: Long, val points: Long, val level: Int?)

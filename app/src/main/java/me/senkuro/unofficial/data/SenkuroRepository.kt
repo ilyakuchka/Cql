@@ -206,6 +206,17 @@ class SenkuroRepository(private val api: SenkuroApi) {
     // ------------------------------------------------------- Аккаунт и закладки сайта
 
     /** null — токен не принят (аноним). */
+    /** Эстерии/Сенкурокоины/уровень; при любой ошибке — null (шапка просто покажет прежний текст). */
+    suspend fun balance(): UserBalance? = try {
+        api.execute("fetchViewerBalance", "fetchViewerBalance", buildJsonObject {}, BalanceResponse.serializer()).viewer?.user?.let {
+            UserBalance(it.credits?.toLong() ?: 0L, it.points?.toLong() ?: 0L, it.level?.toInt())
+        }
+    } catch (e: kotlinx.coroutines.CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        null
+    }
+
     suspend fun viewer(): Account? {
         val viewer = api.execute("fetchViewer", "fetchViewer", buildJsonObject {}, ViewerResponse.serializer()).viewer
         val user = viewer?.user ?: return null

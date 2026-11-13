@@ -1,0 +1,10 @@
+query fetchViewerBalance {
+  viewer {
+    user {
+      id
+      level
+      credits
+      points
+    }
+  }
+}

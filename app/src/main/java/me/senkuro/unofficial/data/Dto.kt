@@ -169,6 +169,15 @@ class ViewerDto(
 )
 
 @Serializable
+class BalanceUserDto(val level: Double? = null, val credits: Double? = null, val points: Double? = null)
+
+@Serializable
+class BalanceViewerDto(val user: BalanceUserDto? = null)
+
+@Serializable
+class BalanceResponse(val viewer: BalanceViewerDto? = null)
+
+@Serializable
 class ViewerResponse(val viewer: ViewerDto? = null)
 
 @Serializable

@@ -51,6 +51,7 @@ import coil3.compose.AsyncImage
 import me.senkuro.unofficial.data.AppGraph
 import me.senkuro.unofficial.data.MangaItem
 import me.senkuro.unofficial.data.SenkuroConfig
+import me.senkuro.unofficial.data.UserBalance
 import java.util.Calendar
 
 @Composable
@@ -165,7 +166,16 @@ private fun HomeHeader(onSearch: () -> Unit, onRefresh: () -> Unit, onLogin: () 
                 color = MaterialTheme.colorScheme.onBackground,
                 style = HeadingStyle,
             )
-            Text(SenkuroConfig.current.title, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp)
+            var balance by remember(account?.userId) { mutableStateOf<UserBalance?>(null) }
+            LaunchedEffect(account?.userId) {
+                if (account != null) balance = AppGraph.repository.balance()
+            }
+            val b = balance
+            Text(
+                if (account != null && b != null) "Эстерии ${fmt(b.credits)} · Коины ${fmt(b.points)}" + (b.level?.let { " · Ур. $it" } ?: "")
+                else SenkuroConfig.current.title,
+                color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
+            )
         }
         IconButton(onClick = onSearch) { Icon(Icons.Filled.Search, contentDescription = "Поиск", tint = MaterialTheme.colorScheme.onBackground) }
         IconButton(onClick = onRefresh) { Icon(Icons.Filled.Refresh, contentDescription = "Обновить", tint = MaterialTheme.colorScheme.onBackground) }
@@ -296,3 +306,5 @@ private fun LazyListScope.newChaptersSection(title: String, list: List<MangaItem
         }
     }
 }
+
+private fun fmt(n: Long): String = "%,d".format(n).replace(',', ' ')
