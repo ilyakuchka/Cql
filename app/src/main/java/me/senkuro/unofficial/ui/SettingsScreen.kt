@@ -24,7 +24,7 @@ import androidx.compose.ui.unit.sp
 import me.senkuro.unofficial.data.AppGraph
 import me.senkuro.unofficial.data.SenkuroConfig
 
-/** Настройки: тёмная тема, режим стримера (под тёмной темой), обновления, разделы аккаунта. */
+/** Настройки: тёмная тема, режим стримера, обновления, разделы аккаунта. */
 @Composable
 fun SettingsScreen(onCards: () -> Unit = {}, onCardCatalog: () -> Unit = {}, onOffers: () -> Unit = {}, onPosts: () -> Unit = {}, onCardHub: () -> Unit = {}, onJournal: (() -> Unit)? = null, onCapture: (() -> Unit)? = null, onSiteVersion: (() -> Unit)? = null) {
     val dark by AppGraph.themeDark.collectAsState()
@@ -59,12 +59,13 @@ fun SettingsScreen(onCards: () -> Unit = {}, onCardCatalog: () -> Unit = {}, onO
             }
             Switch(checked = dark, onCheckedChange = AppGraph::setDarkTheme)
         }
-        // Режим стримера живёт под тёмной темой и доступен только вошедшему пользователю.
-        if (dark && token != null) {
+        // Режим стримера: самостоятельный переключатель, доступен только вошедшему пользователю.
+        if (token != null) {
+            HorizontalDivider(Modifier.padding(vertical = 8.dp))
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(start = 32.dp, end = 16.dp, top = 4.dp, bottom = 8.dp),
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Column(Modifier.weight(1f)) {

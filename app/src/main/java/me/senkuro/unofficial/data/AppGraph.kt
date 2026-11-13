@@ -61,9 +61,8 @@ object AppGraph {
     val streamerMode: StateFlow<Boolean> = _streamer.asStateFlow()
 
     /**
-     * Режим стримера действует, только если переключатель включён, выбрана тёмная тема и пользователь вошёл.
-     * Если любое из условий пропало (выключили тёмную тему, вышли), личные данные снова показываются, а сам
-     * переключатель сохраняется и вернётся в силу при следующем включении тёмной темы или входе.
+     * Режим стримера действует, только если переключатель включён и пользователь вошёл. От темы он не зависит.
+     * После выхода личные данные снова показываются, а сам переключатель сохраняется и вернётся в силу при входе.
      */
     lateinit var streamerActive: StateFlow<Boolean>
         private set
@@ -132,7 +131,7 @@ object AppGraph {
         _themeDark.value = settings.getBoolean(KEY_DARK, false)
         _streamer.value = settings.getBoolean(KEY_STREAMER, false)
         auth = AuthStore(app)
-        streamerActive = combine(_streamer, _themeDark, auth.token) { on, dark, token -> on && dark && token != null }
+        streamerActive = combine(_streamer, auth.token) { on, token -> on && token != null }
             .stateIn(scope, SharingStarted.Eagerly, false)
         httpClient = createHttpClient { auth.current }
         val api = SenkuroApi(app, httpClient)
