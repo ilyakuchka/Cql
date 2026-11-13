@@ -58,6 +58,8 @@ fun SettingsScreen(onCards: () -> Unit = {}, onCardCatalog: () -> Unit = {}, onO
             }
             Switch(checked = dark, onCheckedChange = AppGraph::setDarkTheme)
         }
+        HorizontalDivider(Modifier.padding(vertical = 8.dp))
+        UpdateSettings()
         if (onJournal != null || onCapture != null || onSiteVersion != null) {
             HorizontalDivider(Modifier.padding(vertical = 8.dp))
             SectionLabel("Debug")

@@ -108,6 +108,7 @@ object AppGraph {
     val accountError: StateFlow<String?> = _accountError.asStateFlow()
 
     fun init(app: Application) {
+        Updater.init(app)
         settings = app.getSharedPreferences("settings", android.content.Context.MODE_PRIVATE)
         SenkuroConfig.current = SenkuroConfig.byId(settings.getString(KEY_DOMAIN, null))
         _domain.value = SenkuroConfig.current

@@ -119,6 +119,7 @@ private val topLevel = listOf(
 fun AppRoot() {
     DebugTools.CrashDialog()
     DisclaimerDialog()
+    UpdateHost()
     val nav = rememberNavController()
     val entry by nav.currentBackStackEntryAsState()
     val route = entry?.destination?.route
