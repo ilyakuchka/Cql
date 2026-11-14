@@ -53,4 +53,7 @@ object SenkuroConfig {
 
     /** Размер страницы выдачи mangaTachiyomiSearch (offset-пагинация). */
     const val SEARCH_PAGE_SIZE = 10
+
+    /** Размер страницы каталога «как на сайте» (запрос `mangas`, сортировка по датам). */
+    const val SITE_PAGE_SIZE = 20
 }

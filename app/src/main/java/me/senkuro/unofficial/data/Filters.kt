@@ -13,6 +13,12 @@ class FilterGroupDef(val key: String, val title: String, val options: List<Pair<
 object FilterDefs {
     const val GROUP_LABEL = "label"
 
+    /**
+     * Статус закладок: API каталога такого фильтра не имеет, поэтому он работает на клиенте — по отметкам
+     * закладок аккаунта (AppGraph.marks). Значение — название коллекции закладок.
+     */
+    const val GROUP_BOOKMARK = "bookmark"
+
     val groups = listOf(
         FilterGroupDef(
             "type", "Тип",
@@ -69,6 +75,12 @@ object FilterDefs {
     /** Поля-даты: LAST_CHAPTER_AT — когда у тайтла вышла последняя глава, CREATED_AT — когда тайтл создан на сайте. */
     val dateSortFields = setOf("LAST_CHAPTER_AT", "CREATED_AT")
 
+    /**
+     * Сортировка по датам в поиске Tachiyomi не поддерживается (у его enum нет CREATED_AT), поэтому для неё каталог
+     * идёт через запрос сайта `mangas` (SenkuroRepository.searchSite). Остальные поля — через Tachiyomi-поиск.
+     */
+    fun usesSiteQuery(field: String): Boolean = field in dateSortFields
+
     /** Подпись направления сортировки: для дат «новое/старое», для остальных полей «убывание/возрастание». */
     fun directionTitle(field: String, ascending: Boolean): String = when {
         field in dateSortFields -> if (ascending) "От старого к новому" else "От нового к старому"
@@ -100,6 +112,29 @@ data class CatalogFilters(
     val activeCount: Int get() = states.size
 
     fun cleared() = copy(states = emptyMap())
+
+    /** Выбран ли хоть один фильтр по статусу закладок (его API не знает, применяется на клиенте). */
+    val hasBookmarkFilter: Boolean get() = states.keys.any { it.startsWith("${FilterDefs.GROUP_BOOKMARK}:") }
+
+    /**
+     * Подходит ли тайтл с отметкой [mark] (название его коллекции закладок, null — не в закладках) под фильтр
+     * по статусу закладок: «включить» оставляет только выбранные коллекции, «исключить» скрывает их.
+     */
+    fun matchesBookmark(mark: String?): Boolean {
+        val prefix = "${FilterDefs.GROUP_BOOKMARK}:"
+        var hasInclude = false
+        var included = false
+        for ((k, v) in states) {
+            if (!k.startsWith(prefix)) continue
+            val name = k.removePrefix(prefix)
+            when (v) {
+                Tri.INCLUDE -> { hasInclude = true; if (name == mark) included = true }
+                Tri.EXCLUDE -> if (name == mark) return false
+                Tri.NONE -> {}
+            }
+        }
+        return !hasInclude || included
+    }
 
     /** `{include: [...], exclude: [...]}` либо null, если по группе ничего не выбрано. */
     fun filterJson(group: String): JsonObject? {
