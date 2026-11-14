@@ -72,7 +72,16 @@ data class HomeData(
     val recommendations: List<MangaItem>,
 )
 
-data class LabelItem(val slug: String, val title: String, val rootId: String?)
+data class LabelItem(
+    val slug: String,
+    val title: String,
+    val rootId: String?,
+    /** Альтернативные названия — по ним тоже работает поиск меток. */
+    val aliases: List<String> = emptyList(),
+)
+
+/** Группа меток каталога (как на сайте): корневая метка («Основной каст», «Черты»…) и её метки в порядке API — первые самые популярные. */
+data class LabelGroup(val rootId: String, val title: String, val labels: List<LabelItem>)
 
 data class BookmarkCollection(val id: String, val name: String, val system: Boolean)
 

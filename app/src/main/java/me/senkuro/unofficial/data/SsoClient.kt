@@ -35,8 +35,9 @@ import java.util.concurrent.TimeUnit
  *  5) POST /oauth/token — обмен code на access_token.
  */
 object SsoClient {
-    const val SSO = "https://sso.senkuro.net"
-    const val REDIRECT = "https://senkuro.me/auth/oauth/callback"
+    /** SSO и redirect_uri выбранного домена (у senkuro.me это sso.senkuro.net, у senkuro.com — sso.senkuro.org). */
+    val SSO: String get() = SenkuroConfig.current.ssoUrl
+    val REDIRECT: String get() = SenkuroConfig.current.oauthRedirect
 
     class CaptchaConfig(val service: String, val siteKey: String)
 

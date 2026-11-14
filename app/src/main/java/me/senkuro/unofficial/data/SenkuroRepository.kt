@@ -17,13 +17,13 @@ class SenkuroRepository(private val api: SenkuroApi) {
 
     private val chaptersCache = HashMap<String, ChaptersResult>()
     private val detailsCache = HashMap<String, MangaDetails>()
-    private var labelsCache: List<LabelItem>? = null
+    private var labelGroupsCache: List<LabelGroup>? = null
 
     /** Сбрасывает кэши (нужно при смене домена: идентификаторы и главы могут отличаться). */
     fun clearCaches() {
         synchronized(chaptersCache) { chaptersCache.clear() }
         synchronized(detailsCache) { detailsCache.clear() }
-        labelsCache = null
+        labelGroupsCache = null
     }
 
     // ---------------------------------------------------------------- Каталог
@@ -31,7 +31,7 @@ class SenkuroRepository(private val api: SenkuroApi) {
     suspend fun search(query: String?, filters: CatalogFilters, offset: Int): List<MangaItem> {
         val variables = buildJsonObject {
             if (!query.isNullOrBlank()) put("query", query.trim())
-            for (group in FilterDefs.groups.map { it.key } + FilterDefs.GROUP_LABEL) {
+            for (group in FilterDefs.tachiyomiGroups + FilterDefs.GROUP_LABEL) {
                 filters.filterJson(group)?.let { put(group, it) }
             }
             put(
@@ -65,6 +65,7 @@ class SenkuroRepository(private val api: SenkuroApi) {
         val groups = mapOf(
             "type" to "type", "format" to "format", "status" to "status", "rating" to "rating",
             "translationStatus" to "translitionStatus", FilterDefs.GROUP_LABEL to "label",
+            FilterDefs.GROUP_SOURCE to "source", FilterDefs.GROUP_COUNTRY to "originCountry",
         )
         val variables = buildJsonObject {
             put("first", SenkuroConfig.SITE_PAGE_SIZE)
@@ -81,6 +82,23 @@ class SenkuroRepository(private val api: SenkuroApi) {
                     put("bookmarkCollections", buildJsonObject { put("include", include); put("exclude", exclude) })
                 }
             }
+            // Диапазоны — как на сайте: глав «от 0» и «до 999» не передаются, год — началом года.
+            val chaptersFrom = filters.chaptersMin?.takeIf { it > 0 }
+            val chaptersTo = filters.chaptersMax?.takeIf { it < 999 }
+            if (chaptersFrom != null || chaptersTo != null) {
+                put("chapters", buildJsonObject {
+                    chaptersFrom?.let { put("start", it) }
+                    chaptersTo?.let { put("end", it) }
+                })
+            }
+            val yearFrom = filters.yearMin?.takeIf { it > 1970 }
+            val yearTo = filters.yearMax
+            if (yearFrom != null || yearTo != null) {
+                put("releasedOn", buildJsonObject {
+                    yearFrom?.let { put("start", "$it-01-01") }
+                    yearTo?.let { put("end", "$it-01-01") }
+                })
+            }
             put("orderField", filters.orderField)
             put("orderDirection", if (filters.ascending) "ASC" else "DESC")
         }
@@ -91,17 +109,64 @@ class SenkuroRepository(private val api: SenkuroApi) {
         return items to connection.pageInfo.endCursor.takeIf { connection.pageInfo.hasNextPage }
     }
 
-    suspend fun labels(): List<LabelItem> {
-        labelsCache?.let { return it }
+    /** Все метки одним списком (в порядке групп и API). */
+    suspend fun labels(): List<LabelItem> = labelGroups().flatMap { it.labels }
+
+    /**
+     * Группы меток каталога «как на сайте»: запрос `allLabels` (корень группы — метка с depth 0, метки идут в порядке
+     * популярности). Корни с рейтингом 18+ скрыты, как на сайте без режима Senkognito. Если запрос не удался —
+     * запасной вариант: метки из поиска Tachiyomi и известные корневые группы.
+     */
+    suspend fun labelGroups(): List<LabelGroup> {
+        labelGroupsCache?.let { return it }
+        val groups = try {
+            siteLabelGroups()
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (_: Exception) {
+            emptyList()
+        }.ifEmpty { legacyLabelGroups() }
+        labelGroupsCache = groups
+        return groups
+    }
+
+    private suspend fun siteLabelGroups(): List<LabelGroup> {
+        val all = api.execute(
+            "fetchMangaFilters", "fetchMangaFilters", JsonObject(emptyMap()), AllLabelsResponse.serializer(),
+        ).allLabels
+        val roots = LinkedHashMap<String, SiteLabelDto?>()
+        val children = HashMap<String, MutableList<LabelItem>>()
+        for (label in all) {
+            val rootId = label.rootId ?: continue
+            if (rootId !in roots) roots[rootId] = null
+            if (label.depth == 0) {
+                roots[rootId] = label
+            } else {
+                children.getOrPut(rootId) { ArrayList() } += LabelItem(
+                    slug = label.slug,
+                    title = label.titles?.localized() ?: label.slug,
+                    rootId = rootId,
+                    aliases = label.alternativeNames.orEmpty().map { it.content },
+                )
+            }
+        }
+        return roots.mapNotNull { (rootId, root) ->
+            if (root == null || root.rating.equals("EXPLICIT", true)) return@mapNotNull null
+            val labels = children[rootId].orEmpty()
+            if (labels.isEmpty()) null else LabelGroup(rootId, root.titles?.localized() ?: root.slug, labels)
+        }
+    }
+
+    private suspend fun legacyLabelGroups(): List<LabelGroup> {
         val response = api.execute(
             "fetchTachiyomiSearchFilters", "fetchTachiyomiSearchFilters", JsonObject(emptyMap()),
             FiltersResponse.serializer(),
         )
         val labels = response.mangaTachiyomiSearchFilters.labels
             .map { LabelItem(it.slug, it.titles.localized() ?: it.slug, it.rootId) }
-            .sortedBy { it.title }
-        labelsCache = labels
-        return labels
+        return FilterDefs.labelRoots.mapNotNull { (rootId, title) ->
+            labels.filter { it.rootId == rootId }.takeIf { it.isNotEmpty() }?.let { LabelGroup(rootId, title, it) }
+        }
     }
 
     // ----------------------------------------------------------------- Главная

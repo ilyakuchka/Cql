@@ -37,7 +37,7 @@ import me.senkuro.unofficial.data.AppGraph
 import me.senkuro.unofficial.data.SenkuroConfig
 import java.net.URLDecoder
 
-private const val SSO_URL = "https://sso.senkuro.net/"
+private val ssoUrl: String get() = SenkuroConfig.current.ssoUrl + "/"
 
 /**
  * Вход через сайт: логин (с капчей) проходит в WebView, после этого токен берётся из cookie `access_token`
@@ -122,7 +122,7 @@ fun WebLoginScreen(onBack: () -> Unit, onDone: () -> Unit) {
                     val host = runCatching { java.net.URI(url.orEmpty()).host }.getOrNull()
                     if (host == java.net.URI(SenkuroConfig.BASE_URL).host) {
                         check(view, manual = false)
-                    } else if (host == java.net.URI(SSO_URL).host && !openedSite &&
+                    } else if (host == java.net.URI(ssoUrl).host && !openedSite &&
                         runCatching { java.net.URI(url.orEmpty()).path }.getOrNull().orEmpty().startsWith("/account")
                     ) {
                         openedSite = true
@@ -131,7 +131,7 @@ fun WebLoginScreen(onBack: () -> Unit, onDone: () -> Unit) {
                 }
             }
             // Сразу на страницу входа SSO; после входа переходим на сайт, чтобы он получил токен.
-            loadUrl(SSO_URL)
+            loadUrl(ssoUrl)
         }
     }
 
@@ -146,7 +146,7 @@ fun WebLoginScreen(onBack: () -> Unit, onDone: () -> Unit) {
     Column(Modifier.fillMaxSize().systemBarsPadding()) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Назад") }
-            Text("Вход (sso.senkuro.net)", style = MaterialTheme.typography.titleMedium)
+            Text("Вход (${SenkuroConfig.current.ssoHost})", style = MaterialTheme.typography.titleMedium)
         }
         Row(Modifier.padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(status, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
