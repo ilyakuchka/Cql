@@ -14,6 +14,7 @@ import kotlinx.coroutines.launch
 import me.senkuro.unofficial.data.AppGraph
 import me.senkuro.unofficial.data.CatalogFilters
 import me.senkuro.unofficial.data.Chapter
+import me.senkuro.unofficial.data.FilterDefs
 import me.senkuro.unofficial.data.ChaptersResult
 import me.senkuro.unofficial.data.HomeData
 import me.senkuro.unofficial.data.LabelItem
@@ -140,6 +141,7 @@ class CatalogViewModel : ViewModel() {
     private var job: Job? = null
     private var requestId = 0
     private var nextOffset = 0
+    private var nextCursor: String? = null
 
     init {
         refresh()
@@ -183,6 +185,7 @@ class CatalogViewModel : ViewModel() {
         requestId++
         items = emptyList()
         nextOffset = 0
+        nextCursor = null
         endReached = false
         error = null
         loadMore()
@@ -195,22 +198,33 @@ class CatalogViewModel : ViewModel() {
         error = null
         job = viewModelScope.launch {
             try {
-                // Фильтр по статусу закладок работает на клиенте, и страница может целиком отсеяться:
-                // тогда догружаем следующие, пока что-то не появится (но не бесконечно).
-                var added = 0
-                var requests = 0
-                do {
-                    val page = AppGraph.repository.search(query, filters, nextOffset)
+                if (FilterDefs.usesSiteQuery(filters.orderField)) {
+                    // Сортировка по датам — запросом сайта (курсорная постраничность, закладки фильтрует сервер).
+                    val ids = AppGraph.account.value?.collections.orEmpty().associate { it.name to it.id }
+                    val (page, next) = AppGraph.repository.searchSite(query, filters, ids, nextCursor)
                     if (token != requestId) return@launch
-                    nextOffset += page.size
-                    if (page.size < SenkuroConfig.SEARCH_PAGE_SIZE) endReached = true
-                    val marks = AppGraph.marks.value
+                    nextCursor = next
+                    if (next == null) endReached = true
                     val known = items.mapTo(HashSet()) { it.id }
-                    val fresh = page.filter { it.id !in known && filters.matchesBookmark(marks[it.id]) }
-                    items = items + fresh
-                    added += fresh.size
-                    requests++
-                } while (added == 0 && !endReached && filters.hasBookmarkFilter && requests < 15)
+                    items = items + page.filter { it.id !in known }
+                } else {
+                    // Фильтр по статусу закладок в Tachiyomi-поиске работает на клиенте, и страница может целиком
+                    // отсеяться: тогда догружаем следующие, пока что-то не появится (но не бесконечно).
+                    var added = 0
+                    var requests = 0
+                    do {
+                        val page = AppGraph.repository.search(query, filters, nextOffset)
+                        if (token != requestId) return@launch
+                        nextOffset += page.size
+                        if (page.size < SenkuroConfig.SEARCH_PAGE_SIZE) endReached = true
+                        val marks = AppGraph.marks.value
+                        val known = items.mapTo(HashSet()) { it.id }
+                        val fresh = page.filter { it.id !in known && filters.matchesBookmark(marks[it.id]) }
+                        items = items + fresh
+                        added += fresh.size
+                        requests++
+                    } while (added == 0 && !endReached && filters.hasBookmarkFilter && requests < 15)
+                }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {

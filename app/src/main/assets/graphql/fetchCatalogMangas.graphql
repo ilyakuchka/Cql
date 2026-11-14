@@ -1,0 +1,31 @@
+query fetchMangas(
+  $first: Int = 20,
+  $after: String,
+  $search: String,
+  $type: MangaTypeFilter,
+  $format: MangaFormatFilter,
+  $status: MangaStatusFilter,
+  $rating: MangaRatingFilter,
+  $label: MangaLabelFilter,
+  $bookmarkCollections: MangaBookmarkCollectionsFilter,
+  $translitionStatus: MangaTranslitionStatusFilter,
+  $orderField: MangaOrderField = CREATED_AT,
+  $orderDirection: OrderDirection = DESC
+) {
+  mangas(
+    first: $first,
+    after: $after,
+    orderBy: {field: $orderField, direction: $orderDirection},
+    search: $search,
+    type: $type,
+    format: $format,
+    status: $status,
+    rating: $rating,
+    label: $label,
+    bookmarkCollections: $bookmarkCollections,
+    translitionStatus: $translitionStatus
+  ) {
+    edges { node { id slug originalName { lang content } titles { lang content } status rating cover { original { url } } } }
+    pageInfo { hasNextPage endCursor }
+  }
+}

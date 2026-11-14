@@ -75,6 +75,12 @@ object FilterDefs {
     /** Поля-даты: LAST_CHAPTER_AT — когда у тайтла вышла последняя глава, CREATED_AT — когда тайтл создан на сайте. */
     val dateSortFields = setOf("LAST_CHAPTER_AT", "CREATED_AT")
 
+    /**
+     * Сортировка по датам в поиске Tachiyomi не поддерживается (у его enum нет CREATED_AT), поэтому для неё каталог
+     * идёт через запрос сайта `mangas` (SenkuroRepository.searchSite). Остальные поля — через Tachiyomi-поиск.
+     */
+    fun usesSiteQuery(field: String): Boolean = field in dateSortFields
+
     /** Подпись направления сортировки: для дат «новое/старое», для остальных полей «убывание/возрастание». */
     fun directionTitle(field: String, ascending: Boolean): String = when {
         field in dateSortFields -> if (ascending) "От старого к новому" else "От нового к старому"

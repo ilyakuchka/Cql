@@ -2,8 +2,11 @@ package me.senkuro.unofficial.data
 
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.contentOrNull
@@ -44,6 +47,48 @@ class SenkuroRepository(private val api: SenkuroApi) {
             "searchTachiyomiManga", "searchTachiyomiManga", variables, SearchResponse.serializer(),
         )
         return response.mangaTachiyomiSearch.mangas.mapNotNull { it.toItem() }
+    }
+
+    /**
+     * Каталог «как на сайте»: запрос `mangas` (его же использует страница каталога senkuro.me). Нужен для сортировки
+     * по датам (`CREATED_AT`, `LAST_CHAPTER_AT`) — в поиске Tachiyomi таких полей нет. Постраничность курсорная,
+     * фильтры те же, что и в [search], а «Статус закладок» сервер применяет сам (`bookmarkCollections`).
+     * [bookmarkIds] — название коллекции закладок -> её id. Возвращает страницу и курсор следующей (null — конец).
+     */
+    suspend fun searchSite(
+        query: String?,
+        filters: CatalogFilters,
+        bookmarkIds: Map<String, String>,
+        after: String?,
+    ): Pair<List<MangaItem>, String?> {
+        // Группа фильтра в приложении -> имя переменной в запросе сайта (у сайта «translitionStatus» с опечаткой).
+        val groups = mapOf(
+            "type" to "type", "format" to "format", "status" to "status", "rating" to "rating",
+            "translationStatus" to "translitionStatus", FilterDefs.GROUP_LABEL to "label",
+        )
+        val variables = buildJsonObject {
+            put("first", SenkuroConfig.SITE_PAGE_SIZE)
+            if (after != null) put("after", after)
+            if (!query.isNullOrBlank()) put("search", query.trim())
+            for ((group, variable) in groups) filters.filterJson(group)?.let { put(variable, it) }
+            filters.filterJson(FilterDefs.GROUP_BOOKMARK)?.let { names ->
+                fun ids(key: String) = JsonArray(
+                    (names[key]?.jsonArray.orEmpty()).mapNotNull { bookmarkIds[it.jsonPrimitive.content] }.map { JsonPrimitive(it) },
+                )
+                val include = ids("include")
+                val exclude = ids("exclude")
+                if (include.isNotEmpty() || exclude.isNotEmpty()) {
+                    put("bookmarkCollections", buildJsonObject { put("include", include); put("exclude", exclude) })
+                }
+            }
+            put("orderField", filters.orderField)
+            put("orderDirection", if (filters.ascending) "ASC" else "DESC")
+        }
+        val connection = api.execute(
+            "fetchMangas", "fetchCatalogMangas", variables, CMangasResponse.serializer(),
+        ).mangas
+        val items = connection.edges.mapNotNull { it.node.toItem() }
+        return items to connection.pageInfo.endCursor.takeIf { connection.pageInfo.hasNextPage }
     }
 
     suspend fun labels(): List<LabelItem> {
