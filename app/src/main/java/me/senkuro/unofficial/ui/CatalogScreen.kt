@@ -60,11 +60,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusManager
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import me.senkuro.unofficial.data.CatalogFilters
 import me.senkuro.unofficial.data.FilterDefs
-import me.senkuro.unofficial.data.LabelItem
+import me.senkuro.unofficial.data.LabelGroup
 import me.senkuro.unofficial.data.MangaItem
 import me.senkuro.unofficial.data.Tri
 
@@ -190,7 +191,7 @@ fun CatalogScreen(onManga: (MangaItem) -> Unit, vm: CatalogViewModel = viewModel
     if (showFilters) {
         FiltersSheet(
             initial = vm.filters,
-            labels = vm.labels,
+            labelGroups = vm.labelGroups,
             bookmarkOptions = bookmarkOptions,
             onApply = {
                 showFilters = false
@@ -204,18 +205,20 @@ fun CatalogScreen(onManga: (MangaItem) -> Unit, vm: CatalogViewModel = viewModel
 @Composable
 private fun FiltersSheet(
     initial: CatalogFilters,
-    labels: List<LabelItem>,
+    labelGroups: List<LabelGroup>,
     bookmarkOptions: List<Pair<String, String>>,
     onApply: (CatalogFilters) -> Unit,
     onDismiss: () -> Unit,
 ) {
     var filters by remember { mutableStateOf(initial) }
+    var labelQuery by rememberSaveable { mutableStateOf("") }
+    val allLabels = remember(labelGroups) { labelGroups.flatMap { it.labels } }
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
     ) {
         LazyColumn(
-            modifier = Modifier.weight(1f, fill = false),
+            modifier = Modifier.weight(1f, fill = false).imePadding(),
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
@@ -238,6 +241,45 @@ private fun FiltersSheet(
                     }
                 }
             }
+            // Метки — как на сайте: поиск и группы («Основной каст», «Черты»…), в каждой первые 5 — самые популярные.
+            if (labelGroups.isNotEmpty()) {
+                item(key = "label-search") {
+                    OutlinedTextField(
+                        value = labelQuery,
+                        onValueChange = { labelQuery = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
+                        placeholder = { Text("Поиск меток") },
+                    )
+                }
+                val q = labelQuery.trim()
+                if (q.isNotEmpty()) {
+                    val found = allLabels
+                        .filter { l -> l.title.contains(q, ignoreCase = true) || l.aliases.any { it.contains(q, ignoreCase = true) } }
+                        .take(20)
+                    item(key = "label-found") {
+                        FilterGroup(
+                            title = if (found.isEmpty()) "Ничего не найдено" else "Результаты поиска",
+                            options = found.map { it.slug to it.title },
+                            stateOf = { filters.state(FilterDefs.GROUP_LABEL, it) },
+                            onToggle = { filters = filters.toggle(FilterDefs.GROUP_LABEL, it) },
+                        )
+                    }
+                } else {
+                    for (group in labelGroups) {
+                        item(key = "label-${group.rootId}") {
+                            FilterGroup(
+                                title = group.title,
+                                options = group.labels.map { it.slug to it.title },
+                                stateOf = { filters.state(FilterDefs.GROUP_LABEL, it) },
+                                onToggle = { filters = filters.toggle(FilterDefs.GROUP_LABEL, it) },
+                                collapsible = true,
+                            )
+                        }
+                    }
+                }
+            }
             for (group in FilterDefs.groups) {
                 item(key = group.key) {
                     FilterGroup(
@@ -245,7 +287,32 @@ private fun FiltersSheet(
                         options = group.options,
                         stateOf = { filters.state(group.key, it) },
                         onToggle = { filters = filters.toggle(group.key, it) },
+                        collapsible = group.popular > 0,
+                        popular = group.popular,
                     )
+                }
+                // После возраста — диапазоны глав и года релиза, как на сайте.
+                if (group.key == "rating") {
+                    item(key = "chapters") {
+                        RangeGroup(
+                            title = "Количество глав",
+                            min = filters.chaptersMin,
+                            max = filters.chaptersMax,
+                            onChange = { from, to -> filters = filters.copy(chaptersMin = from, chaptersMax = to) },
+                            presets = listOf(
+                                Triple("1-20", 1, 20), Triple("20-100", 20, 100),
+                                Triple("100-200", 100, 200), Triple(">200", 200, null),
+                            ),
+                        )
+                    }
+                    item(key = "year") {
+                        RangeGroup(
+                            title = "Год релиза",
+                            min = filters.yearMin,
+                            max = filters.yearMax,
+                            onChange = { from, to -> filters = filters.copy(yearMin = from, yearMax = to) },
+                        )
+                    }
                 }
                 // «Статус закладок» — сразу после «Статуса перевода».
                 if (group.key == "translationStatus" && bookmarkOptions.isNotEmpty()) {
@@ -257,19 +324,6 @@ private fun FiltersSheet(
                             onToggle = { filters = filters.toggle(FilterDefs.GROUP_BOOKMARK, it) },
                         )
                     }
-                }
-            }
-            for ((rootId, title) in FilterDefs.labelRoots) {
-                val options = labels.filter { it.rootId == rootId }.map { it.slug to it.title }
-                if (options.isEmpty()) continue
-                item(key = "label-$rootId") {
-                    FilterGroup(
-                        title = title,
-                        options = options,
-                        stateOf = { filters.state(FilterDefs.GROUP_LABEL, it) },
-                        onToggle = { filters = filters.toggle(FilterDefs.GROUP_LABEL, it) },
-                        collapsible = rootId in setOf("TEFCRUw6NQ", "TEFCRUw6NA", "TEFCRUw6Ng", "TEFCRUw6Mw", "TEFCRUw6Nw"),
-                    )
                 }
             }
         }
@@ -292,23 +346,81 @@ private fun FilterGroup(
     stateOf: (String) -> Tri,
     onToggle: (String) -> Unit,
     collapsible: Boolean = false,
+    popular: Int = 5,
 ) {
     var showAll by remember { mutableStateOf(false) }
-    // Свёрнутый вид: первые 5 тегов + все выбранные (чтобы выбор был виден).
+    // Свёрнутый вид: первые [popular] значений + все выбранные (чтобы выбор был виден).
     val shown = if (!collapsible) options else {
-        val first = options.take(5)
-        first + options.drop(5).filter { stateOf(it.first) != Tri.NONE }
+        val first = options.take(popular)
+        first + options.drop(popular).filter { stateOf(it.first) != Tri.NONE }
     }
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(title, style = MaterialTheme.typography.titleSmall)
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             for ((value, name) in shown) TagChip(name, stateOf(value)) { onToggle(value) }
         }
-        if (collapsible && options.size > 5) {
+        if (collapsible && options.size > popular) {
             TextButton(onClick = { showAll = true }) { Text("Показать все (${options.size})") }
         }
     }
     if (showAll) AllTagsDialog(title, options, stateOf, onToggle) { showAll = false }
+}
+
+/** Диапазон «от — до» (количество глав, год релиза) и, если есть, быстрые варианты (пресеты). */
+@Composable
+private fun RangeGroup(
+    title: String,
+    min: Int?,
+    max: Int?,
+    onChange: (Int?, Int?) -> Unit,
+    presets: List<Triple<String, Int?, Int?>> = emptyList(),
+) {
+    var minText by remember { mutableStateOf(min?.toString().orEmpty()) }
+    var maxText by remember { mutableStateOf(max?.toString().orEmpty()) }
+    // Значение могло измениться снаружи (пресет, «Сбросить») — подтягиваем в поле, не трогая то, что набирает пользователь.
+    LaunchedEffect(min) { if (min != minText.toIntOrNull()) minText = min?.toString().orEmpty() }
+    LaunchedEffect(max) { if (max != maxText.toIntOrNull()) maxText = max?.toString().orEmpty() }
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(title, style = MaterialTheme.typography.titleSmall)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedTextField(
+                value = minText,
+                onValueChange = { t ->
+                    val digits = t.filter(Char::isDigit).take(4)
+                    minText = digits
+                    onChange(digits.toIntOrNull(), max)
+                },
+                modifier = Modifier.weight(1f),
+                singleLine = true,
+                placeholder = { Text("От") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            )
+            OutlinedTextField(
+                value = maxText,
+                onValueChange = { t ->
+                    val digits = t.filter(Char::isDigit).take(4)
+                    maxText = digits
+                    onChange(min, digits.toIntOrNull())
+                },
+                modifier = Modifier.weight(1f),
+                singleLine = true,
+                placeholder = { Text("До") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            )
+        }
+        if (presets.isNotEmpty()) {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                for ((label, from, to) in presets) {
+                    val selected = min == from && max == to
+                    FilterChip(
+                        selected = selected,
+                        onClick = { if (selected) onChange(null, null) else onChange(from, to) },
+                        label = { Text(label) },
+                    )
+                }
+            }
+        }
+    }
 }
 
 @Composable

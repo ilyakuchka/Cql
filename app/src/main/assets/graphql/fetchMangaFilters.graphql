@@ -1,0 +1,11 @@
+query fetchMangaFilters {
+  allLabels(subjectType: MANGA) {
+    id
+    slug
+    titles { lang content }
+    alternativeNames { lang content }
+    rootId
+    rating
+    depth
+  }
+}

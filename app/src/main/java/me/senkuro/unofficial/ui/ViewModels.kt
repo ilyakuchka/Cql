@@ -14,9 +14,9 @@ import kotlinx.coroutines.launch
 import me.senkuro.unofficial.data.AppGraph
 import me.senkuro.unofficial.data.CatalogFilters
 import me.senkuro.unofficial.data.Chapter
-import me.senkuro.unofficial.data.FilterDefs
 import me.senkuro.unofficial.data.ChaptersResult
 import me.senkuro.unofficial.data.HomeData
+import me.senkuro.unofficial.data.LabelGroup
 import me.senkuro.unofficial.data.LabelItem
 import me.senkuro.unofficial.data.MangaDetails
 import me.senkuro.unofficial.data.MangaItem
@@ -137,6 +137,8 @@ class CatalogViewModel : ViewModel() {
         private set
     var labels by mutableStateOf<List<LabelItem>>(emptyList())
         private set
+    var labelGroups by mutableStateOf<List<LabelGroup>>(emptyList())
+        private set
 
     private var job: Job? = null
     private var requestId = 0
@@ -150,6 +152,7 @@ class CatalogViewModel : ViewModel() {
         viewModelScope.launch {
             AppGraph.domain.drop(1).collect {
                 labels = emptyList()
+                labelGroups = emptyList()
                 filters = filters.cleared()
                 loadLabels()
                 refresh()
@@ -160,7 +163,9 @@ class CatalogViewModel : ViewModel() {
     private fun loadLabels() {
         viewModelScope.launch {
             try {
-                labels = AppGraph.repository.labels()
+                val groups = AppGraph.repository.labelGroups()
+                labelGroups = groups
+                labels = groups.flatMap { it.labels }
             } catch (e: CancellationException) {
                 throw e
             } catch (_: Exception) {
@@ -198,8 +203,8 @@ class CatalogViewModel : ViewModel() {
         error = null
         job = viewModelScope.launch {
             try {
-                if (FilterDefs.usesSiteQuery(filters.orderField)) {
-                    // Сортировка по датам — запросом сайта (курсорная постраничность, закладки фильтрует сервер).
+                if (filters.usesSiteQuery) {
+                    // Сортировка по датам и фильтры, которых нет в Tachiyomi, — запросом сайта (курсорная постраничность, закладки фильтрует сервер).
                     val ids = AppGraph.account.value?.collections.orEmpty().associate { it.name to it.id }
                     val (page, next) = AppGraph.repository.searchSite(query, filters, ids, nextCursor)
                     if (token != requestId) return@launch

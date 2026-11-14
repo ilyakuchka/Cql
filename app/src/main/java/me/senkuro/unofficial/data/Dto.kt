@@ -19,6 +19,21 @@ class Label(
     val titles: List<Title> = emptyList(),
 )
 
+/** Метка из запроса сайта `allLabels`: depth 0 — корень группы, остальные — её метки. */
+@Serializable
+class SiteLabelDto(
+    val id: String = "",
+    val slug: String = "",
+    val titles: List<Title>? = null,
+    val alternativeNames: List<Title>? = null,
+    val rootId: String? = null,
+    val rating: String? = null,
+    val depth: Int = 0,
+)
+
+@Serializable
+class AllLabelsResponse(val allLabels: List<SiteLabelDto> = emptyList())
+
 @Serializable
 class Person(val name: String = "")
 

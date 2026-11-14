@@ -7,9 +7,10 @@ import kotlinx.serialization.json.buildJsonObject
 
 enum class Tri { NONE, INCLUDE, EXCLUDE }
 
-class FilterGroupDef(val key: String, val title: String, val options: List<Pair<String, String>>)
+/** [popular] > 0 — показывать только первые [popular] значений, остальные — по кнопке «Показать все». */
+class FilterGroupDef(val key: String, val title: String, val options: List<Pair<String, String>>, val popular: Int = 0)
 
-/** Статические фильтры (значения и русские названия — из расширения Tachiyomi). */
+/** Статические фильтры (значения и русские названия — из расширения Tachiyomi и страницы каталога сайта). */
 object FilterDefs {
     const val GROUP_LABEL = "label"
 
@@ -19,16 +20,27 @@ object FilterDefs {
      */
     const val GROUP_BOOKMARK = "bookmark"
 
+    const val GROUP_SOURCE = "source"
+    const val GROUP_COUNTRY = "originCountry"
+
+    /** Группы, которые знает поиск Tachiyomi. «Первоисточник» и «Страна» есть только в запросе сайта `mangas`. */
+    val tachiyomiGroups = setOf("type", "format", "status", "translationStatus", "rating")
+
+    /** Группы в порядке страницы каталога сайта (метки и диапазоны глав/года вставляются UI между ними). */
     val groups = listOf(
         FilterGroupDef(
-            "type", "Тип",
+            "type", "Тип тайтла",
             listOf(
                 "MANGA" to "Манга", "MANHWA" to "Манхва", "MANHUA" to "Маньхуа",
                 "COMICS" to "Комикс", "OEL_MANGA" to "OEL Манга", "RU_MANGA" to "РуМанга",
             ),
         ),
         FilterGroupDef(
-            "format", "Формат",
+            "rating", "Возрастной рейтинг",
+            listOf("GENERAL" to "0+", "SENSITIVE" to "12+", "QUESTIONABLE" to "16+", "EXPLICIT" to "18+"),
+        ),
+        FilterGroupDef(
+            "format", "Формат выпуска",
             listOf(
                 "DIGEST" to "Сборник", "DOUJINSHI" to "Додзинси", "IN_COLOR" to "В цвете",
                 "SINGLE" to "Сингл", "WEB" to "Веб", "WEBTOON" to "Вебтун",
@@ -36,7 +48,7 @@ object FilterDefs {
             ),
         ),
         FilterGroupDef(
-            "status", "Статус",
+            "status", "Статус тайтла",
             listOf(
                 "ANNOUNCE" to "Анонс", "ONGOING" to "Онгоинг", "FINISHED" to "Выпущено",
                 "HIATUS" to "Приостановлено", "CANCELLED" to "Отменено",
@@ -50,8 +62,30 @@ object FilterDefs {
             ),
         ),
         FilterGroupDef(
-            "rating", "Возраст",
-            listOf("GENERAL" to "0+", "SENSITIVE" to "12+", "QUESTIONABLE" to "16+", "EXPLICIT" to "18+"),
+            GROUP_SOURCE, "Первоисточник",
+            listOf(
+                "ANIME" to "Аниме", "COMIC" to "Комикс", "DOUJINSHI" to "Додзинси", "GAME" to "Игра",
+                "LIGHT_NOVEL" to "Ранобэ", "LIVE_ACTION" to "Лайв-экшн", "MANGA" to "Манга", "NOVEL" to "Новелла",
+                "ORIGINAL" to "Оригинальная работа", "OTHER" to "Другое", "PICTURE_BOOK" to "Иллюстрированные книги",
+                "VIDEO_GAME" to "Видео-игра", "VISUAL_NOVEL" to "Визуальная новелла", "WEB_NOVEL" to "Веб-новелла",
+            ),
+            popular = 4,
+        ),
+        FilterGroupDef(
+            GROUP_COUNTRY, "Страна производства",
+            listOf(
+                "KR" to "Корея", "JP" to "Япония", "CN" to "Китай", "US" to "США", "RU" to "Россия", "FR" to "Франция",
+                "UA" to "Украина", "KZ" to "Казахстан", "AU" to "Австралия", "AZ" to "Азербайджан", "AM" to "Армения",
+                "BY" to "Беларусь", "BE" to "Бельгия", "BG" to "Болгария", "GB" to "Великобритания", "VN" to "Вьетнам",
+                "DE" to "Германия", "HK" to "Гонконг", "GE" to "Грузия", "IL" to "Израиль", "IN" to "Индия",
+                "ES" to "Испания", "IT" to "Италия", "CA" to "Канада", "KG" to "Киргизия", "LV" to "Латвия",
+                "LT" to "Литва", "MX" to "Мексика", "MD" to "Молдавия", "MN" to "Монголия", "NL" to "Нидерланды",
+                "NO" to "Норвегия", "AE" to "ОАЭ", "PL" to "Польша", "RO" to "Румыния", "RS" to "Сербия",
+                "SK" to "Словакия", "SI" to "Словения", "TJ" to "Таджикистан", "TH" to "Таиланд", "TR" to "Турция",
+                "UZ" to "Узбекистан", "CZ" to "Чехия", "CH" to "Швейцария", "SE" to "Швеция", "EE" to "Эстония",
+                "TW" to "Китайская Республика (Тайвань)",
+            ),
+            popular = 6,
         ),
     )
 
@@ -68,6 +102,8 @@ object FilterDefs {
     val sortFields = listOf(
         "POPULARITY_SCORE" to "По популярности",
         "SCORE" to "По рейтингу",
+        "CHAPTERS" to "По количеству глав",
+        "VIEWS" to "По просмотрам",
         "LAST_CHAPTER_AT" to "По дате залива",
         "CREATED_AT" to "По дате создания",
     )
@@ -79,7 +115,10 @@ object FilterDefs {
      * Сортировка по датам в поиске Tachiyomi не поддерживается (у его enum нет CREATED_AT), поэтому для неё каталог
      * идёт через запрос сайта `mangas` (SenkuroRepository.searchSite). Остальные поля — через Tachiyomi-поиск.
      */
-    fun usesSiteQuery(field: String): Boolean = field in dateSortFields
+    fun usesSiteQuery(field: String): Boolean = field in dateSortFields || field in siteOnlySortFields
+
+    /** Остальные сортировки сайта, которых нет в поиске Tachiyomi. */
+    private val siteOnlySortFields = setOf("CHAPTERS", "VIEWS")
 
     /** Подпись направления сортировки: для дат «новое/старое», для остальных полей «убывание/возрастание». */
     fun directionTitle(field: String, ascending: Boolean): String = when {
@@ -92,6 +131,11 @@ data class CatalogFilters(
     val orderField: String = "POPULARITY_SCORE",
     val ascending: Boolean = false,
     val states: Map<String, Tri> = emptyMap(),
+    /** Диапазоны «Количество глав» и «Год релиза» (null — граница не задана). Есть только в запросе сайта. */
+    val chaptersMin: Int? = null,
+    val chaptersMax: Int? = null,
+    val yearMin: Int? = null,
+    val yearMax: Int? = null,
 ) {
     private fun key(group: String, value: String) = "$group:$value"
 
@@ -109,9 +153,20 @@ data class CatalogFilters(
         return copy(states = map)
     }
 
-    val activeCount: Int get() = states.size
+    private val hasChaptersRange: Boolean get() = chaptersMin != null || chaptersMax != null
+    private val hasYearRange: Boolean get() = yearMin != null || yearMax != null
 
-    fun cleared() = copy(states = emptyMap())
+    val activeCount: Int get() = states.size + (if (hasChaptersRange) 1 else 0) + (if (hasYearRange) 1 else 0)
+
+    fun cleared() = copy(states = emptyMap(), chaptersMin = null, chaptersMax = null, yearMin = null, yearMax = null)
+
+    /**
+     * Нужен ли запрос сайта `mangas` вместо поиска Tachiyomi: сортировка по датам/главам/просмотрам либо фильтр,
+     * которого в Tachiyomi нет (первоисточник, страна, диапазоны глав и года).
+     */
+    val usesSiteQuery: Boolean
+        get() = FilterDefs.usesSiteQuery(orderField) || hasChaptersRange || hasYearRange ||
+            states.keys.any { it.startsWith("${FilterDefs.GROUP_SOURCE}:") || it.startsWith("${FilterDefs.GROUP_COUNTRY}:") }
 
     /** Выбран ли хоть один фильтр по статусу закладок (его API не знает, применяется на клиенте). */
     val hasBookmarkFilter: Boolean get() = states.keys.any { it.startsWith("${FilterDefs.GROUP_BOOKMARK}:") }
