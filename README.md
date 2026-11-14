@@ -25,6 +25,7 @@
 ## GraphQL-запросы
 
 Все запросы лежат в [`app/src/main/assets/graphql`](app/src/main/assets/graphql) и загружаются по имени файла.
+
 Список запросов и их назначение — в [docs/graphql.md](docs/graphql.md).
 
 Запросы вынесены из приложенных расширений Senkuro (Tachiyomi/Aidoku). Заголовки клиента и адреса — в
