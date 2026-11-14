@@ -85,7 +85,7 @@ fun SettingsScreen(onCards: () -> Unit = {}, onCardCatalog: () -> Unit = {}, onO
         if (onJournal != null || onCapture != null || onSiteVersion != null || SenkuroConfig.DOMAINS.size > 1) {
             HorizontalDivider(Modifier.padding(vertical = 8.dp))
             SectionLabel("Debug")
-            // Домен API: только в debug (в release доменов нет, кроме основного). Токен входа хранится отдельно для каждого домена.
+            // Домен API: только в debug (в release доменов нет, кроме основного). Токен входа общий для всех доменов.
             if (SenkuroConfig.DOMAINS.size > 1) {
                 val domain by AppGraph.domain.collectAsState()
                 Text(
