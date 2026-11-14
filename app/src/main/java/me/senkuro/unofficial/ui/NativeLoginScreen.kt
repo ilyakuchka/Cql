@@ -40,6 +40,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.JsonPrimitive
 import me.senkuro.unofficial.data.AppGraph
+import me.senkuro.unofficial.data.SenkuroConfig
 import me.senkuro.unofficial.data.SsoClient
 
 /**
@@ -153,7 +154,7 @@ fun LoginScreen(onBack: () -> Unit, onDone: () -> Unit) {
 
         TextButton(onClick = { web = true }, enabled = !busy) { Text("Войти через сайт (браузер)") }
         Text(
-            "Пароль отправляется только на sso.senkuro.net и нигде не сохраняется. В приложении хранится лишь токен доступа.",
+            "Пароль отправляется только на ${SenkuroConfig.current.ssoHost} и нигде не сохраняется. В приложении хранится лишь токен доступа.",
             color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp,
         )
     }
@@ -197,7 +198,7 @@ function ready(){try{turnstile.render('#c',{sitekey:$keyJson,appearance:'interac
                     CaptchaBridge({ t -> main.post { onToken(t) } }, { e -> main.post { onError(e) } }),
                     "AndroidCaptcha",
                 )
-                loadDataWithBaseURL("https://sso.senkuro.net/", html, "text/html", "utf-8", null)
+                loadDataWithBaseURL(SenkuroConfig.current.ssoUrl + "/", html, "text/html", "utf-8", null)
             }
         },
         onRelease = { it.destroy() },

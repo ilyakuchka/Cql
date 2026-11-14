@@ -8,10 +8,15 @@ class Domain(
     val title: String,
     val baseUrl: String,
     val apiUrl: String,
+    /** Сайт авторизации (SSO) этого домена, без завершающего «/». */
+    val ssoUrl: String,
     /** Пояснение для переключателя в настройках (где размещён API). */
     val description: String = "",
 ) {
     val apiHost: String get() = URI(apiUrl).host.orEmpty()
+    val ssoHost: String get() = URI(ssoUrl).host.orEmpty()
+    /** Куда SSO возвращает пользователя с кодом (redirect_uri OAuth). */
+    val oauthRedirect: String get() = "$baseUrl/auth/oauth/callback"
 }
 
 /** Константы подключения к Senkuro (значения взяты из приложенных расширений). */
@@ -23,6 +28,7 @@ object SenkuroConfig {
         title = "senkuro.me",
         baseUrl = "https://senkuro.me",
         apiUrl = "https://api.senkuro.me/graphql",
+        ssoUrl = "https://sso.senkuro.net",
         description = "api.senkuro.me — DDoS-Guard (Россия)",
     )
 
@@ -32,6 +38,7 @@ object SenkuroConfig {
         title = "senkuro.com",
         baseUrl = "https://senkuro.com",
         apiUrl = "https://api.senkuro.com/graphql",
+        ssoUrl = "https://sso.senkuro.org",
         description = "api.senkuro.com — Cloudflare (США)",
     )
 
