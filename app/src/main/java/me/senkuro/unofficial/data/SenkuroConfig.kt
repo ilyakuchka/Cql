@@ -8,6 +8,8 @@ class Domain(
     val title: String,
     val baseUrl: String,
     val apiUrl: String,
+    /** Пояснение для переключателя в настройках (где размещён API). */
+    val description: String = "",
 ) {
     val apiHost: String get() = URI(apiUrl).host.orEmpty()
 }
@@ -15,15 +17,29 @@ class Domain(
 /** Константы подключения к Senkuro (значения взяты из приложенных расширений). */
 object SenkuroConfig {
 
-    /** Основной домен (API api.senkuro.me, вход через sso.senkuro.net). Переключатель доменов в интерфейсе пока убран. */
-    val DOMAINS = listOf(
-        Domain(
-            id = "me",
-            title = "senkuro.me",
-            baseUrl = "https://senkuro.me",
-            apiUrl = "https://api.senkuro.me/graphql",
-        ),
+    /** Основной домен (API api.senkuro.me, вход через sso.senkuro.net). */
+    private val primary = Domain(
+        id = "me",
+        title = "senkuro.me",
+        baseUrl = "https://senkuro.me",
+        apiUrl = "https://api.senkuro.me/graphql",
+        description = "api.senkuro.me — DDoS-Guard (Россия)",
     )
+
+    /** Запасной домен: тот же сайт и API за Cloudflare (США). Выбирается только в debug-сборке. */
+    private val cloudflare = Domain(
+        id = "com",
+        title = "senkuro.com",
+        baseUrl = "https://senkuro.com",
+        apiUrl = "https://api.senkuro.com/graphql",
+        description = "api.senkuro.com — Cloudflare (США)",
+    )
+
+    /**
+     * Доступные домены. В release он один (основной): сохранённый выбор из debug сюда не попадает, потому что
+     * [byId] возвращает основной домен для неизвестного id. Переключатель в настройках виден, только если доменов больше одного.
+     */
+    val DOMAINS = if (me.senkuro.unofficial.BuildConfig.DEBUG_TOOLS) listOf(primary, cloudflare) else listOf(primary)
 
     /** Выбранный сейчас домен (меняется через AppGraph.setDomain). */
     @Volatile

@@ -11,6 +11,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -81,9 +82,34 @@ fun SettingsScreen(onCards: () -> Unit = {}, onCardCatalog: () -> Unit = {}, onO
         }
         HorizontalDivider(Modifier.padding(vertical = 8.dp))
         UpdateSettings()
-        if (onJournal != null || onCapture != null || onSiteVersion != null) {
+        if (onJournal != null || onCapture != null || onSiteVersion != null || SenkuroConfig.DOMAINS.size > 1) {
             HorizontalDivider(Modifier.padding(vertical = 8.dp))
             SectionLabel("Debug")
+            // Домен API: только в debug (в release доменов нет, кроме основного). Токен входа хранится отдельно для каждого домена.
+            if (SenkuroConfig.DOMAINS.size > 1) {
+                val domain by AppGraph.domain.collectAsState()
+                Text(
+                    "Домен API (debug)",
+                    color = MaterialTheme.colorScheme.onBackground,
+                    fontSize = 15.sp,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                )
+                for (d in SenkuroConfig.DOMAINS) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { AppGraph.setDomain(d) }
+                            .padding(horizontal = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        RadioButton(selected = d.id == domain.id, onClick = { AppGraph.setDomain(d) })
+                        Column(Modifier.weight(1f)) {
+                            Text(d.title, color = MaterialTheme.colorScheme.onBackground, fontSize = 15.sp)
+                            Text(d.description, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+                        }
+                    }
+                }
+            }
             if (onJournal != null) TextButton(onClick = onJournal, modifier = Modifier.padding(horizontal = 8.dp)) { Text("Журнал запросов (debug)") }
             if (onCapture != null) TextButton(onClick = onCapture, modifier = Modifier.padding(horizontal = 8.dp)) { Text("Отладка: перехват запросов сайта (debug)") }
             if (onSiteVersion != null) TextButton(onClick = onSiteVersion, modifier = Modifier.padding(horizontal = 8.dp)) { Text("Версия сайта: App-Version и App-Id (debug)") }
